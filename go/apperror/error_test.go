@@ -82,3 +82,34 @@ func TestApplicationErrorConstructors(t *testing.T) {
 		})
 	}
 }
+
+func TestNormalize(t *testing.T) {
+	t.Parallel()
+
+	known := InvalidParameter().WithMessage("invalid value")
+	tests := []struct {
+		name     string
+		err      error
+		wantCode Code
+	}{
+		{name: "nil", wantCode: CodeUnexpected},
+		{name: "known", err: fmt.Errorf("failed to perform operation: %w", known), wantCode: CodeInvalidParameter},
+		{name: "unknown", err: errors.New("unknown error"), wantCode: CodeUnexpected},
+	}
+
+	for _, tt := range tests {
+		testCase := tt
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := Normalize(testCase.err)
+			if got.Code() != testCase.wantCode {
+				t.Fatalf("Normalize() code = %q, want %q", got.Code(), testCase.wantCode)
+			}
+		})
+	}
+
+	if got := Normalize(known); got != known {
+		t.Fatal("Normalize() did not return the application error from the chain")
+	}
+}

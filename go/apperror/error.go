@@ -157,6 +157,29 @@ func AsAppError(err error) *AppError {
 	return appErr
 }
 
+// Normalize converts an error to an application error.
+//
+// Unknown and nil errors are converted to an unexpected application error.
+//
+// Parameters:
+//   - err: error to normalize.
+//
+// Returns:
+//   - Application error from the error chain, or an unexpected application error.
+//
+// Version:
+//   - 2026-08-28: Added.
+func Normalize(err error) *AppError {
+	if err == nil {
+		return Unexpected()
+	}
+	if appErr := AsAppError(err); appErr != nil {
+		return appErr
+	}
+
+	return Unexpected()
+}
+
 // WithMessage returns a copy with the provided message.
 //
 // Parameters:
