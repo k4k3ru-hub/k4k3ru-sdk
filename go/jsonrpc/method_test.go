@@ -21,6 +21,30 @@ func TestMethodValidate(t *testing.T) {
 			method: MethodAccountEmailRequestCredentialCreationOTP,
 		},
 		{
+			name:   "known account email sign in otp method",
+			method: MethodAccountEmailRequestSignInOTP,
+		},
+		{
+			name:   "known account email sign in method",
+			method: MethodAccountEmailSignIn,
+		},
+		{
+			name:   "known account api otp method",
+			method: MethodAccountAPIRequestCredentialCreationOTP,
+		},
+		{
+			name:   "known account api creation method",
+			method: MethodAccountAPICreateCredential,
+		},
+		{
+			name:   "known account app usage balance method",
+			method: MethodAccountAppGetUsageBalance,
+		},
+		{
+			name:   "known account app list products method",
+			method: MethodAccountAppListProducts,
+		},
+		{
 			name:   "custom method",
 			method: "Example.CustomMethod",
 		},

@@ -13,6 +13,12 @@ type Method string
 const (
 	MethodAccountEmailRequestCredentialCreationOTP Method = "AccountEmail.RequestCredentialCreationOTP"
 	MethodAccountEmailCreateCredential             Method = "AccountEmail.CreateCredential"
+	MethodAccountEmailRequestSignInOTP             Method = "AccountEmail.RequestSignInOTP"
+	MethodAccountEmailSignIn                       Method = "AccountEmail.SignIn"
+	MethodAccountAPIRequestCredentialCreationOTP   Method = "AccountAPI.RequestCredentialCreationOTP"
+	MethodAccountAPICreateCredential               Method = "AccountAPI.CreateCredential"
+	MethodAccountAppGetUsageBalance                Method = "AccountApp.GetUsageBalance"
+	MethodAccountAppListProducts                   Method = "AccountApp.ListProducts"
 )
 
 // Validate validates the JSON-RPC method.
