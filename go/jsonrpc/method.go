@@ -1,6 +1,10 @@
 package jsonrpc
 
-import "fmt"
+import (
+	"fmt"
+
+	k4k3ruSDKAppError "github.com/k4k3ru-hub/k4k3ru-sdk/go/apperror"
+)
 
 const maxMethodLength = 64
 
@@ -20,11 +24,15 @@ const (
 //   - 2026-08-28: Added.
 func (m Method) Validate() error {
 	if m == "" {
-		return fmt.Errorf("failed to validate json rpc method: method=empty")
+		return fmt.Errorf(
+			"failed to validate json rpc method: %w: method=empty",
+			k4k3ruSDKAppError.InvalidParameter(),
+		)
 	}
 	if len(m) > maxMethodLength {
 		return fmt.Errorf(
-			"failed to validate json rpc method: method=too_long actual_length=%d max_length=%d",
+			"failed to validate json rpc method: %w: method=too_long actual_length=%d max_length=%d",
+			k4k3ruSDKAppError.InvalidParameter(),
 			len(m),
 			maxMethodLength,
 		)

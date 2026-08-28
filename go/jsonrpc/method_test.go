@@ -1,8 +1,11 @@
 package jsonrpc
 
 import (
+	"errors"
 	"strings"
 	"testing"
+
+	k4k3ruSDKAppError "github.com/k4k3ru-hub/k4k3ru-sdk/go/apperror"
 )
 
 func TestMethodValidate(t *testing.T) {
@@ -27,12 +30,12 @@ func TestMethodValidate(t *testing.T) {
 		},
 		{
 			name:    "empty",
-			wantErr: "failed to validate json rpc method: method=empty",
+			wantErr: "failed to validate json rpc method: err_code=\"invalid_parameter\": method=empty",
 		},
 		{
 			name:    "too long",
 			method:  Method(strings.Repeat("a", maxMethodLength+1)),
-			wantErr: "failed to validate json rpc method: method=too_long actual_length=65 max_length=64",
+			wantErr: "failed to validate json rpc method: err_code=\"invalid_parameter\": method=too_long actual_length=65 max_length=64",
 		},
 	}
 
@@ -53,6 +56,9 @@ func TestMethodValidate(t *testing.T) {
 			}
 			if err.Error() != testCase.wantErr {
 				t.Fatalf("Validate() error = %q, want %q", err.Error(), testCase.wantErr)
+			}
+			if !errors.Is(err, k4k3ruSDKAppError.InvalidParameter()) {
+				t.Fatalf("errors.Is(Validate(), InvalidParameter()) = false")
 			}
 		})
 	}

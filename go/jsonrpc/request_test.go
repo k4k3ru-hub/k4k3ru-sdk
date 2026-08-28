@@ -34,7 +34,7 @@ func TestRequestValidate(t *testing.T) {
 			request: &Request{
 				ID: json.RawMessage(`1`),
 			},
-			wantErr: "failed to validate json rpc request: failed to validate json rpc method: method=empty",
+			wantErr: "failed to validate json rpc request: failed to validate json rpc method: err_code=\"invalid_parameter\": method=empty",
 		},
 	}
 
