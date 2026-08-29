@@ -45,6 +45,10 @@ func TestMethodValidate(t *testing.T) {
 			method: MethodAccountAppListProducts,
 		},
 		{
+			name:   "known market hub list venues method",
+			method: MethodMarketHubListVenues,
+		},
+		{
 			name:   "custom method",
 			method: "Example.CustomMethod",
 		},
