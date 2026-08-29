@@ -21,6 +21,9 @@ const (
 	MethodAccountAppListProducts                   Method = "AccountApp.ListProducts"
 	MethodMarketHubListVenues                      Method = "MarketHub.ListVenues"
 	MethodMarketHubListSymbols                     Method = "MarketHub.ListSymbols"
+	MethodMarketHubAggregationSubscribe            Method = "MarketHub.Aggregation.Subscribe"
+	MethodMarketHubAggregationUnsubscribe          Method = "MarketHub.Aggregation.Unsubscribe"
+	MethodMarketHubAggregationGet                  Method = "MarketHub.Aggregation.Get"
 	MethodPaymentOnchainCreateIntent               Method = "PaymentOnchain.CreateIntent"
 	MethodPaymentOnchainGetIntent                  Method = "PaymentOnchain.GetIntent"
 )

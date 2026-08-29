@@ -53,6 +53,18 @@ func TestMethodValidate(t *testing.T) {
 			method: MethodMarketHubListSymbols,
 		},
 		{
+			name:   "known market hub aggregation subscribe method",
+			method: MethodMarketHubAggregationSubscribe,
+		},
+		{
+			name:   "known market hub aggregation unsubscribe method",
+			method: MethodMarketHubAggregationUnsubscribe,
+		},
+		{
+			name:   "known market hub aggregation get method",
+			method: MethodMarketHubAggregationGet,
+		},
+		{
 			name:   "known payment onchain create intent method",
 			method: MethodPaymentOnchainCreateIntent,
 		},
