@@ -20,6 +20,7 @@ const (
 	MethodAccountAppGetUsageBalance                Method = "AccountApp.GetUsageBalance"
 	MethodAccountAppListProducts                   Method = "AccountApp.ListProducts"
 	MethodMarketHubListVenues                      Method = "MarketHub.ListVenues"
+	MethodMarketHubListSymbols                     Method = "MarketHub.ListSymbols"
 )
 
 // Validate validates the JSON-RPC method.
