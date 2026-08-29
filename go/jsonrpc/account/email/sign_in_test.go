@@ -1,4 +1,4 @@
-package jsonrpc
+package email
 
 import (
 	"encoding/json"
@@ -6,10 +6,10 @@ import (
 	"testing"
 )
 
-func TestAccountEmailCreateCredentialParamsJSON(t *testing.T) {
+func TestAccountEmailSignInParamsJSON(t *testing.T) {
 	t.Parallel()
 
-	want := AccountEmailCreateCredentialParams{
+	want := SignInParams{
 		Email: "user@example.com",
 		Code:  "052784",
 	}
@@ -22,7 +22,7 @@ func TestAccountEmailCreateCredentialParamsJSON(t *testing.T) {
 		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}
 
-	var got AccountEmailCreateCredentialParams
+	var got SignInParams
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}
@@ -31,26 +31,20 @@ func TestAccountEmailCreateCredentialParamsJSON(t *testing.T) {
 	}
 }
 
-func TestAccountEmailCreateCredentialResultJSON(t *testing.T) {
+func TestAccountEmailSignInResultJSON(t *testing.T) {
 	t.Parallel()
 
-	want := AccountEmailCreateCredentialResult{
-		AccountID:  1786180518874776239,
-		Status:     "active",
-		Email:      "user@example.com",
-		OTPPurpose: "account.email.create_credential",
-		BonusTicks: 1000000,
-	}
+	want := SignInResult{AccountID: 1786180518874776239}
 	data, err := json.Marshal(want)
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
 	}
-	wantJSON := `{"accountId":"1786180518874776239","status":"active","email":"user@example.com","otpPurpose":"account.email.create_credential","bonusTicks":1000000}`
+	wantJSON := `{"accountId":"1786180518874776239"}`
 	if string(data) != wantJSON {
 		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}
 
-	var got AccountEmailCreateCredentialResult
+	var got SignInResult
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}

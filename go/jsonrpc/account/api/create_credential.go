@@ -1,6 +1,6 @@
-package jsonrpc
+package api
 
-type AccountAPICreateCredentialParams struct {
+type CreateCredentialParams struct {
 	Email              *string `json:"email,omitempty"`
 	Phone              *string `json:"phone,omitempty"`
 	Code               string  `json:"code"`
@@ -9,7 +9,7 @@ type AccountAPICreateCredentialParams struct {
 	ExpiresIn          string  `json:"expiresIn"`
 }
 
-type AccountAPICreateCredentialResult struct {
+type CreateCredentialResult struct {
 	AccountID          uint64 `json:"accountId,string"`
 	APIName            string `json:"apiName"`
 	APIKey             string `json:"apiKey"`

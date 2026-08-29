@@ -1,4 +1,4 @@
-package jsonrpc
+package app
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 func TestAccountAppGetUsageBalanceParamsJSON(t *testing.T) {
 	t.Parallel()
 
-	want := AccountAppGetUsageBalanceParams{AccountID: 1786180518874776239}
+	want := GetUsageBalanceParams{AccountID: 1786180518874776239}
 	data, err := json.Marshal(want)
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
@@ -19,7 +19,7 @@ func TestAccountAppGetUsageBalanceParamsJSON(t *testing.T) {
 		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}
 
-	var got AccountAppGetUsageBalanceParams
+	var got GetUsageBalanceParams
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}
@@ -31,7 +31,7 @@ func TestAccountAppGetUsageBalanceParamsJSON(t *testing.T) {
 func TestAccountAppGetUsageBalanceResultJSON(t *testing.T) {
 	t.Parallel()
 
-	want := AccountAppGetUsageBalanceResult{
+	want := GetUsageBalanceResult{
 		AccountID:    1786180518874776239,
 		BalanceTicks: 1000,
 	}
@@ -44,7 +44,7 @@ func TestAccountAppGetUsageBalanceResultJSON(t *testing.T) {
 		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}
 
-	var got AccountAppGetUsageBalanceResult
+	var got GetUsageBalanceResult
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}

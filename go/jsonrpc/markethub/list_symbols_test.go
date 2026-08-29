@@ -1,4 +1,4 @@
-package jsonrpc
+package markethub
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 func TestMarketHubListSymbolsParamsJSON(t *testing.T) {
 	t.Parallel()
 
-	want := MarketHubListSymbolsParams{Venues: []MarketHubListSymbolsVenueParams{{
+	want := ListSymbolsParams{Venues: []ListSymbolsVenueParams{{
 		Name:        "binance",
 		Page:        2,
 		Limit:       50,
@@ -24,7 +24,7 @@ func TestMarketHubListSymbolsParamsJSON(t *testing.T) {
 		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}
 
-	var got MarketHubListSymbolsParams
+	var got ListSymbolsParams
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}
@@ -36,7 +36,7 @@ func TestMarketHubListSymbolsParamsJSON(t *testing.T) {
 func TestMarketHubListSymbolsParamsJSONOmitsEmptyVenues(t *testing.T) {
 	t.Parallel()
 
-	data, err := json.Marshal(MarketHubListSymbolsParams{})
+	data, err := json.Marshal(ListSymbolsParams{})
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
 	}
@@ -48,12 +48,12 @@ func TestMarketHubListSymbolsParamsJSONOmitsEmptyVenues(t *testing.T) {
 func TestMarketHubListSymbolsResultJSON(t *testing.T) {
 	t.Parallel()
 
-	want := MarketHubListSymbolsResult{Venues: []MarketHubListSymbolsVenue{{
+	want := ListSymbolsResult{Venues: []ListSymbolsVenue{{
 		Name:  "binance",
 		Page:  1,
 		Limit: 100,
 		Total: 2,
-		Symbols: []MarketHubListSymbolsSymbol{
+		Symbols: []ListSymbolsSymbol{
 			{Symbol: "BTC/USDT", MarketTypes: []string{"spot", "perp"}},
 			{Symbol: "ETH/USDT", MarketTypes: []string{"spot"}},
 		},
@@ -67,7 +67,7 @@ func TestMarketHubListSymbolsResultJSON(t *testing.T) {
 		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}
 
-	var got MarketHubListSymbolsResult
+	var got ListSymbolsResult
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}

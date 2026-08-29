@@ -1,4 +1,4 @@
-package jsonrpc
+package api
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ func TestAccountAPICreateCredentialParamsJSON(t *testing.T) {
 	t.Parallel()
 
 	email := "user@example.com"
-	want := AccountAPICreateCredentialParams{
+	want := CreateCredentialParams{
 		Email:              &email,
 		Code:               "052784",
 		APIName:            "trading-bot",
@@ -26,7 +26,7 @@ func TestAccountAPICreateCredentialParamsJSON(t *testing.T) {
 		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}
 
-	var got AccountAPICreateCredentialParams
+	var got CreateCredentialParams
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}
@@ -39,7 +39,7 @@ func TestAccountAPICreateCredentialParamsPhoneJSON(t *testing.T) {
 	t.Parallel()
 
 	phone := "+819012345678"
-	want := AccountAPICreateCredentialParams{
+	want := CreateCredentialParams{
 		Phone:              &phone,
 		Code:               "052784",
 		APIName:            "trading-bot",
@@ -55,7 +55,7 @@ func TestAccountAPICreateCredentialParamsPhoneJSON(t *testing.T) {
 		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}
 
-	var got AccountAPICreateCredentialParams
+	var got CreateCredentialParams
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}
@@ -67,7 +67,7 @@ func TestAccountAPICreateCredentialParamsPhoneJSON(t *testing.T) {
 func TestAccountAPICreateCredentialResultJSON(t *testing.T) {
 	t.Parallel()
 
-	want := AccountAPICreateCredentialResult{
+	want := CreateCredentialResult{
 		AccountID:          1786180518874776239,
 		APIName:            "trading-bot",
 		APIKey:             "api-key",
@@ -84,7 +84,7 @@ func TestAccountAPICreateCredentialResultJSON(t *testing.T) {
 		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}
 
-	var got AccountAPICreateCredentialResult
+	var got CreateCredentialResult
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}

@@ -1,11 +1,11 @@
-package jsonrpc
+package api
 
-type AccountAPIRequestCredentialCreationOTPParams struct {
+type RequestCredentialCreationOTPParams struct {
 	Email *string `json:"email,omitempty"`
 	Phone *string `json:"phone,omitempty"`
 }
 
-type AccountAPIRequestCredentialCreationOTPResult struct {
+type RequestCredentialCreationOTPResult struct {
 	Purpose   string  `json:"purpose"`
 	Email     *string `json:"email,omitempty"`
 	Phone     *string `json:"phone,omitempty"`

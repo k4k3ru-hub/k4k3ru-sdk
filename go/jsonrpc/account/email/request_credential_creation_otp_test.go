@@ -1,4 +1,4 @@
-package jsonrpc
+package email
 
 import (
 	"encoding/json"
@@ -6,19 +6,20 @@ import (
 	"testing"
 )
 
-func TestMarketHubListVenuesParamsJSON(t *testing.T) {
+func TestAccountEmailRequestCredentialCreationOTPParamsJSON(t *testing.T) {
 	t.Parallel()
 
-	want := MarketHubListVenuesParams{}
+	want := RequestCredentialCreationOTPParams{Email: "user@example.com"}
 	data, err := json.Marshal(want)
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
 	}
-	if string(data) != `{}` {
-		t.Fatalf("Marshal() = %s, want {}", data)
+	wantJSON := `{"email":"user@example.com"}`
+	if string(data) != wantJSON {
+		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}
 
-	var got MarketHubListVenuesParams
+	var got RequestCredentialCreationOTPParams
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}
@@ -27,25 +28,24 @@ func TestMarketHubListVenuesParamsJSON(t *testing.T) {
 	}
 }
 
-func TestMarketHubListVenuesResultJSON(t *testing.T) {
+func TestAccountEmailRequestCredentialCreationOTPResultJSON(t *testing.T) {
 	t.Parallel()
 
-	want := MarketHubListVenuesResult{
-		Venues: []MarketHubListVenuesVenue{
-			{Name: "binance", Status: "active", UpdatedAt: "2026-08-29T12:34:56Z"},
-			{Name: "btse", Status: "failed", UpdatedAt: "2026-08-29T12:35:56Z"},
-		},
+	want := RequestCredentialCreationOTPResult{
+		Purpose:   "account.email.create_credential",
+		Email:     "user@example.com",
+		ExpiresAt: "2026-08-29T12:34:56Z",
 	}
 	data, err := json.Marshal(want)
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
 	}
-	wantJSON := `{"venues":[{"name":"binance","status":"active","updatedAt":"2026-08-29T12:34:56Z"},{"name":"btse","status":"failed","updatedAt":"2026-08-29T12:35:56Z"}]}`
+	wantJSON := `{"purpose":"account.email.create_credential","email":"user@example.com","expiresAt":"2026-08-29T12:34:56Z"}`
 	if string(data) != wantJSON {
 		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}
 
-	var got MarketHubListVenuesResult
+	var got RequestCredentialCreationOTPResult
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}

@@ -1,12 +1,12 @@
-package jsonrpc
+package app
 
 import "encoding/json"
 
-type AccountAppListProductsParams struct {
+type ListProductsParams struct {
 	Page uint64 `json:"page"`
 }
 
-type AccountAppListProductsProduct struct {
+type ListProductsProduct struct {
 	ID            uint64          `json:"id,string"`
 	Name          string          `json:"name"`
 	Type          string          `json:"type"`
@@ -20,10 +20,10 @@ type AccountAppListProductsProduct struct {
 	MetaData      json.RawMessage `json:"metaData"`
 }
 
-type AccountAppListProductsResult struct {
-	Products   []*AccountAppListProductsProduct `json:"products"`
-	Page       uint64                           `json:"page"`
-	Limit      uint64                           `json:"limit"`
-	Total      uint64                           `json:"total"`
-	TotalPages uint64                           `json:"totalPages"`
+type ListProductsResult struct {
+	Products   []*ListProductsProduct `json:"products"`
+	Page       uint64                 `json:"page"`
+	Limit      uint64                 `json:"limit"`
+	Total      uint64                 `json:"total"`
+	TotalPages uint64                 `json:"totalPages"`
 }

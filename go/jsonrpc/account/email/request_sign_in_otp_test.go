@@ -1,4 +1,4 @@
-package jsonrpc
+package email
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 func TestAccountEmailRequestSignInOTPParamsJSON(t *testing.T) {
 	t.Parallel()
 
-	want := AccountEmailRequestSignInOTPParams{Email: "user@example.com"}
+	want := RequestSignInOTPParams{Email: "user@example.com"}
 	data, err := json.Marshal(want)
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
@@ -18,7 +18,7 @@ func TestAccountEmailRequestSignInOTPParamsJSON(t *testing.T) {
 		t.Fatalf("Marshal() = %s, want %s", data, `{"email":"user@example.com"}`)
 	}
 
-	var got AccountEmailRequestSignInOTPParams
+	var got RequestSignInOTPParams
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}
@@ -30,7 +30,7 @@ func TestAccountEmailRequestSignInOTPParamsJSON(t *testing.T) {
 func TestAccountEmailRequestSignInOTPResultJSON(t *testing.T) {
 	t.Parallel()
 
-	want := AccountEmailRequestSignInOTPResult{ExpiresAt: "2026-08-29T12:34:56Z"}
+	want := RequestSignInOTPResult{ExpiresAt: "2026-08-29T12:34:56Z"}
 	data, err := json.Marshal(want)
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
@@ -39,7 +39,7 @@ func TestAccountEmailRequestSignInOTPResultJSON(t *testing.T) {
 		t.Fatalf("Marshal() = %s, want %s", data, `{"expiresAt":"2026-08-29T12:34:56Z"}`)
 	}
 
-	var got AccountEmailRequestSignInOTPResult
+	var got RequestSignInOTPResult
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}

@@ -1,4 +1,4 @@
-package jsonrpc
+package api
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ func TestAccountAPIRequestCredentialCreationOTPParamsJSON(t *testing.T) {
 	t.Parallel()
 
 	email := "user@example.com"
-	want := AccountAPIRequestCredentialCreationOTPParams{Email: &email}
+	want := RequestCredentialCreationOTPParams{Email: &email}
 	data, err := json.Marshal(want)
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
@@ -20,7 +20,7 @@ func TestAccountAPIRequestCredentialCreationOTPParamsJSON(t *testing.T) {
 		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}
 
-	var got AccountAPIRequestCredentialCreationOTPParams
+	var got RequestCredentialCreationOTPParams
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}
@@ -33,7 +33,7 @@ func TestAccountAPIRequestCredentialCreationOTPParamsPhoneJSON(t *testing.T) {
 	t.Parallel()
 
 	phone := "+819012345678"
-	want := AccountAPIRequestCredentialCreationOTPParams{Phone: &phone}
+	want := RequestCredentialCreationOTPParams{Phone: &phone}
 	data, err := json.Marshal(want)
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
@@ -43,7 +43,7 @@ func TestAccountAPIRequestCredentialCreationOTPParamsPhoneJSON(t *testing.T) {
 		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}
 
-	var got AccountAPIRequestCredentialCreationOTPParams
+	var got RequestCredentialCreationOTPParams
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}
@@ -56,7 +56,7 @@ func TestAccountAPIRequestCredentialCreationOTPResultJSON(t *testing.T) {
 	t.Parallel()
 
 	email := "user@example.com"
-	want := AccountAPIRequestCredentialCreationOTPResult{
+	want := RequestCredentialCreationOTPResult{
 		Purpose:   "account.api.create_credential",
 		Email:     &email,
 		ExpiresAt: "2026-08-29T12:34:56Z",
@@ -70,7 +70,7 @@ func TestAccountAPIRequestCredentialCreationOTPResultJSON(t *testing.T) {
 		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}
 
-	var got AccountAPIRequestCredentialCreationOTPResult
+	var got RequestCredentialCreationOTPResult
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}

@@ -1,4 +1,4 @@
-package jsonrpc
+package markethub
 
 import (
 	"encoding/json"
@@ -6,23 +6,19 @@ import (
 	"testing"
 )
 
-func TestAccountEmailSignInParamsJSON(t *testing.T) {
+func TestMarketHubListVenuesParamsJSON(t *testing.T) {
 	t.Parallel()
 
-	want := AccountEmailSignInParams{
-		Email: "user@example.com",
-		Code:  "052784",
-	}
+	want := ListVenuesParams{}
 	data, err := json.Marshal(want)
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
 	}
-	wantJSON := `{"email":"user@example.com","code":"052784"}`
-	if string(data) != wantJSON {
-		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
+	if string(data) != `{}` {
+		t.Fatalf("Marshal() = %s, want {}", data)
 	}
 
-	var got AccountEmailSignInParams
+	var got ListVenuesParams
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}
@@ -31,20 +27,25 @@ func TestAccountEmailSignInParamsJSON(t *testing.T) {
 	}
 }
 
-func TestAccountEmailSignInResultJSON(t *testing.T) {
+func TestMarketHubListVenuesResultJSON(t *testing.T) {
 	t.Parallel()
 
-	want := AccountEmailSignInResult{AccountID: 1786180518874776239}
+	want := ListVenuesResult{
+		Venues: []ListVenuesVenue{
+			{Name: "binance", Status: "active", UpdatedAt: "2026-08-29T12:34:56Z"},
+			{Name: "btse", Status: "failed", UpdatedAt: "2026-08-29T12:35:56Z"},
+		},
+	}
 	data, err := json.Marshal(want)
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
 	}
-	wantJSON := `{"accountId":"1786180518874776239"}`
+	wantJSON := `{"venues":[{"name":"binance","status":"active","updatedAt":"2026-08-29T12:34:56Z"},{"name":"btse","status":"failed","updatedAt":"2026-08-29T12:35:56Z"}]}`
 	if string(data) != wantJSON {
 		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}
 
-	var got AccountEmailSignInResult
+	var got ListVenuesResult
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}

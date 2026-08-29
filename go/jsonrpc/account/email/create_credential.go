@@ -1,11 +1,11 @@
-package jsonrpc
+package email
 
-type AccountEmailCreateCredentialParams struct {
+type CreateCredentialParams struct {
 	Email string `json:"email"`
 	Code  string `json:"code"`
 }
 
-type AccountEmailCreateCredentialResult struct {
+type CreateCredentialResult struct {
 	AccountID  uint64 `json:"accountId,string"`
 	Status     string `json:"status"`
 	Email      string `json:"email"`

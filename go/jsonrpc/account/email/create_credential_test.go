@@ -1,4 +1,4 @@
-package jsonrpc
+package email
 
 import (
 	"encoding/json"
@@ -6,20 +6,23 @@ import (
 	"testing"
 )
 
-func TestAccountEmailRequestCredentialCreationOTPParamsJSON(t *testing.T) {
+func TestAccountEmailCreateCredentialParamsJSON(t *testing.T) {
 	t.Parallel()
 
-	want := AccountEmailRequestCredentialCreationOTPParams{Email: "user@example.com"}
+	want := CreateCredentialParams{
+		Email: "user@example.com",
+		Code:  "052784",
+	}
 	data, err := json.Marshal(want)
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
 	}
-	wantJSON := `{"email":"user@example.com"}`
+	wantJSON := `{"email":"user@example.com","code":"052784"}`
 	if string(data) != wantJSON {
 		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}
 
-	var got AccountEmailRequestCredentialCreationOTPParams
+	var got CreateCredentialParams
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}
@@ -28,24 +31,26 @@ func TestAccountEmailRequestCredentialCreationOTPParamsJSON(t *testing.T) {
 	}
 }
 
-func TestAccountEmailRequestCredentialCreationOTPResultJSON(t *testing.T) {
+func TestAccountEmailCreateCredentialResultJSON(t *testing.T) {
 	t.Parallel()
 
-	want := AccountEmailRequestCredentialCreationOTPResult{
-		Purpose:   "account.email.create_credential",
-		Email:     "user@example.com",
-		ExpiresAt: "2026-08-29T12:34:56Z",
+	want := CreateCredentialResult{
+		AccountID:  1786180518874776239,
+		Status:     "active",
+		Email:      "user@example.com",
+		OTPPurpose: "account.email.create_credential",
+		BonusTicks: 1000000,
 	}
 	data, err := json.Marshal(want)
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
 	}
-	wantJSON := `{"purpose":"account.email.create_credential","email":"user@example.com","expiresAt":"2026-08-29T12:34:56Z"}`
+	wantJSON := `{"accountId":"1786180518874776239","status":"active","email":"user@example.com","otpPurpose":"account.email.create_credential","bonusTicks":1000000}`
 	if string(data) != wantJSON {
 		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}
 
-	var got AccountEmailRequestCredentialCreationOTPResult
+	var got CreateCredentialResult
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}

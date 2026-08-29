@@ -1,10 +1,10 @@
-package jsonrpc
+package app
 
-type AccountAppGetUsageBalanceParams struct {
+type GetUsageBalanceParams struct {
 	AccountID uint64 `json:"accountId,string"`
 }
 
-type AccountAppGetUsageBalanceResult struct {
+type GetUsageBalanceResult struct {
 	AccountID    uint64 `json:"accountId,string"`
 	BalanceTicks uint64 `json:"balanceTicks,string"`
 }

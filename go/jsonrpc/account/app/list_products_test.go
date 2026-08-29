@@ -1,4 +1,4 @@
-package jsonrpc
+package app
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 func TestAccountAppListProductsParamsJSON(t *testing.T) {
 	t.Parallel()
 
-	want := AccountAppListProductsParams{Page: 3}
+	want := ListProductsParams{Page: 3}
 	data, err := json.Marshal(want)
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
@@ -18,7 +18,7 @@ func TestAccountAppListProductsParamsJSON(t *testing.T) {
 		t.Fatalf("Marshal() = %s, want %s", data, `{"page":3}`)
 	}
 
-	var got AccountAppListProductsParams
+	var got ListProductsParams
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}
@@ -31,8 +31,8 @@ func TestAccountAppListProductsResultJSON(t *testing.T) {
 	t.Parallel()
 
 	description := "Starter product"
-	want := AccountAppListProductsResult{
-		Products: []*AccountAppListProductsProduct{
+	want := ListProductsResult{
+		Products: []*ListProductsProduct{
 			{
 				ID:            1001,
 				Name:          "starter",
@@ -62,7 +62,7 @@ func TestAccountAppListProductsResultJSON(t *testing.T) {
 		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}
 
-	var got AccountAppListProductsResult
+	var got ListProductsResult
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}
@@ -74,8 +74,8 @@ func TestAccountAppListProductsResultJSON(t *testing.T) {
 func TestAccountAppListProductsResultNullableFieldsJSON(t *testing.T) {
 	t.Parallel()
 
-	result := AccountAppListProductsResult{
-		Products: []*AccountAppListProductsProduct{
+	result := ListProductsResult{
+		Products: []*ListProductsProduct{
 			{
 				Description: nil,
 				MetaData:    json.RawMessage(`null`),
@@ -95,7 +95,7 @@ func TestAccountAppListProductsResultNullableFieldsJSON(t *testing.T) {
 func TestAccountAppListProductsResultEmptyProductsJSON(t *testing.T) {
 	t.Parallel()
 
-	data, err := json.Marshal(AccountAppListProductsResult{Products: []*AccountAppListProductsProduct{}})
+	data, err := json.Marshal(ListProductsResult{Products: []*ListProductsProduct{}})
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
 	}
