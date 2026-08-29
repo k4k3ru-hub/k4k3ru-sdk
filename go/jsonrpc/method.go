@@ -21,6 +21,8 @@ const (
 	MethodAccountAppListProducts                   Method = "AccountApp.ListProducts"
 	MethodMarketHubListVenues                      Method = "MarketHub.ListVenues"
 	MethodMarketHubListSymbols                     Method = "MarketHub.ListSymbols"
+	MethodPaymentOnchainCreateIntent               Method = "PaymentOnchain.CreateIntent"
+	MethodPaymentOnchainGetIntent                  Method = "PaymentOnchain.GetIntent"
 )
 
 // Validate validates the JSON-RPC method.

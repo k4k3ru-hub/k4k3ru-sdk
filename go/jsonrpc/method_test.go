@@ -53,6 +53,14 @@ func TestMethodValidate(t *testing.T) {
 			method: MethodMarketHubListSymbols,
 		},
 		{
+			name:   "known payment onchain create intent method",
+			method: MethodPaymentOnchainCreateIntent,
+		},
+		{
+			name:   "known payment onchain get intent method",
+			method: MethodPaymentOnchainGetIntent,
+		},
+		{
 			name:   "custom method",
 			method: "Example.CustomMethod",
 		},
