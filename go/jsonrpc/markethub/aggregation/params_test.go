@@ -2,8 +2,11 @@ package aggregation
 
 import (
 	"encoding/json"
+	"errors"
 	"reflect"
 	"testing"
+
+	k4k3ruSDKAppError "github.com/k4k3ru-hub/k4k3ru-sdk/go/apperror"
 )
 
 func TestParamsJSON(t *testing.T) {
@@ -35,6 +38,16 @@ func TestParamsJSON(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("Unmarshal() = %#v, want %#v", got, want)
+	}
+}
+
+func TestParamsJSONRejectsUnknownFields(t *testing.T) {
+	t.Parallel()
+
+	var params Params
+	err := json.Unmarshal([]byte(`{"marketType":"spot","symbol":"BTC/USDC","unexpected":true}`), &params)
+	if err == nil || !errors.Is(err, k4k3ruSDKAppError.InvalidParameter()) {
+		t.Fatalf("Unmarshal() error = %v, want invalid parameter", err)
 	}
 }
 
