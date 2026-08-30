@@ -31,7 +31,7 @@ func TestMessageRouterRoutesAggregationEvent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("register() error = %v", err)
 	}
-	router.HandleMessage([]byte(`{"ac":"crypto","mt":"perp","s":"BTC/USDC","am":"composite-mid","p":"63004.4","svc":2,"ts":1}`))
+	router.HandleMessage([]byte(`{"e":"ag","data":{"ac":"crypto","mt":"perp","s":"BTC/USDC","am":"composite-mid","p":"63004.4","svc":2,"ts":1}}`))
 	if result := <-subscription.events; result.Price != "63004.4" {
 		t.Fatalf("event price = %q", result.Price)
 	}

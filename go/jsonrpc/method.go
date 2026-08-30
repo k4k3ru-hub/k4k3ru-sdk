@@ -24,6 +24,8 @@ const (
 	MethodMarketHubAggregationSubscribe            Method = "MarketHub.Aggregation.Subscribe"
 	MethodMarketHubAggregationUnsubscribe          Method = "MarketHub.Aggregation.Unsubscribe"
 	MethodMarketHubAggregationGet                  Method = "MarketHub.Aggregation.Get"
+	MethodMarketHubArbitrageSubscribe              Method = "MarketHub.Arbitrage.Subscribe"
+	MethodMarketHubArbitrageUnsubscribe            Method = "MarketHub.Arbitrage.Unsubscribe"
 	MethodPaymentOnchainCreateIntent               Method = "PaymentOnchain.CreateIntent"
 	MethodPaymentOnchainGetIntent                  Method = "PaymentOnchain.GetIntent"
 )

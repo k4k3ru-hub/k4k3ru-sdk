@@ -65,6 +65,14 @@ func TestMethodValidate(t *testing.T) {
 			method: MethodMarketHubAggregationGet,
 		},
 		{
+			name:   "known market hub arbitrage subscribe method",
+			method: MethodMarketHubArbitrageSubscribe,
+		},
+		{
+			name:   "known market hub arbitrage unsubscribe method",
+			method: MethodMarketHubArbitrageUnsubscribe,
+		},
+		{
 			name:   "known payment onchain create intent method",
 			method: MethodPaymentOnchainCreateIntent,
 		},
