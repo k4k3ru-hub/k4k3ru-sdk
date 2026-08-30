@@ -32,6 +32,7 @@ func (f SourceFilter) Normalize() SourceFilter {
 //   - Validation error.
 //
 // Version:
+//   - 2026-08-30: Added Aerodrome support.
 //   - 2026-08-30: Added.
 func (f SourceFilter) Validate() error {
 	f = f.Normalize()
@@ -40,7 +41,7 @@ func (f SourceFilter) Validate() error {
 	}
 	seen := make(map[Venue]struct{}, len(f.Venues))
 	for _, venue := range f.Venues {
-		if venue != VenueUniswapV3 && venue != VenueUniswapV4 {
+		if venue != VenueAerodrome && venue != VenueUniswapV3 && venue != VenueUniswapV4 {
 			return k4k3ruSDKAppError.Tracef("failed to validate arbitrage source filter: %w: venue=invalid", k4k3ruSDKAppError.InvalidParameter())
 		}
 		if _, exists := seen[venue]; exists {

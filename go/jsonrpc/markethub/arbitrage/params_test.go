@@ -121,6 +121,24 @@ func TestParamsValidateAllowsAllConfiguredSources(t *testing.T) {
 	}
 }
 
+func TestParamsValidateAllowsAerodromeSource(t *testing.T) {
+	t.Parallel()
+
+	params := validParams()
+	params.Chain = k4k3ruOnchainCore.ChainBase
+	params.Symbol = "WETH/USDC"
+	params.InputAsset = "WETH"
+	params.SourceFilter.Venues = []Venue{VenueAerodrome, VenueUniswapV3, VenueUniswapV4}
+	if err := params.Validate(); err != nil {
+		t.Fatalf("Validate() error = %v", err)
+	}
+	normalized := params.Normalize()
+	want := []Venue{VenueAerodrome, VenueUniswapV3, VenueUniswapV4}
+	if !reflect.DeepEqual(normalized.SourceFilter.Venues, want) {
+		t.Fatalf("Normalize() venues = %#v, want %#v", normalized.SourceFilter.Venues, want)
+	}
+}
+
 func TestParamsSubscriptionKeyNormalizesEquivalentSelections(t *testing.T) {
 	t.Parallel()
 
