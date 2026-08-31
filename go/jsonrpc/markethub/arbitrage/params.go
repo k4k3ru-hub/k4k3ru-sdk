@@ -91,6 +91,7 @@ func (p Params) Normalize() Params {
 //   - Validation error.
 //
 // Version:
+//   - 2026-08-31: Supported Sui chains.
 //   - 2026-08-31: Supported Solana chains.
 //   - 2026-08-30: Added.
 func (p Params) Validate() error {
@@ -108,7 +109,7 @@ func (p Params) Validate() error {
 	if err != nil {
 		return k4k3ruSDKAppError.Tracef("failed to validate arbitrage parameters: %w: chain=invalid", k4k3ruSDKAppError.InvalidParameter())
 	}
-	if chainFamily != k4k3ruOnchainCore.ChainFamilyEVM && chainFamily != k4k3ruOnchainCore.ChainFamilySolana {
+	if chainFamily != k4k3ruOnchainCore.ChainFamilyEVM && chainFamily != k4k3ruOnchainCore.ChainFamilySolana && chainFamily != k4k3ruOnchainCore.ChainFamilySui {
 		return k4k3ruSDKAppError.Tracef("failed to validate arbitrage parameters: %w: chain_family=invalid", k4k3ruSDKAppError.InvalidParameter())
 	}
 	baseAsset, quoteAsset, ok := splitSymbol(p.Symbol)

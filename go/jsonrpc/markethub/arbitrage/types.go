@@ -19,6 +19,8 @@ type Venue string
 const (
 	VenueUnknown   Venue = ""
 	VenueAerodrome Venue = "aerodrome"
+	VenueBluefin   Venue = "bluefin"
+	VenueCetus     Venue = "cetus"
 	VenueMeteora   Venue = "meteora"
 	VenueRaydium   Venue = "raydium"
 	VenueUniswapV3 Venue = "uniswap-v3"

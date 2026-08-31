@@ -152,6 +152,19 @@ func TestParamsValidateAllowsSolanaSources(t *testing.T) {
 	}
 }
 
+func TestParamsValidateAllowsSuiSources(t *testing.T) {
+	t.Parallel()
+
+	params := validParams()
+	params.Chain = k4k3ruOnchainCore.ChainSui
+	params.Symbol = "SUI/USDC"
+	params.InputAsset = "SUI"
+	params.SourceFilter.Venues = []Venue{VenueBluefin, VenueCetus}
+	if err := params.Validate(); err != nil {
+		t.Fatalf("Validate() error = %v", err)
+	}
+}
+
 func TestParamsSubscriptionKeyNormalizesEquivalentSelections(t *testing.T) {
 	t.Parallel()
 
