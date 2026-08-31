@@ -139,6 +139,19 @@ func TestParamsValidateAllowsAerodromeSource(t *testing.T) {
 	}
 }
 
+func TestParamsValidateAllowsSolanaSources(t *testing.T) {
+	t.Parallel()
+
+	params := validParams()
+	params.Chain = k4k3ruOnchainCore.ChainSolana
+	params.Symbol = "SOL/USDC"
+	params.InputAsset = "SOL"
+	params.SourceFilter.Venues = []Venue{VenueMeteora, VenueRaydium}
+	if err := params.Validate(); err != nil {
+		t.Fatalf("Validate() error = %v", err)
+	}
+}
+
 func TestParamsSubscriptionKeyNormalizesEquivalentSelections(t *testing.T) {
 	t.Parallel()
 
