@@ -67,17 +67,15 @@ type RouteResult struct {
 }
 
 type Result struct {
-	ArbitrageType       ArbitrageType  `json:"arbitrageType"`
-	Chain               Chain          `json:"chain"`
-	Network             Network        `json:"network"`
-	Symbol              Symbol         `json:"symbol"`
-	InputAsset          string         `json:"inputAsset"`
-	AmountIn            string         `json:"amountIn"`
-	MinimumGrossProfit  string         `json:"minimumGrossProfit"`
-	SourceFilter        *SourceFilter  `json:"sourceFilter,omitempty"`
-	StateReference      StateReference `json:"stateReference"`
-	EvaluatedAt         int64          `json:"evaluatedAt"`
-	BestGrossProfit     string         `json:"bestGrossProfit"`
-	EvaluatedRouteCount uint64         `json:"evaluatedRouteCount"`
-	Routes              []RouteResult  `json:"routes"`
+	ArbitrageType      ArbitrageType  `json:"arbitrageType"`
+	Chain              Chain          `json:"chain"`
+	Network            Network        `json:"network"`
+	Symbol             Symbol         `json:"symbol"`
+	InputAsset         string         `json:"inputAsset"`
+	AmountIn           string         `json:"amountIn"`
+	MinimumGrossProfit string         `json:"minimumGrossProfit"`
+	SourceFilter       *SourceFilter  `json:"sourceFilter,omitempty"`
+	StateReference     StateReference `json:"stateReference"`
+	EvaluatedAt        int64          `json:"evaluatedAt"`
+	ExecutableRoutes   []RouteResult  `json:"executableRoutes"`
 }
