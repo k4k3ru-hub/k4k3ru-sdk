@@ -18,11 +18,16 @@ const (
 )
 
 type RouteResult struct {
-	Direction         RouteDirection `json:"direction"`
-	Legs              []LegResult    `json:"legs"`
-	GrossProfit       string         `json:"grossProfit"`
-	TotalGasEstimate  string         `json:"totalGasEstimate"`
-	MeetsProfitBuffer bool           `json:"meetsProfitBuffer"`
+	Direction                           RouteDirection `json:"direction"`
+	Legs                                []LegResult    `json:"legs"`
+	GrossProfit                         string         `json:"grossProfit"`
+	TotalGasEstimate                    string         `json:"totalGasEstimate"`
+	MeetsProfitBuffer                   bool           `json:"meetsProfitBuffer"`
+	EstimatedExecutionGasCost           string         `json:"estimatedExecutionGasCost,omitempty"`
+	EstimatedNetProfitAfterExecutionGas string         `json:"estimatedNetProfitAfterExecutionGas,omitempty"`
+	TransactionCostComplete             *bool          `json:"transactionCostComplete,omitempty"`
+	UnestimatedCostComponents           []string       `json:"unestimatedCostComponents,omitempty"`
+	MeetsNetProfitBuffer                *bool          `json:"meetsNetProfitBuffer,omitempty"`
 }
 
 type Result struct {
