@@ -47,9 +47,10 @@ func RouteDirectionForVenues(first, second Venue) RouteDirection {
 type StateReferenceKind string
 
 const (
-	StateReferenceKindUnknown    StateReferenceKind = ""
-	StateReferenceKindEVMBlock   StateReferenceKind = "evm-block"
-	StateReferenceKindSolanaSlot StateReferenceKind = "solana-slot"
+	StateReferenceKindUnknown       StateReferenceKind = ""
+	StateReferenceKindEVMBlock      StateReferenceKind = "evm-block"
+	StateReferenceKindSolanaSlot    StateReferenceKind = "solana-slot"
+	StateReferenceKindSuiCheckpoint StateReferenceKind = "sui-checkpoint"
 )
 
 type StateReference struct {

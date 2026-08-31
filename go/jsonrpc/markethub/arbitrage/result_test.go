@@ -52,3 +52,11 @@ func TestRouteDirectionForVenues(t *testing.T) {
 		t.Fatalf("RouteDirectionForVenues() = %q, want %q", got, RouteDirectionUniswapV3ToV4)
 	}
 }
+
+func TestStateReferenceKindSuiCheckpoint(t *testing.T) {
+	t.Parallel()
+
+	if StateReferenceKindSuiCheckpoint != "sui-checkpoint" {
+		t.Fatalf("StateReferenceKindSuiCheckpoint = %q", StateReferenceKindSuiCheckpoint)
+	}
+}
