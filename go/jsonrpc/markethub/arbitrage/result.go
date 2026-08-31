@@ -1,13 +1,12 @@
 package arbitrage
 
 type LegResult struct {
-	Venue       Venue  `json:"venue"`
-	PoolID      string `json:"poolId"`
-	TokenIn     string `json:"tokenIn"`
-	TokenOut    string `json:"tokenOut"`
-	AmountIn    string `json:"amountIn"`
-	AmountOut   string `json:"amountOut"`
-	GasEstimate string `json:"gasEstimate"`
+	Venue     Venue  `json:"venue"`
+	PoolID    string `json:"poolId"`
+	TokenIn   string `json:"tokenIn"`
+	TokenOut  string `json:"tokenOut"`
+	AmountIn  string `json:"amountIn"`
+	AmountOut string `json:"amountOut"`
 }
 
 type RouteDirection string
@@ -18,16 +17,9 @@ const (
 )
 
 type RouteResult struct {
-	Direction                           RouteDirection `json:"direction"`
-	Legs                                []LegResult    `json:"legs"`
-	GrossProfit                         string         `json:"grossProfit"`
-	TotalGasEstimate                    string         `json:"totalGasEstimate"`
-	MeetsProfitBuffer                   bool           `json:"meetsProfitBuffer"`
-	EstimatedExecutionGasCost           string         `json:"estimatedExecutionGasCost,omitempty"`
-	EstimatedNetProfitAfterExecutionGas string         `json:"estimatedNetProfitAfterExecutionGas,omitempty"`
-	TransactionCostComplete             *bool          `json:"transactionCostComplete,omitempty"`
-	UnestimatedCostComponents           []string       `json:"unestimatedCostComponents,omitempty"`
-	MeetsNetProfitBuffer                *bool          `json:"meetsNetProfitBuffer,omitempty"`
+	Direction   RouteDirection `json:"direction"`
+	Legs        []LegResult    `json:"legs"`
+	GrossProfit string         `json:"grossProfit"`
 }
 
 type Result struct {
