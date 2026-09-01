@@ -22,6 +22,7 @@ const (
 	VenueBluefin   Venue = "bluefin"
 	VenueCetus     Venue = "cetus"
 	VenueMeteora   Venue = "meteora"
+	VenueMomentum  Venue = "momentum"
 	VenueRaydium   Venue = "raydium"
 	VenueTurbos    Venue = "turbos"
 	VenueUniswapV3 Venue = "uniswap-v3"

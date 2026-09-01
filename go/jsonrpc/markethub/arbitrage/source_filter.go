@@ -32,6 +32,7 @@ func (f SourceFilter) Normalize() SourceFilter {
 //   - Validation error.
 //
 // Version:
+//   - 2026-09-01: Added Momentum support.
 //   - 2026-09-01: Added Turbos support.
 //   - 2026-08-31: Added Cetus support.
 //   - 2026-08-31: Added Bluefin support.
@@ -45,7 +46,7 @@ func (f SourceFilter) Validate() error {
 	}
 	seen := make(map[Venue]struct{}, len(f.Venues))
 	for _, venue := range f.Venues {
-		if venue != VenueAerodrome && venue != VenueBluefin && venue != VenueCetus && venue != VenueMeteora && venue != VenueRaydium && venue != VenueTurbos && venue != VenueUniswapV3 && venue != VenueUniswapV4 {
+		if venue != VenueAerodrome && venue != VenueBluefin && venue != VenueCetus && venue != VenueMeteora && venue != VenueMomentum && venue != VenueRaydium && venue != VenueTurbos && venue != VenueUniswapV3 && venue != VenueUniswapV4 {
 			return k4k3ruSDKAppError.Tracef("failed to validate arbitrage source filter: %w: venue=invalid", k4k3ruSDKAppError.InvalidParameter())
 		}
 		if _, exists := seen[venue]; exists {
