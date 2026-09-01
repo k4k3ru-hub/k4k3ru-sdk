@@ -159,7 +159,7 @@ func TestParamsValidateAllowsSuiSources(t *testing.T) {
 	params.Chain = k4k3ruOnchainCore.ChainSui
 	params.Symbol = "SUI/USDC"
 	params.InputAsset = "SUI"
-	params.SourceFilter.Venues = []Venue{VenueBluefin, VenueCetus}
+	params.SourceFilter.Venues = []Venue{VenueBluefin, VenueCetus, VenueTurbos}
 	if err := params.Validate(); err != nil {
 		t.Fatalf("Validate() error = %v", err)
 	}

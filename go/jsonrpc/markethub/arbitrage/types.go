@@ -23,6 +23,7 @@ const (
 	VenueCetus     Venue = "cetus"
 	VenueMeteora   Venue = "meteora"
 	VenueRaydium   Venue = "raydium"
+	VenueTurbos    Venue = "turbos"
 	VenueUniswapV3 Venue = "uniswap-v3"
 	VenueUniswapV4 Venue = "uniswap-v4"
 )
