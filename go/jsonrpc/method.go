@@ -28,6 +28,10 @@ const (
 	MethodMarketHubArbitrageUnsubscribe            Method = "MarketHub.Arbitrage.Unsubscribe"
 	MethodPaymentOnchainCreateIntent               Method = "PaymentOnchain.CreateIntent"
 	MethodPaymentOnchainGetIntent                  Method = "PaymentOnchain.GetIntent"
+	MethodTradeHubArbitrageSubscribe               Method = "TradeHub.Arbitrage.Subscribe"
+	MethodTradeHubArbitrageUnsubscribe             Method = "TradeHub.Arbitrage.Unsubscribe"
+	MethodTradeHubExecutionPrepare                 Method = "TradeHub.Execution.Prepare"
+	MethodTradeHubExecutionSubmit                  Method = "TradeHub.Execution.Submit"
 )
 
 // Validate validates the JSON-RPC method.

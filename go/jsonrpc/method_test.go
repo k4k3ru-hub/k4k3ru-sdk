@@ -81,6 +81,22 @@ func TestMethodValidate(t *testing.T) {
 			method: MethodPaymentOnchainGetIntent,
 		},
 		{
+			name:   "known trade hub arbitrage subscribe method",
+			method: MethodTradeHubArbitrageSubscribe,
+		},
+		{
+			name:   "known trade hub arbitrage unsubscribe method",
+			method: MethodTradeHubArbitrageUnsubscribe,
+		},
+		{
+			name:   "known trade hub execution prepare method",
+			method: MethodTradeHubExecutionPrepare,
+		},
+		{
+			name:   "known trade hub execution submit method",
+			method: MethodTradeHubExecutionSubmit,
+		},
+		{
 			name:   "custom method",
 			method: "Example.CustomMethod",
 		},
