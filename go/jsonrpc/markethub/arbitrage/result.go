@@ -61,6 +61,7 @@ type StateReference struct {
 }
 
 type RouteResult struct {
+	RouteID        string          `json:"routeId"`
 	Direction      RouteDirection  `json:"direction"`
 	StateReference *StateReference `json:"stateReference,omitempty"`
 	Legs           []LegResult     `json:"legs"`
@@ -68,6 +69,7 @@ type RouteResult struct {
 }
 
 type Result struct {
+	EvaluationID        string          `json:"evaluationId"`
 	ArbitrageType       ArbitrageType   `json:"arbitrageType"`
 	Chain               Chain           `json:"chain"`
 	Network             Network         `json:"network"`

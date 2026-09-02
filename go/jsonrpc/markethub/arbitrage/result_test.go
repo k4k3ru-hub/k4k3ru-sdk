@@ -2,6 +2,7 @@ package arbitrage
 
 import (
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -12,6 +13,7 @@ func TestResultJSON(t *testing.T) {
 	t.Parallel()
 
 	result := Result{
+		EvaluationID:        "eval_test",
 		ArbitrageType:       ArbitrageTypeAtomic,
 		Chain:               k4k3ruOnchainCore.ChainEthereum,
 		Network:             k4k3ruOnchainCore.NetworkMainnet,
@@ -25,6 +27,7 @@ func TestResultJSON(t *testing.T) {
 		EvaluatedPoolCount:  2,
 		EvaluatedRouteCount: 2,
 		ExecutableRoutes: []RouteResult{{
+			RouteID:     "route_test",
 			Direction:   RouteDirectionUniswapV3ToV4,
 			Legs:        []LegResult{{Venue: VenueUniswapV3, PoolID: "pool", TokenIn: "WBTC", TokenOut: "USDT", AmountIn: "0.1", AmountOut: "100"}},
 			GrossProfit: "0.01",
@@ -34,16 +37,23 @@ func TestResultJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `{"arbitrageType":"atomic","chain":"ethereum","network":"mainnet","symbol":"WBTC/USDT","inputAsset":"WBTC","amountIn":"0.1","minimumGrossProfit":"0.00001","sourceFilter":{"venues":["uniswap-v3","uniswap-v4"]},"stateReference":{"kind":"evm-block","number":123,"hash":"0xabc","timestamp":456},"evaluatedAt":789,"evaluatedPoolCount":2,"evaluatedRouteCount":2,"executableRoutes":[{"direction":"uniswap-v3-to-v4","legs":[{"venue":"uniswap-v3","poolId":"pool","tokenIn":"WBTC","tokenOut":"USDT","amountIn":"0.1","amountOut":"100"}],"grossProfit":"0.01"}]}`
+	want := `{"evaluationId":"eval_test","arbitrageType":"atomic","chain":"ethereum","network":"mainnet","symbol":"WBTC/USDT","inputAsset":"WBTC","amountIn":"0.1","minimumGrossProfit":"0.00001","sourceFilter":{"venues":["uniswap-v3","uniswap-v4"]},"stateReference":{"kind":"evm-block","number":123,"hash":"0xabc","timestamp":456},"evaluatedAt":789,"evaluatedPoolCount":2,"evaluatedRouteCount":2,"executableRoutes":[{"routeId":"route_test","direction":"uniswap-v3-to-v4","legs":[{"venue":"uniswap-v3","poolId":"pool","tokenIn":"WBTC","tokenOut":"USDT","amountIn":"0.1","amountOut":"100"}],"grossProfit":"0.01"}]}`
 	if string(data) != want {
 		t.Fatalf("Marshal() = %s, want %s", data, want)
+	}
+	var decoded Result
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(decoded, result) {
+		t.Fatalf("Unmarshal() = %#v, want %#v", decoded, result)
 	}
 }
 
 func TestSuiResultOmitsTopLevelStateReferenceAndUsesRouteReference(t *testing.T) {
 	t.Parallel()
 
-	result := Result{ArbitrageType: ArbitrageTypeAtomic, Chain: k4k3ruOnchainCore.ChainSui, Network: k4k3ruOnchainCore.NetworkMainnet, Symbol: "SUI/USDC", InputAsset: "SUI", AmountIn: "0.1", MinimumGrossProfit: "0", EvaluatedAt: 1, EvaluatedPoolCount: 4, EvaluatedRouteCount: 12, ExecutableRoutes: []RouteResult{{Direction: "cetus-to-bluefin", StateReference: &StateReference{Kind: StateReferenceKindSuiCheckpoint, Number: 123}, Legs: []LegResult{}, GrossProfit: "0.01"}}}
+	result := Result{EvaluationID: "eval_sui", ArbitrageType: ArbitrageTypeAtomic, Chain: k4k3ruOnchainCore.ChainSui, Network: k4k3ruOnchainCore.NetworkMainnet, Symbol: "SUI/USDC", InputAsset: "SUI", AmountIn: "0.1", MinimumGrossProfit: "0", EvaluatedAt: 1, EvaluatedPoolCount: 4, EvaluatedRouteCount: 12, ExecutableRoutes: []RouteResult{{RouteID: "route_sui", Direction: "cetus-to-bluefin", StateReference: &StateReference{Kind: StateReferenceKindSuiCheckpoint, Number: 123}, Legs: []LegResult{}, GrossProfit: "0.01"}}}
 	data, err := json.Marshal(result)
 	if err != nil {
 		t.Fatal(err)
