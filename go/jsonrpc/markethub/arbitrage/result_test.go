@@ -27,9 +27,14 @@ func TestResultJSON(t *testing.T) {
 		EvaluatedPoolCount:  2,
 		EvaluatedRouteCount: 2,
 		ExecutableRoutes: []RouteResult{{
-			RouteID:     "route_test",
-			Direction:   RouteDirectionUniswapV3ToV4,
-			Legs:        []LegResult{{Venue: VenueUniswapV3, PoolID: "pool", TokenIn: "WBTC", TokenOut: "USDT", AmountIn: "0.1", AmountOut: "100"}},
+			RouteID:   "route_test",
+			Direction: RouteDirectionUniswapV3ToV4,
+			Legs: []LegResult{{
+				Venue: VenueUniswapV3, PoolID: "pool",
+				TokenIn: "WBTC", TokenInAssetID: "0x0000000000000000000000000000000000000001",
+				TokenOut: "USDT", TokenOutAssetID: "0x0000000000000000000000000000000000000002",
+				AmountIn: "0.1", AmountOut: "100",
+			}},
 			GrossProfit: "0.01",
 		}},
 	}
@@ -37,7 +42,7 @@ func TestResultJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `{"evaluationId":"eval_test","arbitrageType":"atomic","chain":"ethereum","network":"mainnet","symbol":"WBTC/USDT","inputAsset":"WBTC","amountIn":"0.1","minimumGrossProfit":"0.00001","sourceFilter":{"venues":["uniswap-v3","uniswap-v4"]},"stateReference":{"kind":"evm-block","number":123,"hash":"0xabc","timestamp":456},"evaluatedAt":789,"evaluatedPoolCount":2,"evaluatedRouteCount":2,"executableRoutes":[{"routeId":"route_test","direction":"uniswap-v3-to-v4","legs":[{"venue":"uniswap-v3","poolId":"pool","tokenIn":"WBTC","tokenOut":"USDT","amountIn":"0.1","amountOut":"100"}],"grossProfit":"0.01"}]}`
+	want := `{"evaluationId":"eval_test","arbitrageType":"atomic","chain":"ethereum","network":"mainnet","symbol":"WBTC/USDT","inputAsset":"WBTC","amountIn":"0.1","minimumGrossProfit":"0.00001","sourceFilter":{"venues":["uniswap-v3","uniswap-v4"]},"stateReference":{"kind":"evm-block","number":123,"hash":"0xabc","timestamp":456},"evaluatedAt":789,"evaluatedPoolCount":2,"evaluatedRouteCount":2,"executableRoutes":[{"routeId":"route_test","direction":"uniswap-v3-to-v4","legs":[{"venue":"uniswap-v3","poolId":"pool","tokenIn":"WBTC","tokenInAssetId":"0x0000000000000000000000000000000000000001","tokenOut":"USDT","tokenOutAssetId":"0x0000000000000000000000000000000000000002","amountIn":"0.1","amountOut":"100"}],"grossProfit":"0.01"}]}`
 	if string(data) != want {
 		t.Fatalf("Marshal() = %s, want %s", data, want)
 	}

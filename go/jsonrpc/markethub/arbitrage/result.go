@@ -3,12 +3,14 @@ package arbitrage
 import "strings"
 
 type LegResult struct {
-	Venue     Venue  `json:"venue"`
-	PoolID    string `json:"poolId"`
-	TokenIn   string `json:"tokenIn"`
-	TokenOut  string `json:"tokenOut"`
-	AmountIn  string `json:"amountIn"`
-	AmountOut string `json:"amountOut"`
+	Venue           Venue  `json:"venue"`
+	PoolID          string `json:"poolId"`
+	TokenIn         string `json:"tokenIn"`
+	TokenInAssetID  string `json:"tokenInAssetId"`
+	TokenOut        string `json:"tokenOut"`
+	TokenOutAssetID string `json:"tokenOutAssetId"`
+	AmountIn        string `json:"amountIn"`
+	AmountOut       string `json:"amountOut"`
 }
 
 type RouteDirection string
