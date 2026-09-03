@@ -14,6 +14,7 @@ type EventType string
 const (
 	EventTypeAggregation EventType = "ag"
 	EventTypeArbitrage   EventType = "ar"
+	EventTypeExecution   EventType = "ex"
 )
 
 type Event struct {
@@ -59,7 +60,7 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 //   - 2026-08-30: Added.
 func (e Event) Validate() error {
 	switch e.Type {
-	case EventTypeAggregation, EventTypeArbitrage:
+	case EventTypeAggregation, EventTypeArbitrage, EventTypeExecution:
 	default:
 		if e.Type == "" {
 			return k4k3ruSDKAppError.Tracef("failed to validate subscription event: %w: event_type=empty", k4k3ruSDKAppError.InvalidParameter())
