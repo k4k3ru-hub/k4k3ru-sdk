@@ -65,6 +65,18 @@ func TestMethodValidate(t *testing.T) {
 			method: MethodMarketHubAggregationGet,
 		},
 		{
+			name:   "known market hub order book subscribe method",
+			method: MethodMarketHubOrderBookSubscribe,
+		},
+		{
+			name:   "known market hub order book unsubscribe method",
+			method: MethodMarketHubOrderBookUnsubscribe,
+		},
+		{
+			name:   "known market hub order book get method",
+			method: MethodMarketHubOrderBookGet,
+		},
+		{
 			name:   "known market hub arbitrage subscribe method",
 			method: MethodMarketHubArbitrageSubscribe,
 		},
