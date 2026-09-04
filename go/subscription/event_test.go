@@ -43,6 +43,7 @@ func TestEventValidate(t *testing.T) {
 
 	valid := []Event{
 		{Type: EventTypeAggregation, Data: json.RawMessage(`{}`)},
+		{Type: EventTypeOrderBook, Data: json.RawMessage(`{}`)},
 		{Type: EventTypeArbitrage, Data: json.RawMessage(`{"arbitrageType":"atomic"}`)},
 	}
 	for _, event := range valid {
