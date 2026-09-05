@@ -31,7 +31,7 @@ func TestMessageRouterRoutesBBOEvent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("register() error = %v", err)
 	}
-	router.HandleMessage([]byte(`{"e":"bbo","data":{"ac":"crypto","mt":"perp","s":"BTC/USDC","am":"consolidated-bbo","b":{"p":"63004.4","q":"1"},"a":{"p":"63005.4","q":"2"},"svc":2,"v":1,"ts":1}}`))
+	router.HandleMessage([]byte(`{"e":"bbo","data":{"ac":"crypto","mt":"perp","s":"BTC/USDC","b":{"p":"63004.4","q":"1"},"a":{"p":"63005.4","q":"2"},"svc":2,"v":1,"ts":1}}`))
 	if result := <-subscription.events; result.Bid.Price != "63004.4" {
 		t.Fatalf("bid price = %q", result.Bid.Price)
 	}

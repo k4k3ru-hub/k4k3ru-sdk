@@ -17,11 +17,10 @@ const (
 )
 
 type Params struct {
-	AssetClass      AssetClass      `json:"assetClass,omitempty"`
-	MarketType      MarketType      `json:"marketType"`
-	Symbol          Symbol          `json:"symbol"`
-	AggregationMode AggregationMode `json:"aggregationMode,omitempty"`
-	SourceFilter    *SourceFilter   `json:"sourceFilter,omitempty"`
+	AssetClass   AssetClass    `json:"assetClass,omitempty"`
+	MarketType   MarketType    `json:"marketType"`
+	Symbol       Symbol        `json:"symbol"`
+	SourceFilter *SourceFilter `json:"sourceFilter,omitempty"`
 }
 
 // UnmarshalJSON decodes BBO parameters and rejects unknown fields.
@@ -59,6 +58,7 @@ func (p *Params) UnmarshalJSON(data []byte) error {
 //   - Normalized BBO parameters.
 //
 // Version:
+//   - 2026-09-05: Removed the redundant aggregation mode.
 //   - 2026-09-05: Added.
 func (p Params) Normalize() Params {
 	p.AssetClass = AssetClass(strings.ToLower(strings.TrimSpace(string(p.AssetClass))))
@@ -67,10 +67,6 @@ func (p Params) Normalize() Params {
 	}
 	p.MarketType = MarketType(strings.ToLower(strings.TrimSpace(string(p.MarketType))))
 	p.Symbol = Symbol(strings.ToUpper(strings.TrimSpace(string(p.Symbol))))
-	p.AggregationMode = AggregationMode(strings.ToLower(strings.TrimSpace(string(p.AggregationMode))))
-	if p.AggregationMode == AggregationModeUnknown {
-		p.AggregationMode = AggregationModeConsolidatedBBO
-	}
 	if p.SourceFilter != nil {
 		normalized := p.SourceFilter.Normalize()
 		if normalized.VenueCategories == nil && normalized.LiquidityModels == nil && normalized.AMMPoolChains == nil {
@@ -88,6 +84,7 @@ func (p Params) Normalize() Params {
 //   - Validation error.
 //
 // Version:
+//   - 2026-09-05: Removed aggregation mode validation because BBO is always consolidated.
 //   - 2026-09-05: Added.
 func (p Params) Validate() error {
 	p = p.Normalize()
@@ -102,9 +99,6 @@ func (p Params) Validate() error {
 	}
 	if len(p.Symbol) > maxSymbolLength {
 		return k4k3ruSDKAppError.Tracef("failed to validate bbo parameters: %w: symbol=too_long actual_length=%d max_length=%d", k4k3ruSDKAppError.InvalidParameter(), len(p.Symbol), maxSymbolLength)
-	}
-	if p.AggregationMode != AggregationModeConsolidatedBBO {
-		return k4k3ruSDKAppError.Tracef("failed to validate bbo parameters: %w: aggregation_mode=invalid", k4k3ruSDKAppError.InvalidParameter())
 	}
 	if p.SourceFilter != nil {
 		if err := p.SourceFilter.Validate(); err != nil {
@@ -121,13 +115,14 @@ func (p Params) Validate() error {
 //   - Validation error.
 //
 // Version:
+//   - 2026-09-05: Removed the aggregation mode from the canonical key.
 //   - 2026-09-05: Added.
 func (p Params) SubscriptionKey() (string, error) {
 	p = p.Normalize()
 	if err := p.Validate(); err != nil {
 		return "", k4k3ruSDKAppError.Tracef("failed to build bbo subscription key: %w", err)
 	}
-	return fmt.Sprintf("%s:ac=%s:mt=%s:s=%s:am=%s:src=%s", bboSubscriptionNamespace, strings.ToUpper(string(p.AssetClass)), strings.ToUpper(string(p.MarketType)), p.Symbol, strings.ToUpper(string(p.AggregationMode)), p.sourceSelector()), nil
+	return fmt.Sprintf("%s:ac=%s:mt=%s:s=%s:src=%s", bboSubscriptionNamespace, strings.ToUpper(string(p.AssetClass)), strings.ToUpper(string(p.MarketType)), p.Symbol, p.sourceSelector()), nil
 }
 
 func (p Params) sourceSelector() string {

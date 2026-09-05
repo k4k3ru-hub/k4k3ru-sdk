@@ -10,15 +10,24 @@ func TestParamsNormalizeAndSubscriptionKey(t *testing.T) {
 
 	params := Params{MarketType: " spot ", Symbol: " btc/usdc "}
 	normalized := params.Normalize()
-	if normalized.AssetClass != AssetClassCrypto || normalized.MarketType != MarketTypeSpot || normalized.Symbol != "BTC/USDC" || normalized.AggregationMode != AggregationModeConsolidatedBBO {
+	if normalized.AssetClass != AssetClassCrypto || normalized.MarketType != MarketTypeSpot || normalized.Symbol != "BTC/USDC" {
 		t.Fatalf("Normalize() = %#v", normalized)
 	}
 	key, err := params.SubscriptionKey()
 	if err != nil {
 		t.Fatalf("SubscriptionKey() error = %v", err)
 	}
-	if want := "MarketHub.BBO:ac=CRYPTO:mt=SPOT:s=BTC/USDC:am=CONSOLIDATED-BBO:src=*"; key != want {
+	if want := "MarketHub.BBO:ac=CRYPTO:mt=SPOT:s=BTC/USDC:src=*"; key != want {
 		t.Fatalf("SubscriptionKey() = %q, want %q", key, want)
+	}
+}
+
+func TestParamsJSONRejectsAggregationMode(t *testing.T) {
+	t.Parallel()
+
+	var params Params
+	if err := json.Unmarshal([]byte(`{"marketType":"spot","symbol":"BTC/USDC","aggregationMode":"consolidated-bbo"}`), &params); err == nil {
+		t.Fatal("Unmarshal() error = nil, want unknown-field error")
 	}
 }
 

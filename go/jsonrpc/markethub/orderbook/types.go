@@ -17,13 +17,6 @@ const (
 
 type Symbol string
 
-type AggregationMode string
-
-const (
-	AggregationModeUnknown           AggregationMode = ""
-	AggregationModeConsolidatedDepth AggregationMode = "consolidated-depth"
-)
-
 type VenueCategory string
 
 const (

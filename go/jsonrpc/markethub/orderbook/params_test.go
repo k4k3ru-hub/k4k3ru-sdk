@@ -14,7 +14,7 @@ func TestParamsNormalizeAppliesDefaults(t *testing.T) {
 
 	params := Params{MarketType: " SPOT ", Symbol: " btc/usdc "}
 	got := params.Normalize()
-	if got.AssetClass != AssetClassCrypto || got.MarketType != MarketTypeSpot || got.Symbol != "BTC/USDC" || got.Depth != 3 || got.AggregationMode != AggregationModeConsolidatedDepth {
+	if got.AssetClass != AssetClassCrypto || got.MarketType != MarketTypeSpot || got.Symbol != "BTC/USDC" || got.Depth != 3 {
 		t.Fatalf("Normalize() = %#v", got)
 	}
 }
@@ -24,14 +24,13 @@ func TestParamsJSON(t *testing.T) {
 
 	want := Params{
 		AssetClass: AssetClassCrypto, MarketType: MarketTypePerp, Symbol: "BTC/USDC", Depth: 10,
-		AggregationMode: AggregationModeConsolidatedDepth,
-		SourceFilter:    &SourceFilter{VenueCategories: []VenueCategory{VenueCategoryCEX}, LiquidityModels: []LiquidityModel{LiquidityModelOrderBook}},
+		SourceFilter: &SourceFilter{VenueCategories: []VenueCategory{VenueCategoryCEX}, LiquidityModels: []LiquidityModel{LiquidityModelOrderBook}},
 	}
 	data, err := json.Marshal(want)
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
 	}
-	wantJSON := `{"assetClass":"crypto","marketType":"perp","symbol":"BTC/USDC","depth":10,"aggregationMode":"consolidated-depth","sourceFilter":{"venueCategories":["cex"],"liquidityModels":["order-book"]}}`
+	wantJSON := `{"assetClass":"crypto","marketType":"perp","symbol":"BTC/USDC","depth":10,"sourceFilter":{"venueCategories":["cex"],"liquidityModels":["order-book"]}}`
 	if string(data) != wantJSON {
 		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}
@@ -49,6 +48,16 @@ func TestParamsRejectsUnknownJSONField(t *testing.T) {
 
 	var params Params
 	err := json.Unmarshal([]byte(`{"marketType":"spot","symbol":"BTC/USDC","venue":"binance"}`), &params)
+	if err == nil || !errors.Is(err, k4k3ruSDKAppError.InvalidParameter()) {
+		t.Fatalf("Unmarshal() error = %v, want invalid parameter", err)
+	}
+}
+
+func TestParamsRejectsAggregationMode(t *testing.T) {
+	t.Parallel()
+
+	var params Params
+	err := json.Unmarshal([]byte(`{"marketType":"spot","symbol":"BTC/USDC","aggregationMode":"consolidated-depth"}`), &params)
 	if err == nil || !errors.Is(err, k4k3ruSDKAppError.InvalidParameter()) {
 		t.Fatalf("Unmarshal() error = %v, want invalid parameter", err)
 	}
@@ -75,7 +84,7 @@ func TestParamsSubscriptionKeyIsVenueIndependent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SubscriptionKey() error = %v", err)
 	}
-	want := "MarketHub.OrderBook:ac=CRYPTO:mt=SPOT:s=BTC/USDC:d=3:am=CONSOLIDATED-DEPTH:src=*"
+	want := "MarketHub.OrderBook:ac=CRYPTO:mt=SPOT:s=BTC/USDC:d=3:src=*"
 	if key != want {
 		t.Fatalf("SubscriptionKey() = %q, want %q", key, want)
 	}

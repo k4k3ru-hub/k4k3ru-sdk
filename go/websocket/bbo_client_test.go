@@ -58,9 +58,9 @@ func (s *fakeBBOJSONRPCSender) send(_ context.Context, method k4k3ruSDKJSONRPC.M
 }
 
 func validBBOParams() k4k3ruSDKJSONRPCBBO.Params {
-	return k4k3ruSDKJSONRPCBBO.Params{AssetClass: k4k3ruSDKJSONRPCBBO.AssetClassCrypto, MarketType: k4k3ruSDKJSONRPCBBO.MarketTypePerp, Symbol: "BTC/USDC", AggregationMode: k4k3ruSDKJSONRPCBBO.AggregationModeConsolidatedBBO}
+	return k4k3ruSDKJSONRPCBBO.Params{AssetClass: k4k3ruSDKJSONRPCBBO.AssetClassCrypto, MarketType: k4k3ruSDKJSONRPCBBO.MarketTypePerp, Symbol: "BTC/USDC"}
 }
 
 func bboResult(params k4k3ruSDKJSONRPCBBO.Params, bidPrice string) k4k3ruSDKJSONRPCBBO.Result {
-	return k4k3ruSDKJSONRPCBBO.Result{AssetClass: params.AssetClass, MarketType: params.MarketType, Symbol: params.Symbol, AggregationMode: params.AggregationMode, Bid: k4k3ruSDKJSONRPCBBO.Level{Price: bidPrice, Quantity: "1"}, Ask: k4k3ruSDKJSONRPCBBO.Level{Price: "101", Quantity: "1"}}
+	return k4k3ruSDKJSONRPCBBO.Result{AssetClass: params.AssetClass, MarketType: params.MarketType, Symbol: params.Symbol, Bid: k4k3ruSDKJSONRPCBBO.Level{Price: bidPrice, Quantity: "1"}, Ask: k4k3ruSDKJSONRPCBBO.Level{Price: "101", Quantity: "1"}}
 }

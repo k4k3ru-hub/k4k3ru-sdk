@@ -55,7 +55,7 @@ func (r *bboEventRegistry) route(result k4k3ruSDKJSONRPCBBO.Result) (bool, error
 	if r == nil {
 		return false, fmt.Errorf("failed to route bbo event: event_registry=null")
 	}
-	params := k4k3ruSDKJSONRPCBBO.Params{AssetClass: result.AssetClass, MarketType: result.MarketType, Symbol: result.Symbol, AggregationMode: result.AggregationMode, SourceFilter: result.SourceFilter}
+	params := k4k3ruSDKJSONRPCBBO.Params{AssetClass: result.AssetClass, MarketType: result.MarketType, Symbol: result.Symbol, SourceFilter: result.SourceFilter}
 	key, err := params.SubscriptionKey()
 	if err != nil {
 		return false, fmt.Errorf("failed to route bbo event: %w", err)

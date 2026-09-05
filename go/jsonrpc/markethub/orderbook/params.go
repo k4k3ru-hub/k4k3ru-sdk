@@ -19,12 +19,11 @@ const (
 )
 
 type Params struct {
-	AssetClass      AssetClass      `json:"assetClass,omitempty"`
-	MarketType      MarketType      `json:"marketType"`
-	Symbol          Symbol          `json:"symbol"`
-	Depth           uint16          `json:"depth,omitempty"`
-	AggregationMode AggregationMode `json:"aggregationMode,omitempty"`
-	SourceFilter    *SourceFilter   `json:"sourceFilter,omitempty"`
+	AssetClass   AssetClass    `json:"assetClass,omitempty"`
+	MarketType   MarketType    `json:"marketType"`
+	Symbol       Symbol        `json:"symbol"`
+	Depth        uint16        `json:"depth,omitempty"`
+	SourceFilter *SourceFilter `json:"sourceFilter,omitempty"`
 }
 
 // UnmarshalJSON decodes order book parameters and rejects unknown fields.
@@ -33,6 +32,7 @@ type Params struct {
 //   - data: JSON-encoded order book parameters.
 //
 // Version:
+//   - 2026-09-05: Removed the redundant aggregation mode.
 //   - 2026-09-04: Added.
 func (p *Params) UnmarshalJSON(data []byte) error {
 	if p == nil {
@@ -73,10 +73,6 @@ func (p Params) Normalize() Params {
 	if p.Depth == 0 {
 		p.Depth = defaultDepth
 	}
-	p.AggregationMode = AggregationMode(strings.ToLower(strings.TrimSpace(string(p.AggregationMode))))
-	if p.AggregationMode == AggregationModeUnknown {
-		p.AggregationMode = AggregationModeConsolidatedDepth
-	}
 	if p.SourceFilter != nil {
 		normalized := p.SourceFilter.Normalize()
 		if normalized.VenueCategories == nil && normalized.LiquidityModels == nil && normalized.AMMPoolChains == nil {
@@ -94,6 +90,7 @@ func (p Params) Normalize() Params {
 //   - Validation error.
 //
 // Version:
+//   - 2026-09-05: Removed aggregation mode validation because order books are always consolidated.
 //   - 2026-09-04: Added.
 func (p Params) Validate() error {
 	p = p.Normalize()
@@ -112,9 +109,6 @@ func (p Params) Validate() error {
 	if p.Depth == 0 || p.Depth > maximumDepth {
 		return k4k3ruSDKAppError.Tracef("failed to validate order book parameters: %w: depth=out_of_range min_value=1 max_value=%d", k4k3ruSDKAppError.InvalidParameter(), maximumDepth)
 	}
-	if p.AggregationMode != AggregationModeConsolidatedDepth {
-		return k4k3ruSDKAppError.Tracef("failed to validate order book parameters: %w: aggregation_mode=invalid", k4k3ruSDKAppError.InvalidParameter())
-	}
 	if p.SourceFilter != nil {
 		if err := p.SourceFilter.Validate(); err != nil {
 			return k4k3ruSDKAppError.Tracef("failed to validate order book parameters: %w", err)
@@ -130,6 +124,7 @@ func (p Params) Validate() error {
 //   - Validation error.
 //
 // Version:
+//   - 2026-09-05: Removed the aggregation mode from the canonical key.
 //   - 2026-09-04: Added.
 func (p Params) SubscriptionKey() (string, error) {
 	p = p.Normalize()
@@ -137,13 +132,12 @@ func (p Params) SubscriptionKey() (string, error) {
 		return "", k4k3ruSDKAppError.Tracef("failed to build order book subscription key: %w", err)
 	}
 	return fmt.Sprintf(
-		"%s:ac=%s:mt=%s:s=%s:d=%d:am=%s:src=%s",
+		"%s:ac=%s:mt=%s:s=%s:d=%d:src=%s",
 		orderBookSubscriptionNamespace,
 		strings.ToUpper(string(p.AssetClass)),
 		strings.ToUpper(string(p.MarketType)),
 		p.Symbol,
 		p.Depth,
-		strings.ToUpper(string(p.AggregationMode)),
 		p.sourceSelector(),
 	), nil
 }

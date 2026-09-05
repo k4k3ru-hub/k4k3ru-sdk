@@ -17,13 +17,6 @@ const (
 
 type Symbol string
 
-type AggregationMode string
-
-const (
-	AggregationModeUnknown         AggregationMode = ""
-	AggregationModeConsolidatedBBO AggregationMode = "consolidated-bbo"
-)
-
 type VenueCategory string
 
 const (
