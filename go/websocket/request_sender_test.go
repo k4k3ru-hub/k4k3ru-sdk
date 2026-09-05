@@ -28,7 +28,7 @@ func TestRequestSenderSignsSendsAndWaitsForResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("newRequestSender() error = %v", err)
 	}
-	response, err := sender.send(context.Background(), k4k3ruSDKJSONRPC.MethodMarketHubAggregationSubscribe, json.RawMessage(`{"symbol":"BTC/USDC"}`))
+	response, err := sender.send(context.Background(), k4k3ruSDKJSONRPC.MethodMarketHubBBOSubscribe, json.RawMessage(`{"symbol":"BTC/USDC"}`))
 	if err != nil {
 		t.Fatalf("send() error = %v", err)
 	}
@@ -48,7 +48,7 @@ func TestRequestSenderCancelsPendingRequestOnContextCancellation(t *testing.T) {
 	sender, _ := newRequestSender(transport, tracker, staticCredentialProvider{credential: validSigningCredential()}, fixedClock{value: time.Now()}, fixedNonceGenerator{value: "nonce"}, &fixedRequestIDGenerator{value: json.RawMessage(`8`)})
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	_, err := sender.send(ctx, k4k3ruSDKJSONRPC.MethodMarketHubAggregationSubscribe, json.RawMessage(`{}`))
+	_, err := sender.send(ctx, k4k3ruSDKJSONRPC.MethodMarketHubBBOSubscribe, json.RawMessage(`{}`))
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("send() error = %v", err)
 	}

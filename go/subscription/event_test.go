@@ -11,12 +11,12 @@ import (
 func TestEventJSONRoundTrip(t *testing.T) {
 	t.Parallel()
 
-	want := Event{Type: EventTypeAggregation, Data: json.RawMessage(`{"symbol":"BTC/USDC"}`)}
+	want := Event{Type: EventTypeBBO, Data: json.RawMessage(`{"symbol":"BTC/USDC"}`)}
 	data, err := json.Marshal(want)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(data) != `{"e":"ag","data":{"symbol":"BTC/USDC"}}` {
+	if string(data) != `{"e":"bbo","data":{"symbol":"BTC/USDC"}}` {
 		t.Fatalf("Marshal() = %s", data)
 	}
 	var got Event
@@ -32,7 +32,7 @@ func TestEventRejectsUnknownFields(t *testing.T) {
 	t.Parallel()
 
 	var event Event
-	err := json.Unmarshal([]byte(`{"e":"ag","data":{},"unknown":true}`), &event)
+	err := json.Unmarshal([]byte(`{"e":"bbo","data":{},"unknown":true}`), &event)
 	if err == nil || !errors.Is(err, k4k3ruSDKAppError.InvalidParameter()) {
 		t.Fatalf("Unmarshal() error = %v, want invalid parameter", err)
 	}
@@ -42,7 +42,6 @@ func TestEventValidate(t *testing.T) {
 	t.Parallel()
 
 	valid := []Event{
-		{Type: EventTypeAggregation, Data: json.RawMessage(`{}`)},
 		{Type: EventTypeBBO, Data: json.RawMessage(`{}`)},
 		{Type: EventTypeOrderBook, Data: json.RawMessage(`{}`)},
 		{Type: EventTypeArbitrage, Data: json.RawMessage(`{"arbitrageType":"atomic"}`)},
@@ -55,8 +54,8 @@ func TestEventValidate(t *testing.T) {
 	invalid := []Event{
 		{},
 		{Type: "unknown", Data: json.RawMessage(`{}`)},
-		{Type: EventTypeAggregation},
-		{Type: EventTypeAggregation, Data: json.RawMessage(`invalid`)},
+		{Type: EventTypeBBO},
+		{Type: EventTypeBBO, Data: json.RawMessage(`invalid`)},
 	}
 	for _, event := range invalid {
 		if err := event.Validate(); err == nil || !errors.Is(err, k4k3ruSDKAppError.InvalidParameter()) {

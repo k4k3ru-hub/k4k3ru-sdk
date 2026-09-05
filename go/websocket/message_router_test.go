@@ -22,18 +22,18 @@ func TestMessageRouterRoutesJSONRPCResponse(t *testing.T) {
 	}
 }
 
-func TestMessageRouterRoutesAggregationEvent(t *testing.T) {
+func TestMessageRouterRoutesBBOEvent(t *testing.T) {
 	t.Parallel()
 
 	router, _, events := newTestMessageRouter(t)
-	params := validAggregationParams()
+	params := validBBOParams()
 	subscription, err := events.register(params)
 	if err != nil {
 		t.Fatalf("register() error = %v", err)
 	}
-	router.HandleMessage([]byte(`{"e":"ag","data":{"ac":"crypto","mt":"perp","s":"BTC/USDC","am":"composite-mid","p":"63004.4","svc":2,"ts":1}}`))
-	if result := <-subscription.events; result.Price != "63004.4" {
-		t.Fatalf("event price = %q", result.Price)
+	router.HandleMessage([]byte(`{"e":"bbo","data":{"ac":"crypto","mt":"perp","s":"BTC/USDC","am":"consolidated-bbo","b":{"p":"63004.4","q":"1"},"a":{"p":"63005.4","q":"2"},"svc":2,"v":1,"ts":1}}`))
+	if result := <-subscription.events; result.Bid.Price != "63004.4" {
+		t.Fatalf("bid price = %q", result.Bid.Price)
 	}
 }
 
@@ -70,7 +70,7 @@ func TestMessageRouterCloseFailsPendingRequests(t *testing.T) {
 func TestNewMessageRouterValidatesDependencies(t *testing.T) {
 	t.Parallel()
 
-	if _, err := newMessageRouter(nil, newAggregationEventRegistry()); err == nil || !strings.Contains(err.Error(), "request_tracker=null") {
+	if _, err := newMessageRouter(nil, newBBOEventRegistry()); err == nil || !strings.Contains(err.Error(), "request_tracker=null") {
 		t.Fatalf("nil request tracker error = %v", err)
 	}
 	if _, err := newMessageRouter(newRequestTracker(), nil); err == nil || !strings.Contains(err.Error(), "event_registry=null") {
@@ -78,10 +78,10 @@ func TestNewMessageRouterValidatesDependencies(t *testing.T) {
 	}
 }
 
-func newTestMessageRouter(t *testing.T) (*messageRouter, *requestTracker, *aggregationEventRegistry) {
+func newTestMessageRouter(t *testing.T) (*messageRouter, *requestTracker, *bboEventRegistry) {
 	t.Helper()
 	requests := newRequestTracker()
-	events := newAggregationEventRegistry()
+	events := newBBOEventRegistry()
 	router, err := newMessageRouter(requests, events)
 	if err != nil {
 		t.Fatalf("newMessageRouter() error = %v", err)

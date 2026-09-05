@@ -24,10 +24,10 @@ type ModuleConfig struct {
 type Module struct {
 	client        *client
 	requests      *requestTracker
-	events        *aggregationEventRegistry
+	events        *bboEventRegistry
 	router        *messageRouter
 	subscriptions *subscriptionLifecycle
-	aggregation   *AggregationClient
+	bbo           *BBOClient
 }
 
 // NewModule composes a K4K3RU WebSocket module.
@@ -41,7 +41,7 @@ type Module struct {
 //   - Configuration or composition error.
 //
 // Version:
-//   - 2026-08-29: Composed authentication and the aggregation subscription client.
+//   - 2026-09-05: Replaced the aggregation client with the BBO client.
 //   - 2026-08-29: Added.
 func NewModule(ctx context.Context, config ModuleConfig) (*Module, error) {
 	return newModule(ctx, config, moduleDeps{
@@ -87,7 +87,7 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 		return nil, fmt.Errorf("failed to create websocket module: client_factory=null")
 	}
 	requests := newRequestTracker()
-	events := newAggregationEventRegistry()
+	events := newBBOEventRegistry()
 	router, err := newMessageRouter(requests, events)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
@@ -112,7 +112,7 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
 	}
-	aggregationClient, err := newAggregationClient(sender, subscriptions, events)
+	bboClient, err := newBBOClient(sender, subscriptions, events)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
 	}
@@ -122,22 +122,22 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 		events:        events,
 		router:        router,
 		subscriptions: subscriptions,
-		aggregation:   aggregationClient,
+		bbo:           bboClient,
 	}, nil
 }
 
-// Aggregation returns the composed Market Hub aggregation WebSocket client.
+// BBO returns the composed Market Hub BBO WebSocket client.
 //
 // Returns:
-//   - Aggregation client, or nil for a nil or incomplete module.
+//   - BBO client, or nil for a nil or incomplete module.
 //
 // Version:
-//   - 2026-08-29: Added.
-func (m *Module) Aggregation() *AggregationClient {
+//   - 2026-09-05: Added.
+func (m *Module) BBO() *BBOClient {
 	if m == nil {
 		return nil
 	}
-	return m.aggregation
+	return m.bbo
 }
 
 func (c ModuleConfig) validate() error {

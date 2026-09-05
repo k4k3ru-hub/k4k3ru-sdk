@@ -25,7 +25,7 @@ func TestNewModuleComposesPhysicalClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("newModule() error = %v", err)
 	}
-	if module == nil || module.client == nil || module.client.physical != factory.client || module.requests == nil || module.events == nil || module.router == nil || module.subscriptions == nil {
+	if module == nil || module.client == nil || module.client.physical != factory.client || module.requests == nil || module.events == nil || module.router == nil || module.subscriptions == nil || module.BBO() == nil {
 		t.Fatalf("newModule() = %#v", module)
 	}
 	if factory.endpointURL != config.EndpointURL {
@@ -94,7 +94,7 @@ func TestModuleClose(t *testing.T) {
 	if err != nil {
 		t.Fatalf("register() error = %v", err)
 	}
-	router, err := newMessageRouter(requests, newAggregationEventRegistry())
+	router, err := newMessageRouter(requests, newBBOEventRegistry())
 	if err != nil {
 		t.Fatalf("newMessageRouter() error = %v", err)
 	}

@@ -20,7 +20,7 @@ func TestSignRequestSupportsConfiguredAlgorithms(t *testing.T) {
 		{APIKey: "api-key", SecretKey: hmacSecret, SignatureAlgorithm: SignatureAlgorithmHMACSHA256},
 		{APIKey: "api-key", SecretKey: ed25519Secret, SignatureAlgorithm: SignatureAlgorithmEd25519},
 	} {
-		auth, err := SignRequest(k4k3ruSDKJSONRPC.MethodMarketHubAggregationSubscribe, json.RawMessage(`{"symbol":"BTC/USDC"}`), credential, 1788019200, "nonce")
+		auth, err := SignRequest(k4k3ruSDKJSONRPC.MethodMarketHubBBOSubscribe, json.RawMessage(`{"symbol":"BTC/USDC"}`), credential, 1788019200, "nonce")
 		if err != nil {
 			t.Fatalf("SignRequest() error = %v", err)
 		}

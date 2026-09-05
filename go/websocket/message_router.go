@@ -6,17 +6,17 @@ import (
 	"fmt"
 
 	k4k3ruSDKJSONRPC "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc"
-	k4k3ruSDKJSONRPCAggregation "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/aggregation"
+	k4k3ruSDKJSONRPCBBO "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/bbo"
 	k4k3ruSDKSubscription "github.com/k4k3ru-hub/k4k3ru-sdk/go/subscription"
 )
 
 type messageRouter struct {
 	requests *requestTracker
-	events   *aggregationEventRegistry
+	events   *bboEventRegistry
 	errors   chan error
 }
 
-func newMessageRouter(requests *requestTracker, events *aggregationEventRegistry) (*messageRouter, error) {
+func newMessageRouter(requests *requestTracker, events *bboEventRegistry) (*messageRouter, error) {
 	if requests == nil {
 		return nil, fmt.Errorf("failed to create websocket message router: request_tracker=null")
 	}
@@ -76,13 +76,13 @@ func (r *messageRouter) route(message []byte) error {
 		return fmt.Errorf("failed to route websocket event: %w", err)
 	}
 	switch event.Type {
-	case k4k3ruSDKSubscription.EventTypeAggregation:
-		var result k4k3ruSDKJSONRPCAggregation.Result
+	case k4k3ruSDKSubscription.EventTypeBBO:
+		var result k4k3ruSDKJSONRPCBBO.Result
 		if err := json.Unmarshal(event.Data, &result); err != nil {
-			return fmt.Errorf("failed to route aggregation event: failed to decode data: %w", err)
+			return fmt.Errorf("failed to route bbo event: failed to decode data: %w", err)
 		}
-		if result.Price == "" {
-			return fmt.Errorf("failed to route aggregation event: price=empty")
+		if result.Bid.Price == "" || result.Bid.Quantity == "" || result.Ask.Price == "" || result.Ask.Quantity == "" {
+			return fmt.Errorf("failed to route bbo event: level=invalid")
 		}
 		if _, err := r.events.route(result); err != nil {
 			return fmt.Errorf("failed to route websocket message: %w", err)
