@@ -11,6 +11,5 @@ type Result struct {
 	SourceVenueCount uint16          `json:"svc"`
 	Version          uint64          `json:"v"`
 	Timestamp        int64           `json:"ts"`
-	Synchronized     bool            `json:"sync"`
 	SourceFilter     *SourceFilter   `json:"sourceFilter,omitempty"`
 }
