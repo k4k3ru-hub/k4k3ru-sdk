@@ -10,6 +10,7 @@ type RouteFamily string
 type VenueCategory string
 type LiquidityModel string
 type Chain string
+type Network string
 
 const (
 	AssetClassUnknown       AssetClass     = ""
@@ -33,6 +34,7 @@ const (
 	ChainBNB                Chain          = "bnb"
 	ChainSolana             Chain          = "solana"
 	ChainSui                Chain          = "sui"
+	NetworkMainnet          Network        = "mainnet"
 )
 
 var allRouteFamilies = []RouteFamily{RouteFamilySpotSpot, RouteFamilySpotPerp, RouteFamilyPerpSpot, RouteFamilyPerpPerp}

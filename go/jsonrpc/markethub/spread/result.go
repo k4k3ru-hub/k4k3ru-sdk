@@ -5,7 +5,13 @@ type Leg struct {
 	MarketType         MarketType `json:"mt"`
 	Side               Side       `json:"sd"`
 	BaseAsset          Asset      `json:"ba"`
+	BaseAssetID        string     `json:"bai,omitempty"`
 	QuoteAsset         Asset      `json:"qa"`
+	QuoteAssetID       string     `json:"qai,omitempty"`
+	VenueSymbol        string     `json:"vs,omitempty"`
+	PoolID             string     `json:"pid,omitempty"`
+	Chain              Chain      `json:"c,omitempty"`
+	Network            Network    `json:"n,omitempty"`
 	Quantity           string     `json:"q"`
 	VWAP               string     `json:"vwap"`
 	QuoteAmount        string     `json:"qam"`
