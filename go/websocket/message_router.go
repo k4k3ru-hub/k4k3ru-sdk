@@ -7,23 +7,28 @@ import (
 
 	k4k3ruSDKJSONRPC "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc"
 	k4k3ruSDKJSONRPCBBO "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/bbo"
+	k4k3ruSDKJSONRPCOrderBook "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/orderbook"
 	k4k3ruSDKSubscription "github.com/k4k3ru-hub/k4k3ru-sdk/go/subscription"
 )
 
 type messageRouter struct {
-	requests *requestTracker
-	events   *bboEventRegistry
-	errors   chan error
+	requests        *requestTracker
+	bboEvents       *bboEventRegistry
+	orderBookEvents *orderBookEventRegistry
+	errors          chan error
 }
 
-func newMessageRouter(requests *requestTracker, events *bboEventRegistry) (*messageRouter, error) {
+func newMessageRouter(requests *requestTracker, bboEvents *bboEventRegistry, orderBookEvents *orderBookEventRegistry) (*messageRouter, error) {
 	if requests == nil {
 		return nil, fmt.Errorf("failed to create websocket message router: request_tracker=null")
 	}
-	if events == nil {
-		return nil, fmt.Errorf("failed to create websocket message router: event_registry=null")
+	if bboEvents == nil {
+		return nil, fmt.Errorf("failed to create websocket message router: bbo_event_registry=null")
 	}
-	return &messageRouter{requests: requests, events: events, errors: make(chan error, 1)}, nil
+	if orderBookEvents == nil {
+		return nil, fmt.Errorf("failed to create websocket message router: order_book_event_registry=null")
+	}
+	return &messageRouter{requests: requests, bboEvents: bboEvents, orderBookEvents: orderBookEvents, errors: make(chan error, 1)}, nil
 }
 
 func (r *messageRouter) HandleMessage(message []byte) {
@@ -84,7 +89,18 @@ func (r *messageRouter) route(message []byte) error {
 		if result.Bid.Price == "" || result.Bid.Quantity == "" || result.Ask.Price == "" || result.Ask.Quantity == "" {
 			return fmt.Errorf("failed to route bbo event: level=invalid")
 		}
-		if _, err := r.events.route(result); err != nil {
+		if _, err := r.bboEvents.route(result); err != nil {
+			return fmt.Errorf("failed to route websocket message: %w", err)
+		}
+	case k4k3ruSDKSubscription.EventTypeOrderBook:
+		var result k4k3ruSDKJSONRPCOrderBook.Result
+		if err := json.Unmarshal(event.Data, &result); err != nil {
+			return fmt.Errorf("failed to route order book event: failed to decode data: %w", err)
+		}
+		if len(result.Bids) == 0 || len(result.Asks) == 0 {
+			return fmt.Errorf("failed to route order book event: levels=empty")
+		}
+		if _, err := r.orderBookEvents.route(result); err != nil {
 			return fmt.Errorf("failed to route websocket message: %w", err)
 		}
 	case k4k3ruSDKSubscription.EventTypeArbitrage:

@@ -37,6 +37,26 @@ func TestMessageRouterRoutesBBOEvent(t *testing.T) {
 	}
 }
 
+func TestMessageRouterRoutesOrderBookEvent(t *testing.T) {
+	t.Parallel()
+
+	requests := newRequestTracker()
+	events := newOrderBookEventRegistry()
+	router, err := newMessageRouter(requests, newBBOEventRegistry(), events)
+	if err != nil {
+		t.Fatal(err)
+	}
+	params := validOrderBookParams()
+	subscription, err := events.register(params)
+	if err != nil {
+		t.Fatal(err)
+	}
+	router.HandleMessage([]byte(`{"e":"ob","data":{"ac":"crypto","mt":"spot","s":"BTC/USDC","d":3,"b":[{"p":"100","q":"1"}],"a":[{"p":"101","q":"2"}],"svc":2,"v":1,"ts":1}}`))
+	if result := <-subscription.events; result.Bids[0].Price != "100" {
+		t.Fatalf("bid price = %q", result.Bids[0].Price)
+	}
+}
+
 func TestMessageRouterReportsMalformedMessages(t *testing.T) {
 	t.Parallel()
 
@@ -70,11 +90,14 @@ func TestMessageRouterCloseFailsPendingRequests(t *testing.T) {
 func TestNewMessageRouterValidatesDependencies(t *testing.T) {
 	t.Parallel()
 
-	if _, err := newMessageRouter(nil, newBBOEventRegistry()); err == nil || !strings.Contains(err.Error(), "request_tracker=null") {
+	if _, err := newMessageRouter(nil, newBBOEventRegistry(), newOrderBookEventRegistry()); err == nil || !strings.Contains(err.Error(), "request_tracker=null") {
 		t.Fatalf("nil request tracker error = %v", err)
 	}
-	if _, err := newMessageRouter(newRequestTracker(), nil); err == nil || !strings.Contains(err.Error(), "event_registry=null") {
-		t.Fatalf("nil event registry error = %v", err)
+	if _, err := newMessageRouter(newRequestTracker(), nil, newOrderBookEventRegistry()); err == nil || !strings.Contains(err.Error(), "bbo_event_registry=null") {
+		t.Fatalf("nil bbo event registry error = %v", err)
+	}
+	if _, err := newMessageRouter(newRequestTracker(), newBBOEventRegistry(), nil); err == nil || !strings.Contains(err.Error(), "order_book_event_registry=null") {
+		t.Fatalf("nil order book event registry error = %v", err)
 	}
 }
 
@@ -82,7 +105,7 @@ func newTestMessageRouter(t *testing.T) (*messageRouter, *requestTracker, *bboEv
 	t.Helper()
 	requests := newRequestTracker()
 	events := newBBOEventRegistry()
-	router, err := newMessageRouter(requests, events)
+	router, err := newMessageRouter(requests, events, newOrderBookEventRegistry())
 	if err != nil {
 		t.Fatalf("newMessageRouter() error = %v", err)
 	}

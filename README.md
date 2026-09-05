@@ -19,6 +19,28 @@ import (
 )
 ```
 
+### WebSocket OrderBook購読
+
+`websocket.NewModule`が返すComposition Rootから`OrderBook()`を取得し、統合板を購読できます。`Params`の`depth`は1〜20で、未指定時は3です。
+
+```go
+subscription, err := module.OrderBook().Subscribe(ctx, orderbook.Params{
+	MarketType: orderbook.MarketTypeSpot,
+	Symbol:     "BTC/USDC",
+	Depth:      3,
+})
+if err != nil {
+	return err
+}
+result := <-subscription.Events()
+fmt.Printf("bids=%v asks=%v\n", result.Bids, result.Asks)
+if err := module.OrderBook().Unsubscribe(ctx, subscription); err != nil {
+	return err
+}
+```
+
+接続先とCredential Providerは`websocket.ModuleConfig`で明示的に渡します。個別Venueは指定せず、必要に応じて`SourceFilter`でVenueカテゴリや流動性モデルを絞り込みます。
+
 ## Goで署名認証付きリクエストを送る
 
 署名が必要なメソッドでは、API CredentialのAPI keyと、作成時に取得したsecret keyを使用します。次の例は`AccountApp.GetUsageBalance`を呼び出す、実行可能な最小構成です。

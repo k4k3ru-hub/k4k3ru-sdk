@@ -22,12 +22,14 @@ type ModuleConfig struct {
 
 // Module owns the composed K4K3RU WebSocket client graph.
 type Module struct {
-	client        *client
-	requests      *requestTracker
-	events        *bboEventRegistry
-	router        *messageRouter
-	subscriptions *subscriptionLifecycle
-	bbo           *BBOClient
+	client          *client
+	requests        *requestTracker
+	bboEvents       *bboEventRegistry
+	orderBookEvents *orderBookEventRegistry
+	router          *messageRouter
+	subscriptions   *subscriptionLifecycle
+	bbo             *BBOClient
+	orderBook       *OrderBookClient
 }
 
 // NewModule composes a K4K3RU WebSocket module.
@@ -41,6 +43,7 @@ type Module struct {
 //   - Configuration or composition error.
 //
 // Version:
+//   - 2026-09-05: Added the OrderBook client.
 //   - 2026-09-05: Replaced the aggregation client with the BBO client.
 //   - 2026-08-29: Added.
 func NewModule(ctx context.Context, config ModuleConfig) (*Module, error) {
@@ -87,8 +90,9 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 		return nil, fmt.Errorf("failed to create websocket module: client_factory=null")
 	}
 	requests := newRequestTracker()
-	events := newBBOEventRegistry()
-	router, err := newMessageRouter(requests, events)
+	bboEvents := newBBOEventRegistry()
+	orderBookEvents := newOrderBookEventRegistry()
+	router, err := newMessageRouter(requests, bboEvents, orderBookEvents)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
 	}
@@ -112,18 +116,38 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
 	}
-	bboClient, err := newBBOClient(sender, subscriptions, events)
+	bboClient, err := newBBOClient(sender, subscriptions, bboEvents)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create websocket module: %w", err)
+	}
+	orderBookClient, err := newOrderBookClient(sender, subscriptions, orderBookEvents)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
 	}
 	return &Module{
-		client:        transportClient,
-		requests:      requests,
-		events:        events,
-		router:        router,
-		subscriptions: subscriptions,
-		bbo:           bboClient,
+		client:          transportClient,
+		requests:        requests,
+		bboEvents:       bboEvents,
+		orderBookEvents: orderBookEvents,
+		router:          router,
+		subscriptions:   subscriptions,
+		bbo:             bboClient,
+		orderBook:       orderBookClient,
 	}, nil
+}
+
+// OrderBook returns the composed Market Hub OrderBook WebSocket client.
+//
+// Returns:
+//   - OrderBook client, or nil for a nil or incomplete module.
+//
+// Version:
+//   - 2026-09-05: Added.
+func (m *Module) OrderBook() *OrderBookClient {
+	if m == nil {
+		return nil
+	}
+	return m.orderBook
 }
 
 // BBO returns the composed Market Hub BBO WebSocket client.
