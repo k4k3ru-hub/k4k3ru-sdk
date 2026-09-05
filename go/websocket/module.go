@@ -26,10 +26,12 @@ type Module struct {
 	requests        *requestTracker
 	bboEvents       *bboEventRegistry
 	orderBookEvents *orderBookEventRegistry
+	spreadEvents    *spreadEventRegistry
 	router          *messageRouter
 	subscriptions   *subscriptionLifecycle
 	bbo             *BBOClient
 	orderBook       *OrderBookClient
+	spread          *SpreadClient
 }
 
 // NewModule composes a K4K3RU WebSocket module.
@@ -43,6 +45,7 @@ type Module struct {
 //   - Configuration or composition error.
 //
 // Version:
+//   - 2026-09-05: Added the Spread client.
 //   - 2026-09-05: Added the OrderBook client.
 //   - 2026-09-05: Replaced the aggregation client with the BBO client.
 //   - 2026-08-29: Added.
@@ -92,7 +95,8 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 	requests := newRequestTracker()
 	bboEvents := newBBOEventRegistry()
 	orderBookEvents := newOrderBookEventRegistry()
-	router, err := newMessageRouter(requests, bboEvents, orderBookEvents)
+	spreadEvents := newSpreadEventRegistry()
+	router, err := newMessageRouter(requests, bboEvents, orderBookEvents, spreadEvents)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
 	}
@@ -124,16 +128,33 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
 	}
+	spreadClient, err := newSpreadClient(sender, subscriptions, spreadEvents)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create websocket module: %w", err)
+	}
 	return &Module{
 		client:          transportClient,
 		requests:        requests,
 		bboEvents:       bboEvents,
 		orderBookEvents: orderBookEvents,
+		spreadEvents:    spreadEvents,
 		router:          router,
 		subscriptions:   subscriptions,
 		bbo:             bboClient,
 		orderBook:       orderBookClient,
+		spread:          spreadClient,
 	}, nil
+}
+
+// Spread returns the composed Market Hub Spread WebSocket client.
+//
+// Version:
+//   - 2026-09-05: Added.
+func (m *Module) Spread() *SpreadClient {
+	if m == nil {
+		return nil
+	}
+	return m.spread
 }
 
 // OrderBook returns the composed Market Hub OrderBook WebSocket client.

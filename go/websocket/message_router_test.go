@@ -42,7 +42,7 @@ func TestMessageRouterRoutesOrderBookEvent(t *testing.T) {
 
 	requests := newRequestTracker()
 	events := newOrderBookEventRegistry()
-	router, err := newMessageRouter(requests, newBBOEventRegistry(), events)
+	router, err := newMessageRouter(requests, newBBOEventRegistry(), events, newSpreadEventRegistry())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,13 +90,13 @@ func TestMessageRouterCloseFailsPendingRequests(t *testing.T) {
 func TestNewMessageRouterValidatesDependencies(t *testing.T) {
 	t.Parallel()
 
-	if _, err := newMessageRouter(nil, newBBOEventRegistry(), newOrderBookEventRegistry()); err == nil || !strings.Contains(err.Error(), "request_tracker=null") {
+	if _, err := newMessageRouter(nil, newBBOEventRegistry(), newOrderBookEventRegistry(), newSpreadEventRegistry()); err == nil || !strings.Contains(err.Error(), "request_tracker=null") {
 		t.Fatalf("nil request tracker error = %v", err)
 	}
-	if _, err := newMessageRouter(newRequestTracker(), nil, newOrderBookEventRegistry()); err == nil || !strings.Contains(err.Error(), "bbo_event_registry=null") {
+	if _, err := newMessageRouter(newRequestTracker(), nil, newOrderBookEventRegistry(), newSpreadEventRegistry()); err == nil || !strings.Contains(err.Error(), "bbo_event_registry=null") {
 		t.Fatalf("nil bbo event registry error = %v", err)
 	}
-	if _, err := newMessageRouter(newRequestTracker(), newBBOEventRegistry(), nil); err == nil || !strings.Contains(err.Error(), "order_book_event_registry=null") {
+	if _, err := newMessageRouter(newRequestTracker(), newBBOEventRegistry(), nil, newSpreadEventRegistry()); err == nil || !strings.Contains(err.Error(), "order_book_event_registry=null") {
 		t.Fatalf("nil order book event registry error = %v", err)
 	}
 }
@@ -105,7 +105,7 @@ func newTestMessageRouter(t *testing.T) (*messageRouter, *requestTracker, *bboEv
 	t.Helper()
 	requests := newRequestTracker()
 	events := newBBOEventRegistry()
-	router, err := newMessageRouter(requests, events, newOrderBookEventRegistry())
+	router, err := newMessageRouter(requests, events, newOrderBookEventRegistry(), newSpreadEventRegistry())
 	if err != nil {
 		t.Fatalf("newMessageRouter() error = %v", err)
 	}

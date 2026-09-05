@@ -15,6 +15,7 @@ const (
 	EventTypeBBO       EventType = "bbo"
 	EventTypeArbitrage EventType = "ar"
 	EventTypeOrderBook EventType = "ob"
+	EventTypeSpread    EventType = "sp"
 	EventTypeExecution EventType = "ex"
 )
 
@@ -58,10 +59,11 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 //   - Validation error.
 //
 // Version:
+//   - 2026-09-05: Accepted Market Hub Spread events.
 //   - 2026-08-30: Added.
 func (e Event) Validate() error {
 	switch e.Type {
-	case EventTypeBBO, EventTypeArbitrage, EventTypeOrderBook, EventTypeExecution:
+	case EventTypeBBO, EventTypeArbitrage, EventTypeOrderBook, EventTypeSpread, EventTypeExecution:
 	default:
 		if e.Type == "" {
 			return k4k3ruSDKAppError.Tracef("failed to validate subscription event: %w: event_type=empty", k4k3ruSDKAppError.InvalidParameter())

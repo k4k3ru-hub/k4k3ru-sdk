@@ -41,6 +41,29 @@ if err := module.OrderBook().Unsubscribe(ctx, subscription); err != nil {
 
 接続先とCredential Providerは`websocket.ModuleConfig`で明示的に渡します。個別Venueは指定せず、必要に応じて`SourceFilter`でVenueカテゴリや流動性モデルを絞り込みます。
 
+### WebSocket Spread購読
+
+`Spread()`は、同一Canonical SymbolのSpot–Spot、Spot–Perp、Perp–Spot、Perp–Perp経路を、指定した基準資産数量で評価する購読クライアントです。
+
+```go
+subscription, err := module.Spread().Subscribe(ctx, spread.Params{
+	Symbol:                "BTC/USDC",
+	BaseAsset:             "BTC",
+	Quantity:              "0.1",
+	MinimumGrossSpreadBps: "5",
+})
+if err != nil {
+	return err
+}
+result := <-subscription.Events()
+fmt.Printf("eligible routes=%v\n", result.EligibleRoutes)
+if err := module.Spread().Unsubscribe(ctx, subscription); err != nil {
+	return err
+}
+```
+
+`RouteFamilies`を省略すると4種類すべてを評価します。`SourceFilter`はBBO／OrderBookと同じVenueカテゴリ、流動性モデル、AMM chainによる絞り込みです。
+
 ## Goで署名認証付きリクエストを送る
 
 署名が必要なメソッドでは、API CredentialのAPI keyと、作成時に取得したsecret keyを使用します。次の例は`AccountApp.GetUsageBalance`を呼び出す、実行可能な最小構成です。
