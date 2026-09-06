@@ -25,7 +25,7 @@ func TestNewModuleComposesPhysicalClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("newModule() error = %v", err)
 	}
-	if module == nil || module.client == nil || module.client.physical != factory.client || module.requests == nil || module.bboEvents == nil || module.orderBookEvents == nil || module.spreadEvents == nil || module.router == nil || module.subscriptions == nil || module.BBO() == nil || module.OrderBook() == nil || module.Spread() == nil {
+	if module == nil || module.client == nil || module.client.physical != factory.client || module.requests == nil || module.bboEvents == nil || module.orderBookEvents == nil || module.spreadEvents == nil || module.router == nil || module.subscriptions == nil || module.BBO() == nil || module.OrderBook() == nil || module.Spread() == nil || module.Carry() == nil || module.carryEvents == nil || module.router.carryEvents != module.carryEvents {
 		t.Fatalf("newModule() = %#v", module)
 	}
 	if factory.endpointURL != config.EndpointURL {
@@ -94,7 +94,7 @@ func TestModuleClose(t *testing.T) {
 	if err != nil {
 		t.Fatalf("register() error = %v", err)
 	}
-	router, err := newMessageRouter(requests, newBBOEventRegistry(), newOrderBookEventRegistry(), newSpreadEventRegistry())
+	router, err := newMessageRouter(requests, newBBOEventRegistry(), newOrderBookEventRegistry(), newSpreadEventRegistry(), newCarryEventRegistry())
 	if err != nil {
 		t.Fatalf("newMessageRouter() error = %v", err)
 	}

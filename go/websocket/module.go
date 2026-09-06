@@ -27,11 +27,13 @@ type Module struct {
 	bboEvents       *bboEventRegistry
 	orderBookEvents *orderBookEventRegistry
 	spreadEvents    *spreadEventRegistry
+	carryEvents     *carryEventRegistry
 	router          *messageRouter
 	subscriptions   *subscriptionLifecycle
 	bbo             *BBOClient
 	orderBook       *OrderBookClient
 	spread          *SpreadClient
+	carry           *CarryClient
 }
 
 // NewModule composes a K4K3RU WebSocket module.
@@ -45,6 +47,7 @@ type Module struct {
 //   - Configuration or composition error.
 //
 // Version:
+//   - 2026-09-06: Added the Carry client.
 //   - 2026-09-05: Added the Spread client.
 //   - 2026-09-05: Added the OrderBook client.
 //   - 2026-09-05: Replaced the aggregation client with the BBO client.
@@ -96,7 +99,8 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 	bboEvents := newBBOEventRegistry()
 	orderBookEvents := newOrderBookEventRegistry()
 	spreadEvents := newSpreadEventRegistry()
-	router, err := newMessageRouter(requests, bboEvents, orderBookEvents, spreadEvents)
+	carryEvents := newCarryEventRegistry()
+	router, err := newMessageRouter(requests, bboEvents, orderBookEvents, spreadEvents, carryEvents)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
 	}
@@ -132,17 +136,23 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
 	}
+	carryClient, err := newCarryClient(sender, subscriptions, carryEvents)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create websocket module: %w", err)
+	}
 	return &Module{
 		client:          transportClient,
 		requests:        requests,
 		bboEvents:       bboEvents,
 		orderBookEvents: orderBookEvents,
 		spreadEvents:    spreadEvents,
+		carryEvents:     carryEvents,
 		router:          router,
 		subscriptions:   subscriptions,
 		bbo:             bboClient,
 		orderBook:       orderBookClient,
 		spread:          spreadClient,
+		carry:           carryClient,
 	}, nil
 }
 
@@ -155,6 +165,17 @@ func (m *Module) Spread() *SpreadClient {
 		return nil
 	}
 	return m.spread
+}
+
+// Carry returns the composed Market Hub Carry WebSocket client.
+//
+// Version:
+//   - 2026-09-06: Added.
+func (m *Module) Carry() *CarryClient {
+	if m == nil {
+		return nil
+	}
+	return m.carry
 }
 
 // OrderBook returns the composed Market Hub OrderBook WebSocket client.

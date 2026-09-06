@@ -227,3 +227,18 @@ go run .
 5. API key、timestamp、nonce、signatureを`jsonrpc.Auth`へ設定します。
 
 `BuildPayload()`へ渡した`method`、`timestamp`、`nonce`、`params`と、リクエストEnvelopeへ設定する値は必ず一致させてください。特に、署名後に`params`を再構築または変更すると署名検証に失敗します。また、nonceはリクエストごとに新しく生成し、API keyやsecret keyをログへ出力しないでください。
+
+## Funding Carry
+
+The local SDK implements Carry Get/Subscribe/Unsubscribe method constants and
+owning-package contracts in `jsonrpc/markethub/carry`. Carry supports
+`spot-perp`, `perp-spot`, and `perp-perp`, with a required
+`HoldingPeriodMinutes` from 1 to 43,200. Funding estimates and entry spread remain
+separate; Spot-short borrowing is explicitly unevaluated for `perp-spot`.
+
+The WebSocket composition root exposes `module.Carry()`. Use its typed
+`Subscribe(ctx, carry.Params)` and `Unsubscribe(ctx, subscription)` methods;
+read results from `subscription.Events()`. Parameters and signing material remain
+owned by the calling application. Carry events use type `cy`, and acknowledgement
+validation includes the holding period and Funding threshold in subscription
+identity. The service must support Carry before these methods can be used live.
