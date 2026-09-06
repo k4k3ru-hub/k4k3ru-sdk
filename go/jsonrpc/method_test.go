@@ -101,6 +101,18 @@ func TestMethodValidate(t *testing.T) {
 			method: MethodTradeHubArbitrageUnsubscribe,
 		},
 		{
+			name:   "known trade hub spread get method",
+			method: MethodTradeHubSpreadGet,
+		},
+		{
+			name:   "known trade hub spread subscribe method",
+			method: MethodTradeHubSpreadSubscribe,
+		},
+		{
+			name:   "known trade hub spread unsubscribe method",
+			method: MethodTradeHubSpreadUnsubscribe,
+		},
+		{
 			name:   "known trade hub execution prepare method",
 			method: MethodTradeHubExecutionPrepare,
 		},

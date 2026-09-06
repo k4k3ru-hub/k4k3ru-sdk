@@ -30,6 +30,7 @@ type Route struct {
 }
 
 type Result struct {
+	EvaluationID          string        `json:"eid"`
 	AssetClass            AssetClass    `json:"ac"`
 	Symbol                Symbol        `json:"s"`
 	BaseAsset             Asset         `json:"ba"`

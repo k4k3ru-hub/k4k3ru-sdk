@@ -5,6 +5,7 @@ type IntentKind string
 const (
 	IntentKindUnknown         IntentKind = ""
 	IntentKindAtomicArbitrage IntentKind = "atomic-arbitrage"
+	IntentKindSpread          IntentKind = "spread"
 )
 
 type SubmissionMode string

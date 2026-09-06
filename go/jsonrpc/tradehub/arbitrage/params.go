@@ -195,6 +195,9 @@ func (c ExecutionConditions) Validate() error {
 	if c.MaximumSlippageBPS == nil {
 		return invalidParameterError("maximum_slippage_bps=null")
 	}
+	if *c.MaximumSlippageBPS > 10_000 {
+		return invalidParameterError("maximum_slippage_bps=out_of_range")
+	}
 	if err := validateNonNegativeDecimal(c.MaximumExecutionCost, "maximum_execution_cost", true); err != nil {
 		return err
 	}

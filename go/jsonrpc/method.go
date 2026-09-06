@@ -39,6 +39,9 @@ const (
 	MethodPaymentOnchainGetIntent                  Method = "PaymentOnchain.GetIntent"
 	MethodTradeHubArbitrageSubscribe               Method = "TradeHub.Arbitrage.Subscribe"
 	MethodTradeHubArbitrageUnsubscribe             Method = "TradeHub.Arbitrage.Unsubscribe"
+	MethodTradeHubSpreadGet                        Method = "TradeHub.Spread.Get"
+	MethodTradeHubSpreadSubscribe                  Method = "TradeHub.Spread.Subscribe"
+	MethodTradeHubSpreadUnsubscribe                Method = "TradeHub.Spread.Unsubscribe"
 	MethodTradeHubExecutionPrepare                 Method = "TradeHub.Execution.Prepare"
 	MethodTradeHubExecutionSubmit                  Method = "TradeHub.Execution.Submit"
 )

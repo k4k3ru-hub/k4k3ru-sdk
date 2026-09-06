@@ -65,7 +65,7 @@ func (p Params) Normalize() Params {
 //   - 2026-09-03: Added.
 func (p Params) Validate() error {
 	p = p.Normalize()
-	if p.Intent.Kind != IntentKindAtomicArbitrage {
+	if p.Intent.Kind != IntentKindAtomicArbitrage && p.Intent.Kind != IntentKindSpread {
 		return invalidParameterError("intent_kind=invalid")
 	}
 	if p.Intent.EvaluationID == "" {
@@ -105,6 +105,9 @@ func (c Conditions) Validate() error {
 	}
 	if c.MaximumSlippageBPS == nil {
 		return invalidParameterError("maximum_slippage_bps=null")
+	}
+	if *c.MaximumSlippageBPS > 10_000 {
+		return invalidParameterError("maximum_slippage_bps=out_of_range")
 	}
 	if err := validateNonNegativeDecimal(c.MaximumExecutionCost, "maximum_execution_cost", true); err != nil {
 		return err
