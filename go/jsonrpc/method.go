@@ -33,6 +33,7 @@ const (
 	MethodMarketHubCarryUnsubscribe                Method = "MarketHub.Carry.Unsubscribe"
 	MethodMarketHubSpreadGet                       Method = "MarketHub.Spread.Get"
 	MethodMarketHubCarryGet                        Method = "MarketHub.Carry.Get"
+	MethodMarketHubCarrySearch                     Method = "MarketHub.Carry.Search"
 	MethodMarketHubArbitrageSubscribe              Method = "MarketHub.Arbitrage.Subscribe"
 	MethodMarketHubArbitrageUnsubscribe            Method = "MarketHub.Arbitrage.Unsubscribe"
 	MethodPaymentOnchainCreateIntent               Method = "PaymentOnchain.CreateIntent"

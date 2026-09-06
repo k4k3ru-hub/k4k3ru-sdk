@@ -31,14 +31,14 @@ type FundingObservation struct {
 }
 type EntrySpread struct {
 	Amount string `json:"amount"`
-	Bps    string `json:"bps"`
+	Bps    string `json:"bps,omitempty"`
 	Asset  Asset  `json:"asset"`
 }
 type FundingEstimate struct {
 	Amount               string `json:"amount"`
-	Bps                  string `json:"bps"`
-	AnnualizedRate       string `json:"annualizedRate"`
-	ReferenceNotional    string `json:"referenceNotional"`
+	Bps                  string `json:"bps,omitempty"`
+	AnnualizedRate       string `json:"annualizedRate,omitempty"`
+	ReferenceNotional    string `json:"referenceNotional,omitempty"`
 	Asset                Asset  `json:"asset"`
 	HoldingPeriodMinutes uint32 `json:"holdingPeriodMinutes"`
 	Model                string `json:"model"`
@@ -51,6 +51,7 @@ type Assessment struct {
 	ExitCost             string `json:"exitCost"`
 }
 type Route struct {
+	Selector        RouteSelector       `json:"route"`
 	RouteID         string              `json:"id"`
 	Family          RouteFamily         `json:"f"`
 	Buy             Leg                 `json:"b"`
@@ -61,7 +62,7 @@ type Route struct {
 	FundingEstimate FundingEstimate     `json:"fundingEstimate"`
 	Assessment      Assessment          `json:"assessment"`
 }
-type Result struct {
+type SearchResult struct {
 	AssetClass                 AssetClass    `json:"ac"`
 	Symbol                     Symbol        `json:"s"`
 	BaseAsset                  Asset         `json:"ba"`
@@ -79,10 +80,49 @@ type Result struct {
 	EvaluatedAt                int64         `json:"ts"`
 }
 
-// Params returns the normalized parameters identifying this Carry result.
+// Availability describes whether an individual metric can be evaluated.
+type Availability struct {
+	Status     string `json:"status"`
+	Reason     string `json:"reason,omitempty"`
+	ObservedAt int64  `json:"observedAt,omitempty"`
+	ValidUntil int64  `json:"validUntil,omitempty"`
+}
+type EvaluationAvailability struct {
+	BuyPrice      Availability `json:"buyPrice"`
+	SellPrice     Availability `json:"sellPrice"`
+	BuyFunding    Availability `json:"buyFunding"`
+	SellFunding   Availability `json:"sellFunding"`
+	FundingAmount Availability `json:"fundingAmount"`
+	FundingBps    Availability `json:"fundingBps"`
+	EntrySpread   Availability `json:"entrySpread"`
+}
+type Result struct {
+	AssetClass           AssetClass             `json:"ac"`
+	Symbol               Symbol                 `json:"s"`
+	BaseAsset            Asset                  `json:"ba"`
+	QuoteAsset           Asset                  `json:"qa"`
+	Quantity             string                 `json:"q"`
+	HoldingPeriodMinutes uint32                 `json:"hpm"`
+	Route                RouteSelector          `json:"route"`
+	RouteID              string                 `json:"routeId"`
+	EvaluationKey        string                 `json:"evaluationKey"`
+	EvaluationID         string                 `json:"evaluationId"`
+	Status               string                 `json:"status"`
+	Buy                  *Leg                   `json:"buy,omitempty"`
+	Sell                 *Leg                   `json:"sell,omitempty"`
+	BuyFunding           *FundingObservation    `json:"buyFunding,omitempty"`
+	SellFunding          *FundingObservation    `json:"sellFunding,omitempty"`
+	FundingEstimate      *FundingEstimate       `json:"fundingEstimate,omitempty"`
+	EntrySpread          *EntrySpread           `json:"entrySpread,omitempty"`
+	Assessment           Assessment             `json:"assessment"`
+	Availability         EvaluationAvailability `json:"availability"`
+	EvaluatedAt          int64                  `json:"ts"`
+}
+
+// Params returns the fixed-route parameters identifying this result.
 //
 // Version:
-//   - 2026-09-06: Added.
+//   - 2026-09-06: Reconstruct fixed-route subscription identity.
 func (r Result) Params() Params {
-	return (Params{AssetClass: r.AssetClass, Symbol: r.Symbol, BaseAsset: r.BaseAsset, Quantity: r.Quantity, HoldingPeriodMinutes: r.HoldingPeriodMinutes, MinimumEstimatedFundingBps: r.MinimumEstimatedFundingBps, RouteFamilies: r.RouteFamilies, SourceFilter: r.SourceFilter}).Normalize()
+	return (Params{AssetClass: r.AssetClass, Symbol: r.Symbol, BaseAsset: r.BaseAsset, Quantity: r.Quantity, HoldingPeriodMinutes: r.HoldingPeriodMinutes, Route: r.Route}).Normalize()
 }

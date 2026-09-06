@@ -8,7 +8,7 @@ import (
 )
 
 func TestCarryContractValidationAndIdentity(t *testing.T) {
-	base := Params{Symbol: "BTC/USDC", BaseAsset: "BTC", Quantity: "0.1", HoldingPeriodMinutes: 1440}
+	base := SearchParams{Symbol: "BTC/USDC", BaseAsset: "BTC", Quantity: "0.1", HoldingPeriodMinutes: 1440}
 	key, err := base.SubscriptionKey()
 	if err != nil {
 		t.Fatal(err)
@@ -62,22 +62,10 @@ func TestCarryContractValidationAndIdentity(t *testing.T) {
 			t.Fatalf("accepted nondecimal: %s", value)
 		}
 	}
-	var decoded Params
+	var decoded SearchParams
 	for _, raw := range []string{`{"unknown":true}`, `{"holdingPeriodMinutes":1.5}`, `{"sourceFilter":{"unknown":true}}`} {
 		if err := json.Unmarshal([]byte(raw), &decoded); !errors.Is(err, app.InvalidParameter()) {
 			t.Fatalf("decode %s: %v", raw, err)
 		}
-	}
-	result := Result{AssetClass: base.Normalize().AssetClass, Symbol: base.Symbol, BaseAsset: base.BaseAsset, Quantity: base.Quantity, HoldingPeriodMinutes: base.HoldingPeriodMinutes, MinimumEstimatedFundingBps: "0", RouteFamilies: base.Normalize().RouteFamilies}
-	raw, err := json.Marshal(result)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var roundtrip Result
-	if err := json.Unmarshal(raw, &roundtrip); err != nil {
-		t.Fatal(err)
-	}
-	if got, err := roundtrip.Params().SubscriptionKey(); err != nil || got != key {
-		t.Fatalf("roundtrip: %q %v", got, err)
 	}
 }

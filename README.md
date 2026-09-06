@@ -230,7 +230,7 @@ go run .
 
 ## Funding Carry
 
-The local SDK implements Carry Get/Subscribe/Unsubscribe method constants and
+The local SDK implements Carry Search/Get/Subscribe/Unsubscribe method constants and
 owning-package contracts in `jsonrpc/markethub/carry`. Carry supports
 `spot-perp`, `perp-spot`, and `perp-perp`, with a required
 `HoldingPeriodMinutes` from 1 to 43,200. Funding estimates and entry spread remain
@@ -240,5 +240,35 @@ The WebSocket composition root exposes `module.Carry()`. Use its typed
 `Subscribe(ctx, carry.Params)` and `Unsubscribe(ctx, subscription)` methods;
 read results from `subscription.Events()`. Parameters and signing material remain
 owned by the calling application. Carry events use type `cy`, and acknowledgement
-validation includes the holding period and Funding threshold in subscription
-identity. The service must support Carry before these methods can be used live.
+validation includes the fixed route, quantity and holding period in subscription
+identity. Search uses `carry.SearchParams` / `carry.SearchResult`; fixed
+Get/Subscribe use `carry.Params` / `carry.Result`. The service must support Carry before these methods can be used live.
+
+This is a breaking migration: move candidate Get requests to
+`MarketHub.Carry.Search`. Copy a candidate's `Selector` into fixed `Params.Route`.
+Fixed subscriptions do not accept Funding thresholds or a delivery interval.
+Each request monitors one route; subscribe separately for additional routes.
+
+```go
+params := carry.Params{
+    Symbol: "BTC/USDC", BaseAsset: "BTC", Quantity: "0.1",
+    HoldingPeriodMinutes: 1440,
+    Route: carry.RouteSelector{
+        Buy: carry.MarketSelector{Venue: "binance", MarketType: carry.MarketTypePerp},
+        Sell: carry.MarketSelector{Venue: "hyperliquid", MarketType: carry.MarketTypePerp},
+    },
+}
+subscription, err := module.Carry().Subscribe(ctx, params)
+if err != nil { return err }
+// Consume subscription.Events(); each event replaces the previous snapshot.
+// Call module.Carry().Unsubscribe(ctx, subscription) when finished.
+```
+
+Fixed results retain route identity when inputs are unavailable. Check `Status`
+and individual `Availability` fields before using a metric. `FundingEstimate`
+and `EntrySpread` are optional; even an available Funding amount may have no bps
+when buy entry depth is unavailable. RouteID excludes quantity/period;
+EvaluationKey includes them. EvaluationID is not a monotonic sequence number.
+Events contain latest state, not every venue tick. Reestablish subscriptions on
+reconnect and use the initial snapshot. TradeHub/application code owns account,
+position, margin, execution decisions and connection-loss handling.

@@ -11,7 +11,7 @@ import (
 
 func TestCarryClientSubscribeAndUnsubscribe(t *testing.T) {
 	t.Parallel()
-	params := k4k3ruSDKCarry.Params{Symbol: "BTC/USDC", BaseAsset: "BTC", Quantity: "0.1", HoldingPeriodMinutes: 1440}.Normalize()
+	params := k4k3ruSDKCarry.Params{Symbol: "BTC/USDC", BaseAsset: "BTC", Quantity: "0.1", HoldingPeriodMinutes: 1440, Route: k4k3ruSDKCarry.RouteSelector{Buy: k4k3ruSDKCarry.MarketSelector{Venue: "binance", MarketType: "spot"}, Sell: k4k3ruSDKCarry.MarketSelector{Venue: "hyperliquid", MarketType: "perp"}}}.Normalize()
 	sender := &fakeCarryJSONRPCSender{params: params}
 	lifecycle, err := newSubscriptionLifecycle(&fakeSubscriptionTransport{})
 	if err != nil {
@@ -26,7 +26,7 @@ func TestCarryClientSubscribeAndUnsubscribe(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result := k4k3ruSDKCarry.Result{AssetClass: params.AssetClass, Symbol: params.Symbol, BaseAsset: params.BaseAsset, Quantity: params.Quantity, HoldingPeriodMinutes: params.HoldingPeriodMinutes, MinimumEstimatedFundingBps: params.MinimumEstimatedFundingBps, RouteFamilies: params.RouteFamilies}
+	result := k4k3ruSDKCarry.Result{AssetClass: params.AssetClass, Symbol: params.Symbol, BaseAsset: params.BaseAsset, Quantity: params.Quantity, HoldingPeriodMinutes: params.HoldingPeriodMinutes, Route: params.Route}
 	if routed, routeErr := registry.route(result); routeErr != nil || !routed {
 		t.Fatalf("route() = %v, %v", routed, routeErr)
 	}
@@ -53,4 +53,57 @@ func (s *fakeCarryJSONRPCSender) send(_ context.Context, method k4k3ruSDKJSONRPC
 		return nil, err
 	}
 	return &k4k3ruSDKJSONRPC.Response{Result: result}, nil
+}
+
+func TestCarryRoutesRemainSeparateWhenUnavailable(t *testing.T) {
+	p := k4k3ruSDKCarry.Params{Symbol: "BTC/USDC", BaseAsset: "BTC", Quantity: "0.1", HoldingPeriodMinutes: 1440, Route: k4k3ruSDKCarry.RouteSelector{Buy: k4k3ruSDKCarry.MarketSelector{Venue: "binance", MarketType: "spot"}, Sell: k4k3ruSDKCarry.MarketSelector{Venue: "hyperliquid", MarketType: "perp"}}}.Normalize()
+	other := p
+	other.Route.Buy.Venue = "bybit"
+	sender := &fakeCarryJSONRPCSender{params: p}
+	lifecycle, err := newSubscriptionLifecycle(&fakeSubscriptionTransport{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	registry := newCarryEventRegistry()
+	client, err := newCarryClient(sender, lifecycle, registry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := client.Subscribe(context.Background(), p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sender.params = other
+	second, err := client.Subscribe(context.Background(), other)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := k4k3ruSDKCarry.Result{AssetClass: other.AssetClass, Symbol: other.Symbol, BaseAsset: other.BaseAsset, Quantity: other.Quantity, HoldingPeriodMinutes: other.HoldingPeriodMinutes, Route: other.Route, Status: "unavailable"}
+	if routed, err := registry.route(r); err != nil || !routed {
+		t.Fatalf("route: %v %v", routed, err)
+	}
+	select {
+	case <-first.Events():
+		t.Fatal("event delivered to wrong route")
+	default:
+	}
+	select {
+	case got := <-second.Events():
+		if got.Status != "unavailable" {
+			t.Fatal("lost unavailable state")
+		}
+	default:
+		t.Fatal("missing fixed route event")
+	}
+	sender.params = p
+	if err := client.Unsubscribe(context.Background(), first); err != nil {
+		t.Fatal(err)
+	}
+	if routed, err := registry.route(r); err != nil || !routed {
+		t.Fatal("unsubscribed sibling route")
+	}
+	sender.params = other
+	if err := client.Unsubscribe(context.Background(), second); err != nil {
+		t.Fatal(err)
+	}
 }
