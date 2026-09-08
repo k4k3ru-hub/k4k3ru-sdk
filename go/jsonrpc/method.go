@@ -11,6 +11,7 @@ const maxMethodLength = 64
 type Method string
 
 const (
+	MethodAccountAPIListCredential                 Method = "AccountAPI.ListCredential"
 	MethodAccountEmailRequestCredentialCreationOTP Method = "AccountEmail.RequestCredentialCreationOTP"
 	MethodAccountEmailCreateCredential             Method = "AccountEmail.CreateCredential"
 	MethodAccountEmailRequestSignInOTP             Method = "AccountEmail.RequestSignInOTP"
