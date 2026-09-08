@@ -75,3 +75,22 @@ func TestMarketHubListSymbolsResultJSON(t *testing.T) {
 		t.Fatalf("Unmarshal() = %#v, want %#v", got, want)
 	}
 }
+
+func TestMarketHubListSymbolsBaseAssetJSON(t *testing.T) {
+	t.Parallel()
+	want := ListSymbolsParams{BaseAsset: "PONS"}
+	data, err := json.Marshal(want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != `{"baseAsset":"PONS"}` {
+		t.Fatalf("unexpected JSON: %s", data)
+	}
+	var got ListSymbolsParams
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("decoded=%+v want=%+v", got, want)
+	}
+}

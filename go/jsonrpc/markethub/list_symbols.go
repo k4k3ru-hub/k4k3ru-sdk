@@ -1,7 +1,9 @@
 package markethub
 
 type ListSymbolsParams struct {
-	Venues []ListSymbolsVenueParams `json:"venues,omitempty"`
+	// BaseAsset filters by the exact, case-sensitive canonical base asset. Empty selects all assets.
+	BaseAsset string                   `json:"baseAsset,omitempty"`
+	Venues    []ListSymbolsVenueParams `json:"venues,omitempty"`
 }
 
 type ListSymbolsVenueParams struct {
