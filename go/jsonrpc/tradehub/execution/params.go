@@ -77,8 +77,8 @@ func (p Params) Validate() error {
 	if p.Signer == "" {
 		return invalidParameterError("signer=empty")
 	}
-	if p.SubmissionMode != SubmissionModeTradeHubRelay {
-		return invalidParameterError("submission_mode=invalid")
+	if err := p.SubmissionMode.Validate(); err != nil {
+		return k4k3ruSDKAppError.Tracef("failed to validate trade hub execution preparation parameters: %w", err)
 	}
 	if p.Conditions == nil {
 		return invalidParameterError("conditions=null")

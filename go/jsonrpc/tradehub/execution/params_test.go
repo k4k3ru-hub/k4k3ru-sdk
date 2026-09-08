@@ -30,3 +30,15 @@ func TestParamsUnmarshalJSONRejectsUnknownField(t *testing.T) {
 		t.Fatal("Unmarshal() error = nil")
 	}
 }
+
+func TestSubmissionModeValidate(t *testing.T) {
+	t.Parallel()
+	for _, mode := range []SubmissionMode{SubmissionModeClientDirect, SubmissionModeTradeHubRelay} {
+		if err := mode.Validate(); err != nil {
+			t.Fatalf("Validate(%q) error = %v", mode, err)
+		}
+	}
+	if err := SubmissionMode("direct").Validate(); err == nil {
+		t.Fatal("Validate(direct) error = nil")
+	}
+}

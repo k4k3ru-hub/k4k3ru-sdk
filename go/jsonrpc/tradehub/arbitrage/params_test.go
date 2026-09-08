@@ -190,6 +190,9 @@ func TestSubmissionModeValidate(t *testing.T) {
 	if err := SubmissionModeTradeHubRelay.Validate(); err != nil {
 		t.Fatalf("Validate() error = %v", err)
 	}
+	if err := SubmissionModeClientDirect.Validate(); err != nil {
+		t.Fatalf("Validate(client-direct) error = %v", err)
+	}
 	if err := SubmissionModeUnknown.Validate(); err == nil || !errors.Is(err, k4k3ruSDKAppError.InvalidParameter()) {
 		t.Fatalf("Validate() error = %v, want invalid parameter", err)
 	}

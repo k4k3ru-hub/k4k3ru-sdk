@@ -4,6 +4,7 @@ type SubmissionMode string
 
 const (
 	SubmissionModeUnknown       SubmissionMode = ""
+	SubmissionModeClientDirect  SubmissionMode = "client-direct"
 	SubmissionModeTradeHubRelay SubmissionMode = "tradehub-relay"
 )
 
@@ -13,9 +14,10 @@ const (
 //   - Validation error.
 //
 // Version:
+//   - 2026-09-08: Added client-direct submission.
 //   - 2026-09-03: Added.
 func (m SubmissionMode) Validate() error {
-	if m != SubmissionModeTradeHubRelay {
+	if m != SubmissionModeClientDirect && m != SubmissionModeTradeHubRelay {
 		return invalidParameterError("submission_mode=invalid")
 	}
 	return nil

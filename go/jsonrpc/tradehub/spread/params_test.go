@@ -40,3 +40,17 @@ func TestParamsRejectsInvalidAndUnknownFields(t *testing.T) {
 		t.Fatalf("Validate() error = %v", err)
 	}
 }
+
+func TestParamsValidateAcceptsClientDirect(t *testing.T) {
+	t.Parallel()
+	slippage, age, ttl := uint64(50), uint64(1_000), uint64(5_000)
+	params := Params{
+		Opportunity: k4k3ruSDKMarketHubSpread.Params{Symbol: "BTC/USDC", BaseAsset: "BTC", Quantity: "0.001"},
+		Execution: ExecutionParams{Signer: "0xabc", SubmissionMode: k4k3ruSDKTradeHubExecution.SubmissionModeClientDirect, Conditions: &k4k3ruSDKTradeHubExecution.Conditions{
+			MinimumNetProfit: "1", MaximumSlippageBPS: &slippage, MaximumOpportunityAgeMS: &age, ExecutionTTLMS: &ttl,
+		}},
+	}
+	if err := params.Validate(); err != nil {
+		t.Fatalf("Validate() error = %v", err)
+	}
+}
