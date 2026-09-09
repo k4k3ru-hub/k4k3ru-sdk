@@ -75,3 +75,10 @@ func (m Method) Validate() error {
 
 	return nil
 }
+
+const (
+	MethodInternalAppAccountAPIListCredential               Method = "InternalApp.AccountAPI.ListCredential"
+	MethodInternalAppAccountAPIRequestCredentialCreationOTP Method = "InternalApp.AccountAPI.RequestCredentialCreationOTP"
+	MethodInternalAppAccountAPICreateCredential             Method = "InternalApp.AccountAPI.CreateCredential"
+	MethodInternalAppAccountAPIRevokeCredential             Method = "InternalApp.AccountAPI.RevokeCredential"
+)
