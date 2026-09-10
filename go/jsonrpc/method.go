@@ -43,6 +43,7 @@ const (
 	MethodMarketHubArbitrageUnsubscribe            Method = "MarketHub.Arbitrage.Unsubscribe"
 	MethodPaymentOnchainCreateIntent               Method = "PaymentOnchain.CreateIntent"
 	MethodPaymentOnchainGetIntent                  Method = "PaymentOnchain.GetIntent"
+	MethodPaymentOnchainListIntents                Method = "PaymentOnchain.ListIntents"
 	MethodTradeHubArbitrageSubscribe               Method = "TradeHub.Arbitrage.Subscribe"
 	MethodTradeHubArbitrageUnsubscribe             Method = "TradeHub.Arbitrage.Unsubscribe"
 	MethodTradeHubSpreadGet                        Method = "TradeHub.Spread.Get"

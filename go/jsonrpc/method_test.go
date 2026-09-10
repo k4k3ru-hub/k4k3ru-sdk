@@ -89,6 +89,10 @@ func TestMethodValidate(t *testing.T) {
 			method: MethodPaymentOnchainCreateIntent,
 		},
 		{
+			name:   "known payment onchain list intents method",
+			method: MethodPaymentOnchainListIntents,
+		},
+		{
 			name:   "known payment onchain get intent method",
 			method: MethodPaymentOnchainGetIntent,
 		},
