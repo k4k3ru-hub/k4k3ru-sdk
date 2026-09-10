@@ -117,6 +117,10 @@ func TestMethodValidate(t *testing.T) {
 			method: MethodTradeHubSwapQuote,
 		},
 		{
+			name:   "known trade hub swap prepare method",
+			method: MethodTradeHubSwapPrepare,
+		},
+		{
 			name:   "known trade hub execution prepare method",
 			method: MethodTradeHubExecutionPrepare,
 		},
