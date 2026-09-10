@@ -7,11 +7,11 @@ type ListProductsParams struct {
 }
 
 type ListProductsProduct struct {
-	ID            uint64          `json:"id,string"`
-	Name          string          `json:"name"`
-	Type          string          `json:"type"`
+	ID   uint64 `json:"id,string"`
+	Name string `json:"name"`
+	Type string `json:"type"`
+	// CreditTicks is the total grant, including any product incentives.
 	CreditTicks   uint64          `json:"creditTicks,string"`
-	BonusTicks    uint64          `json:"bonusTicks,string"`
 	PriceAmount   uint64          `json:"priceAmount,string"`
 	PriceCurrency string          `json:"priceCurrency"`
 	ExpiresInDays uint32          `json:"expiresInDays"`

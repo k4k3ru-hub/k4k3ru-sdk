@@ -19,6 +19,14 @@ import (
 )
 ```
 
+### 商品の付与クレジット
+
+`jsonrpc/account/app.ListProductsProduct.CreditTicks`は、購入特典を含む付与総量です。
+JSONでは`creditTicks`を10進文字列として扱います。商品の`BonusTicks`フィールドは廃止されているため、利用側で加算する必要はありません。
+旧SDKから更新する場合は、商品への`BonusTicks`参照を削除し、この商品仕様に対応したサーバーと組み合わせてください。
+
+登録APIの`jsonrpc/account/email.CreateCredentialResult.BonusTicks`は、登録特典の付与量を表す別のフィールドとして維持されています。
+
 ### WebSocket OrderBook購読
 
 `websocket.NewModule`が返すComposition Rootから`OrderBook()`を取得し、統合板を購読できます。`Params`の`depth`は1〜20で、未指定時は3です。

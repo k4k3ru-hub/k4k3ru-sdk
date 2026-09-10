@@ -37,8 +37,7 @@ func TestAccountAppListProductsResultJSON(t *testing.T) {
 				ID:            1001,
 				Name:          "starter",
 				Type:          "one_time",
-				CreditTicks:   1000000,
-				BonusTicks:    100000,
+				CreditTicks:   1100000,
 				PriceAmount:   500,
 				PriceCurrency: "usd",
 				ExpiresInDays: 30,
@@ -57,7 +56,7 @@ func TestAccountAppListProductsResultJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
 	}
-	wantJSON := `{"products":[{"id":"1001","name":"starter","type":"one_time","creditTicks":"1000000","bonusTicks":"100000","priceAmount":"500","priceCurrency":"usd","expiresInDays":30,"purchaseLimit":1,"description":"Starter product","metaData":{"featured":true}}],"page":2,"limit":20,"total":21,"totalPages":2}`
+	wantJSON := `{"products":[{"id":"1001","name":"starter","type":"one_time","creditTicks":"1100000","priceAmount":"500","priceCurrency":"usd","expiresInDays":30,"purchaseLimit":1,"description":"Starter product","metaData":{"featured":true}}],"page":2,"limit":20,"total":21,"totalPages":2}`
 	if string(data) != wantJSON {
 		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}
@@ -86,7 +85,7 @@ func TestAccountAppListProductsResultNullableFieldsJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
 	}
-	want := `{"products":[{"id":"0","name":"","type":"","creditTicks":"0","bonusTicks":"0","priceAmount":"0","priceCurrency":"","expiresInDays":0,"purchaseLimit":0,"description":null,"metaData":null}],"page":0,"limit":0,"total":0,"totalPages":0}`
+	want := `{"products":[{"id":"0","name":"","type":"","creditTicks":"0","priceAmount":"0","priceCurrency":"","expiresInDays":0,"purchaseLimit":0,"description":null,"metaData":null}],"page":0,"limit":0,"total":0,"totalPages":0}`
 	if string(data) != want {
 		t.Fatalf("Marshal() = %s, want %s", data, want)
 	}
