@@ -55,4 +55,13 @@ const (
 	ChainFamilyUnknown ChainFamily = ""
 	ChainFamilySui     ChainFamily = "sui"
 	ChainFamilyEVM     ChainFamily = "evm"
+	ChainFamilySolana  ChainFamily = "solana"
+)
+
+type PayloadEncoding string
+
+const (
+	PayloadEncodingUnknown PayloadEncoding = ""
+	PayloadEncodingHex     PayloadEncoding = "hex"
+	PayloadEncodingBase64  PayloadEncoding = "base64"
 )

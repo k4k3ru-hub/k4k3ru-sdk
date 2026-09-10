@@ -45,11 +45,6 @@ type Manifest struct {
 	Venues           []k4k3ruSDKMarketHubArbitrage.Venue `json:"venues"`
 }
 
-type SubmitParams struct {
-	ExecutionID   string `json:"executionId"`
-	PayloadDigest string `json:"payloadDigest"`
-}
-
 type Result struct {
 	ExecutionID     string          `json:"executionId,omitempty"`
 	Intent          Intent          `json:"intent"`
