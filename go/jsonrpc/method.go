@@ -11,6 +11,9 @@ const maxMethodLength = 64
 type Method string
 
 const (
+	MethodMarketHubAMMPoolGet                      Method = "MarketHub.AMMPool.Get"
+	MethodMarketHubAMMPoolSubscribe                Method = "MarketHub.AMMPool.Subscribe"
+	MethodMarketHubAMMPoolUnsubscribe              Method = "MarketHub.AMMPool.Unsubscribe"
 	MethodAccountAPIRevokeCredential               Method = "AccountAPI.RevokeCredential"
 	MethodAccountAPIListCredential                 Method = "AccountAPI.ListCredential"
 	MethodAccountEmailRequestCredentialCreationOTP Method = "AccountEmail.RequestCredentialCreationOTP"

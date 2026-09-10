@@ -280,3 +280,13 @@ EvaluationKey includes them. EvaluationID is not a monotonic sequence number.
 Events contain latest state, not every venue tick. Reestablish subscriptions on
 reconnect and use the initial snapshot. TradeHub/application code owns account,
 position, margin, execution decisions and connection-loss handling.
+
+## AMM pool snapshots (Go)
+
+Use the owning package `github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/ammpool`:
+
+```go
+params := ammpool.Params{Symbol: "WETH/USDC", MaxAgeSeconds: 30}
+```
+
+Use these parameters with `MarketHub.AMMPool.Get`, `.Subscribe` and `.Unsubscribe`. Get returns `ammpool.Result`; WebSocket event type `ap` carries the same full result. `MaxAgeSeconds` is required and positive. Results retain original observation times in Unix microseconds; all-pool expiration returns `Available: false` and a nil `CompositeMid`. Fresh pool prices are averaged within venues and then across venues with equal venue weights. Get/Subscribe read locally retained state without issuing RPC requests. These snapshots are not quantity-specific executable quotes or Swap history.
