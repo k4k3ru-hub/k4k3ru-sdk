@@ -290,3 +290,35 @@ params := ammpool.Params{Symbol: "WETH/USDC", MaxAgeSeconds: 30}
 ```
 
 Use these parameters with `MarketHub.AMMPool.Get`, `.Subscribe` and `.Unsubscribe`. Get returns `ammpool.Result`; WebSocket event type `ap` carries the same full result. `MaxAgeSeconds` is required and positive. Results retain original observation times in Unix microseconds; all-pool expiration returns `Available: false` and a nil `CompositeMid`. Fresh pool prices are averaged within venues and then across venues with equal venue weights. Get/Subscribe read locally retained state without issuing RPC requests. These snapshots are not quantity-specific executable quotes or Swap history.
+
+## AMMPool
+
+`jsonrpc/markethub/ammpool` owns the `Params` and `Result` contracts for
+`MarketHub.AMMPool.Get`, `Subscribe` and `Unsubscribe`. Get uses the application's
+HTTP JSON-RPC transport, as with Carry Get. The WebSocket composition root exposes
+`module.AMMPool()` and routes `ap` events into typed latest-value channels.
+
+```go
+// Import "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/ammpool".
+params := ammpool.Params{Symbol: "WETH/USDC", MaxAgeSeconds: 30}
+subscription, err := module.AMMPool().Subscribe(ctx, params)
+if err != nil {
+    return err
+}
+select {
+case snapshot := <-subscription.Events():
+    // Replace the prior view, including Available=false and CompositeMid=nil.
+    _ = snapshot
+case <-ctx.Done():
+}
+if err := module.AMMPool().Unsubscribe(ctx, subscription); err != nil {
+    return err
+}
+```
+
+`MaxAgeSeconds` is required. Each symbol/age combination has its own subscription.
+ACK selectors must match the request. Events replace the entire previous view;
+a slow consumer receives the latest queued view, not every intermediate update.
+The reader epoch and version identify response ordering. None of these public
+operations initiate on-chain RPC calls. Solana price-source selection remains
+pending in the service; DTO/client support does not enable new price sources.

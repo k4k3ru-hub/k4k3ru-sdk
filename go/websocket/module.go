@@ -28,12 +28,14 @@ type Module struct {
 	orderBookEvents *orderBookEventRegistry
 	spreadEvents    *spreadEventRegistry
 	carryEvents     *carryEventRegistry
+	ammPoolEvents   *ammPoolEventRegistry
 	router          *messageRouter
 	subscriptions   *subscriptionLifecycle
 	bbo             *BBOClient
 	orderBook       *OrderBookClient
 	spread          *SpreadClient
 	carry           *CarryClient
+	ammPool         *AMMPoolClient
 }
 
 // NewModule composes a K4K3RU WebSocket module.
@@ -47,6 +49,7 @@ type Module struct {
 //   - Configuration or composition error.
 //
 // Version:
+//   - 2026-09-11: Compose the AMMPool client and event registry.
 //   - 2026-09-06: Added the Carry client.
 //   - 2026-09-05: Added the Spread client.
 //   - 2026-09-05: Added the OrderBook client.
@@ -100,7 +103,8 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 	orderBookEvents := newOrderBookEventRegistry()
 	spreadEvents := newSpreadEventRegistry()
 	carryEvents := newCarryEventRegistry()
-	router, err := newMessageRouter(requests, bboEvents, orderBookEvents, spreadEvents, carryEvents)
+	ammPoolEvents := newAMMPoolEventRegistry()
+	router, err := newMessageRouter(requests, bboEvents, orderBookEvents, spreadEvents, carryEvents, ammPoolEvents)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
 	}
@@ -140,6 +144,10 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
 	}
+	ammPoolClient, err := newAMMPoolClient(sender, subscriptions, ammPoolEvents)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create websocket module: %w", err)
+	}
 	return &Module{
 		client:          transportClient,
 		requests:        requests,
@@ -147,12 +155,14 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 		orderBookEvents: orderBookEvents,
 		spreadEvents:    spreadEvents,
 		carryEvents:     carryEvents,
+		ammPoolEvents:   ammPoolEvents,
 		router:          router,
 		subscriptions:   subscriptions,
 		bbo:             bboClient,
 		orderBook:       orderBookClient,
 		spread:          spreadClient,
 		carry:           carryClient,
+		ammPool:         ammPoolClient,
 	}, nil
 }
 
@@ -244,4 +254,15 @@ func isLoopbackHostname(hostname string) bool {
 	}
 	address := net.ParseIP(hostname)
 	return address != nil && address.IsLoopback()
+}
+
+// AMMPool returns the composed Market Hub AMMPool WebSocket client.
+//
+// Version:
+//   - 2026-09-11: Added.
+func (m *Module) AMMPool() *AMMPoolClient {
+	if m == nil {
+		return nil
+	}
+	return m.ammPool
 }
