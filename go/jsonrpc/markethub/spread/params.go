@@ -15,6 +15,8 @@ import (
 const spreadSubscriptionNamespace = "MarketHub.Spread"
 
 type Params struct {
+	// MaxAgeSeconds limits AMM price age; zero uses the five-second default.
+	MaxAgeSeconds         uint32        `json:"maxAgeSeconds,omitempty"`
 	AssetClass            AssetClass    `json:"assetClass,omitempty"`
 	Symbol                Symbol        `json:"symbol"`
 	BaseAsset             Asset         `json:"baseAsset"`
@@ -27,6 +29,7 @@ type Params struct {
 // UnmarshalJSON decodes Spread parameters and rejects unknown fields.
 //
 // Version:
+//   - 2026-09-12: Support configurable AMM price age in seconds.
 //   - 2026-09-05: Added.
 func (p *Params) UnmarshalJSON(data []byte) error {
 	if p == nil {
@@ -53,8 +56,12 @@ func (p *Params) UnmarshalJSON(data []byte) error {
 // Normalize applies stable Spread defaults and canonical formatting.
 //
 // Version:
+//   - 2026-09-12: Support configurable AMM price age in seconds.
 //   - 2026-09-05: Added.
 func (p Params) Normalize() Params {
+	if p.MaxAgeSeconds == 0 {
+		p.MaxAgeSeconds = 5
+	}
 	p.AssetClass = AssetClass(strings.ToLower(strings.TrimSpace(string(p.AssetClass))))
 	if p.AssetClass == "" {
 		p.AssetClass = AssetClassCrypto
@@ -126,13 +133,14 @@ func (p Params) Validate() error {
 // SubscriptionKey builds a stable Spread subscription key.
 //
 // Version:
+//   - 2026-09-12: Support configurable AMM price age in seconds.
 //   - 2026-09-05: Added.
 func (p Params) SubscriptionKey() (string, error) {
 	p = p.Normalize()
 	if err := p.Validate(); err != nil {
 		return "", k4k3ruSDKAppError.Tracef("failed to build spread subscription key: %w", err)
 	}
-	return fmt.Sprintf("%s:ac=%s:s=%s:ba=%s:q=%s:mgsb=%s:rf=%s:src=%s", spreadSubscriptionNamespace, strings.ToUpper(string(p.AssetClass)), p.Symbol, p.BaseAsset, p.Quantity, p.MinimumGrossSpreadBps, upperJoin(p.RouteFamilies), p.sourceSelector()), nil
+	return fmt.Sprintf("%s:ac=%s:s=%s:ba=%s:q=%s:mgsb=%s:rf=%s:src=%s:age=%d", spreadSubscriptionNamespace, strings.ToUpper(string(p.AssetClass)), p.Symbol, p.BaseAsset, p.Quantity, p.MinimumGrossSpreadBps, upperJoin(p.RouteFamilies), p.sourceSelector(), p.MaxAgeSeconds), nil
 }
 
 func (p Params) sourceSelector() string {

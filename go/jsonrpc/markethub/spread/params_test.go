@@ -47,3 +47,38 @@ func TestParamsUnmarshalRejectsUnknownField(t *testing.T) {
 		t.Fatal("Unmarshal() error = nil")
 	}
 }
+
+// TestMaxAgeSeconds verifies wire validation, defaults and subscription isolation.
+// Version:
+//   - 2026-09-12: Added.
+func TestMaxAgeSeconds(t *testing.T) {
+	p := Params{Symbol: "BTC/USDC", BaseAsset: "BTC", Quantity: "1"}
+	defaultKey, err := p.SubscriptionKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.MaxAgeSeconds = 5
+	explicitKey, err := p.SubscriptionKey()
+	if err != nil || explicitKey != defaultKey {
+		t.Fatalf("default mismatch: %s %v", explicitKey, err)
+	}
+	p.MaxAgeSeconds = 60
+	key, err := p.SubscriptionKey()
+	if err != nil || key == defaultKey {
+		t.Fatalf("age collision: %s %v", key, err)
+	}
+	for _, value := range []string{"-1", "1.5", "4294967296", "\"60\""} {
+		var decoded Params
+		if err := json.Unmarshal([]byte(`{"symbol":"BTC/USDC","baseAsset":"BTC","quantity":"1","maxAgeSeconds":`+value+`}`), &decoded); err == nil {
+			t.Fatalf("accepted %s", value)
+		}
+	}
+	data, err := json.Marshal(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded Params
+	if err = json.Unmarshal(data, &decoded); err != nil || decoded.MaxAgeSeconds != 60 {
+		t.Fatalf("round trip: %+v %v", decoded, err)
+	}
+}

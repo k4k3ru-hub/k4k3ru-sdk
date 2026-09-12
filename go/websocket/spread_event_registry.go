@@ -51,7 +51,7 @@ func (r *spreadEventRegistry) route(result k4k3ruSDKSpread.Result) (bool, error)
 	if r == nil {
 		return false, fmt.Errorf("failed to route spread event: event_registry=null")
 	}
-	params := k4k3ruSDKSpread.Params{AssetClass: result.AssetClass, Symbol: result.Symbol, BaseAsset: result.BaseAsset, Quantity: result.Quantity, MinimumGrossSpreadBps: result.MinimumGrossSpreadBps, RouteFamilies: result.RouteFamilies, SourceFilter: result.SourceFilter}
+	params := k4k3ruSDKSpread.Params{MaxAgeSeconds: result.MaxAgeSeconds, AssetClass: result.AssetClass, Symbol: result.Symbol, BaseAsset: result.BaseAsset, Quantity: result.Quantity, MinimumGrossSpreadBps: result.MinimumGrossSpreadBps, RouteFamilies: result.RouteFamilies, SourceFilter: result.SourceFilter}
 	key, err := params.SubscriptionKey()
 	if err != nil {
 		return false, fmt.Errorf("failed to route spread event: %w", err)

@@ -30,6 +30,7 @@ type Route struct {
 }
 
 type Result struct {
+	MaxAgeSeconds         uint32        `json:"maxAgeSeconds,omitempty"`
 	EvaluationID          string        `json:"eid"`
 	AssetClass            AssetClass    `json:"ac"`
 	Symbol                Symbol        `json:"s"`

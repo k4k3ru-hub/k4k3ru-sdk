@@ -54,3 +54,36 @@ func (s *fakeSpreadJSONRPCSender) send(_ context.Context, method k4k3ruSDKJSONRP
 	}
 	return &k4k3ruSDKJSONRPC.Response{Result: result}, nil
 }
+
+// TestSpreadEventAgeRouting isolates subscriptions with different AMM age limits.
+// Version:
+//   - 2026-09-12: Added.
+func TestSpreadEventAgeRouting(t *testing.T) {
+	r := newSpreadEventRegistry()
+	p := k4k3ruSDKSpread.Params{Symbol: "BTC/USDC", BaseAsset: "BTC", Quantity: "1"}.Normalize()
+	short, err := r.register(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.unregister(short)
+	p.MaxAgeSeconds = 60
+	long, err := r.register(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.unregister(long)
+	result := k4k3ruSDKSpread.Result{MaxAgeSeconds: 60, AssetClass: p.AssetClass, Symbol: p.Symbol, BaseAsset: p.BaseAsset, Quantity: p.Quantity, MinimumGrossSpreadBps: p.MinimumGrossSpreadBps, RouteFamilies: p.RouteFamilies}
+	if routed, err := r.route(result); err != nil || !routed {
+		t.Fatalf("route: %v %v", routed, err)
+	}
+	select {
+	case <-long.events:
+	default:
+		t.Fatal("missing long-age event")
+	}
+	select {
+	case <-short.events:
+		t.Fatal("delivered to wrong age subscription")
+	default:
+	}
+}
