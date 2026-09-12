@@ -53,6 +53,10 @@ func TestMethodValidate(t *testing.T) {
 			method: MethodMarketHubListSymbols,
 		},
 		{
+			name:   "known market hub amm pool list method",
+			method: MethodMarketHubAMMPoolList,
+		},
+		{
 			name:   "known market hub bbo subscribe method",
 			method: MethodMarketHubBBOSubscribe,
 		},

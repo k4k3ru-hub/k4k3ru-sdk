@@ -12,6 +12,7 @@ type Method string
 
 const (
 	MethodMarketHubAMMPoolGet                      Method = "MarketHub.AMMPool.Get"
+	MethodMarketHubAMMPoolList                     Method = "MarketHub.AMMPool.List"
 	MethodMarketHubAMMPoolSubscribe                Method = "MarketHub.AMMPool.Subscribe"
 	MethodMarketHubAMMPoolUnsubscribe              Method = "MarketHub.AMMPool.Unsubscribe"
 	MethodAccountAPIRevokeCredential               Method = "AccountAPI.RevokeCredential"
