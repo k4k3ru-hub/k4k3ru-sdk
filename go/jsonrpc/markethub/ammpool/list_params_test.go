@@ -29,10 +29,10 @@ func TestListParamsValidate(t *testing.T) {
 		{name: "chain and network", params: ListParams{Chain: "base", Network: "sepolia"}},
 		{name: "symbol", params: ListParams{Symbol: "WETH/USDC"}},
 		{name: "all filters", params: ListParams{Chain: "base", Network: "mainnet", Venue: "uniswap-v3", Symbol: "WETH/USDC"}},
-		{name: "empty selector", params: ListParams{}, wantErr: "selector=empty"},
-		{name: "venue only", params: ListParams{Venue: "uniswap-v3"}, wantErr: "selector=empty"},
-		{name: "network without chain", params: ListParams{Network: "sepolia", Symbol: "WETH/USDC"}, wantErr: "chain=empty"},
-		{name: "chain without network", params: ListParams{Chain: "base"}, wantErr: "network=empty"},
+		{name: "empty filters", params: ListParams{}},
+		{name: "venue only", params: ListParams{Venue: "uniswap-v3"}},
+		{name: "network only", params: ListParams{Network: "sepolia"}},
+		{name: "chain only", params: ListParams{Chain: "base"}},
 		{name: "invalid chain", params: ListParams{Chain: "base!", Network: "sepolia"}, wantErr: "chain=invalid"},
 		{name: "long venue", params: ListParams{Symbol: "WETH/USDC", Venue: strings.Repeat("a", maxListFilterLength+1)}, wantErr: "venue=too_long"},
 		{name: "invalid symbol", params: ListParams{Symbol: "WETH"}, wantErr: "symbol=invalid"},
@@ -67,10 +67,14 @@ func TestListParamsUnmarshalJSON(t *testing.T) {
 	}
 	for _, payload := range []string{
 		`{"chain":"base","network":"sepolia","unknown":true}`,
-		`{"chain":"base"}`,
 	} {
 		if err := json.Unmarshal([]byte(payload), &params); err == nil || !errors.Is(err, k4k3ruSDKAppError.InvalidParameter()) {
 			t.Fatalf("json.Unmarshal(%q) error = %v, want invalid parameter", payload, err)
+		}
+	}
+	for _, payload := range []string{`{}`, `{"chain":"base"}`, `{"network":"sepolia"}`, `{"venue":"uniswap-v3"}`} {
+		if err := json.Unmarshal([]byte(payload), &params); err != nil {
+			t.Fatalf("json.Unmarshal(%q) error = %v", payload, err)
 		}
 	}
 	if err := json.Unmarshal([]byte(`{"symbol":"WETH/USDC"} {}`), &params); err == nil {

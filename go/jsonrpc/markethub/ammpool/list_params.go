@@ -43,18 +43,10 @@ func (p ListParams) Normalize() ListParams {
 //   - Validation error.
 //
 // Version:
+//   - 2026-09-12: Allowed every filter to be omitted or used independently.
 //   - 2026-09-12: Added.
 func (p ListParams) Validate() error {
 	p = p.Normalize()
-	if p.Chain == "" && p.Symbol == "" {
-		return fmt.Errorf("failed to validate amm pool list parameters: %w: selector=empty", k4k3ruSDKAppError.InvalidParameter())
-	}
-	if p.Chain == "" && p.Network != "" {
-		return fmt.Errorf("failed to validate amm pool list parameters: %w: chain=empty", k4k3ruSDKAppError.InvalidParameter())
-	}
-	if p.Chain != "" && p.Network == "" {
-		return fmt.Errorf("failed to validate amm pool list parameters: %w: network=empty", k4k3ruSDKAppError.InvalidParameter())
-	}
 	for name, value := range map[string]string{
 		"chain": p.Chain, "network": p.Network, "venue": p.Venue,
 	} {
