@@ -6,6 +6,7 @@ import (
 	"fmt"
 	dtoAMMPool "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/ammpool"
 	dtoAMMPoolLaunch "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/ammpool/launch"
+	dtoAMMPoolNewPair "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/ammpool/newpair"
 
 	k4k3ruSDKJSONRPC "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc"
 	k4k3ruSDKJSONRPCBBO "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/bbo"
@@ -16,19 +17,23 @@ import (
 )
 
 type messageRouter struct {
-	requests            *requestTracker
-	bboEvents           *bboEventRegistry
-	orderBookEvents     *orderBookEventRegistry
-	spreadEvents        *spreadEventRegistry
-	carryEvents         *carryEventRegistry
-	ammPoolEvents       *ammPoolEventRegistry
-	ammPoolLaunchEvents *ammPoolLaunchEventRegistry
-	errors              chan error
+	requests             *requestTracker
+	bboEvents            *bboEventRegistry
+	orderBookEvents      *orderBookEventRegistry
+	spreadEvents         *spreadEventRegistry
+	carryEvents          *carryEventRegistry
+	ammPoolEvents        *ammPoolEventRegistry
+	ammPoolLaunchEvents  *ammPoolLaunchEventRegistry
+	ammPoolNewPairEvents *ammPoolNewPairEventRegistry
+	errors               chan error
 }
 
-func newMessageRouter(requests *requestTracker, bboEvents *bboEventRegistry, orderBookEvents *orderBookEventRegistry, spreadEvents *spreadEventRegistry, carryEvents *carryEventRegistry, ammPoolEvents *ammPoolEventRegistry, ammPoolLaunchEvents *ammPoolLaunchEventRegistry) (*messageRouter, error) {
+func newMessageRouter(requests *requestTracker, bboEvents *bboEventRegistry, orderBookEvents *orderBookEventRegistry, spreadEvents *spreadEventRegistry, carryEvents *carryEventRegistry, ammPoolEvents *ammPoolEventRegistry, ammPoolLaunchEvents *ammPoolLaunchEventRegistry, ammPoolNewPairEvents *ammPoolNewPairEventRegistry) (*messageRouter, error) {
 	if ammPoolLaunchEvents == nil {
 		return nil, fmt.Errorf("failed to create websocket message router: amm_pool_launch_event_registry=null")
+	}
+	if ammPoolNewPairEvents == nil {
+		return nil, fmt.Errorf("failed to create websocket message router: amm_pool_new_pair_event_registry=null")
 	}
 	if ammPoolEvents == nil {
 		return nil, fmt.Errorf("failed to create websocket message router: amm_pool_event_registry=null")
@@ -48,7 +53,7 @@ func newMessageRouter(requests *requestTracker, bboEvents *bboEventRegistry, ord
 	if spreadEvents == nil {
 		return nil, fmt.Errorf("failed to create websocket message router: spread_event_registry=null")
 	}
-	return &messageRouter{ammPoolLaunchEvents: ammPoolLaunchEvents, requests: requests, bboEvents: bboEvents, orderBookEvents: orderBookEvents, spreadEvents: spreadEvents, carryEvents: carryEvents, ammPoolEvents: ammPoolEvents, errors: make(chan error, 1)}, nil
+	return &messageRouter{ammPoolNewPairEvents: ammPoolNewPairEvents, ammPoolLaunchEvents: ammPoolLaunchEvents, requests: requests, bboEvents: bboEvents, orderBookEvents: orderBookEvents, spreadEvents: spreadEvents, carryEvents: carryEvents, ammPoolEvents: ammPoolEvents, errors: make(chan error, 1)}, nil
 }
 
 // HandleMessage routes responses and typed subscription events.
@@ -164,6 +169,14 @@ func (r *messageRouter) route(message []byte) error {
 			return fmt.Errorf("failed to route amm pool launch event: failed to decode data: %w", err)
 		}
 		if _, err := r.ammPoolLaunchEvents.route(result); err != nil {
+			return fmt.Errorf("failed to route websocket message: %w", err)
+		}
+	case k4k3ruSDKSubscription.EventTypeAMMPoolNewPair:
+		var result dtoAMMPoolNewPair.Result
+		if err := json.Unmarshal(event.Data, &result); err != nil {
+			return fmt.Errorf("failed to route amm pool new pair event: failed to decode data: %w", err)
+		}
+		if _, err := r.ammPoolNewPairEvents.route(result); err != nil {
 			return fmt.Errorf("failed to route websocket message: %w", err)
 		}
 	case k4k3ruSDKSubscription.EventTypeArbitrage:

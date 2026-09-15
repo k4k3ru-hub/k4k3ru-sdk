@@ -37,6 +37,7 @@ type Module struct {
 	carry           *CarryClient
 	ammPool         *AMMPoolClient
 	ammPoolLaunch   *AMMPoolLaunchClient
+	ammPoolNewPair  *AMMPoolNewPairClient
 }
 
 // NewModule composes a K4K3RU WebSocket module.
@@ -107,7 +108,8 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 	carryEvents := newCarryEventRegistry()
 	ammPoolEvents := newAMMPoolEventRegistry()
 	ammPoolLaunchEvents := newAMMPoolLaunchEventRegistry()
-	router, err := newMessageRouter(requests, bboEvents, orderBookEvents, spreadEvents, carryEvents, ammPoolEvents, ammPoolLaunchEvents)
+	ammPoolNewPairEvents := newAMMPoolNewPairEventRegistry()
+	router, err := newMessageRouter(requests, bboEvents, orderBookEvents, spreadEvents, carryEvents, ammPoolEvents, ammPoolLaunchEvents, ammPoolNewPairEvents)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
 	}
@@ -155,6 +157,10 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
 	}
+	ammPoolNewPairClient, err := newAMMPoolNewPairClient(sender, subscriptions, ammPoolNewPairEvents)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create websocket module: %w", err)
+	}
 	return &Module{
 		client:          transportClient,
 		requests:        requests,
@@ -171,6 +177,7 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 		carry:           carryClient,
 		ammPool:         ammPoolClient,
 		ammPoolLaunch:   ammPoolLaunchClient,
+		ammPoolNewPair:  ammPoolNewPairClient,
 	}, nil
 }
 
@@ -284,4 +291,15 @@ func (m *Module) AMMPoolLaunch() *AMMPoolLaunchClient {
 		return nil
 	}
 	return m.ammPoolLaunch
+}
+
+// AMMPoolNewPair returns the composed pool new pair subscription client.
+//
+// Version:
+//   - 2026-09-16: Added.
+func (m *Module) AMMPoolNewPair() *AMMPoolNewPairClient {
+	if m == nil {
+		return nil
+	}
+	return m.ammPoolNewPair
 }

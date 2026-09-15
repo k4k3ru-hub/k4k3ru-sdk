@@ -46,7 +46,7 @@ func TestMessageRouterRoutesOrderBookEvent(t *testing.T) {
 
 	requests := newRequestTracker()
 	events := newOrderBookEventRegistry()
-	router, err := newMessageRouter(requests, newBBOEventRegistry(), events, newSpreadEventRegistry(), newCarryEventRegistry(), newAMMPoolEventRegistry(), newAMMPoolLaunchEventRegistry())
+	router, err := newMessageRouter(requests, newBBOEventRegistry(), events, newSpreadEventRegistry(), newCarryEventRegistry(), newAMMPoolEventRegistry(), newAMMPoolLaunchEventRegistry(), newAMMPoolNewPairEventRegistry())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,13 +98,13 @@ func TestMessageRouterCloseFailsPendingRequests(t *testing.T) {
 func TestNewMessageRouterValidatesDependencies(t *testing.T) {
 	t.Parallel()
 
-	if _, err := newMessageRouter(nil, newBBOEventRegistry(), newOrderBookEventRegistry(), newSpreadEventRegistry(), newCarryEventRegistry(), newAMMPoolEventRegistry(), newAMMPoolLaunchEventRegistry()); err == nil || !strings.Contains(err.Error(), "request_tracker=null") {
+	if _, err := newMessageRouter(nil, newBBOEventRegistry(), newOrderBookEventRegistry(), newSpreadEventRegistry(), newCarryEventRegistry(), newAMMPoolEventRegistry(), newAMMPoolLaunchEventRegistry(), newAMMPoolNewPairEventRegistry()); err == nil || !strings.Contains(err.Error(), "request_tracker=null") {
 		t.Fatalf("nil request tracker error = %v", err)
 	}
-	if _, err := newMessageRouter(newRequestTracker(), nil, newOrderBookEventRegistry(), newSpreadEventRegistry(), newCarryEventRegistry(), newAMMPoolEventRegistry(), newAMMPoolLaunchEventRegistry()); err == nil || !strings.Contains(err.Error(), "bbo_event_registry=null") {
+	if _, err := newMessageRouter(newRequestTracker(), nil, newOrderBookEventRegistry(), newSpreadEventRegistry(), newCarryEventRegistry(), newAMMPoolEventRegistry(), newAMMPoolLaunchEventRegistry(), newAMMPoolNewPairEventRegistry()); err == nil || !strings.Contains(err.Error(), "bbo_event_registry=null") {
 		t.Fatalf("nil bbo event registry error = %v", err)
 	}
-	if _, err := newMessageRouter(newRequestTracker(), newBBOEventRegistry(), nil, newSpreadEventRegistry(), newCarryEventRegistry(), newAMMPoolEventRegistry(), newAMMPoolLaunchEventRegistry()); err == nil || !strings.Contains(err.Error(), "order_book_event_registry=null") {
+	if _, err := newMessageRouter(newRequestTracker(), newBBOEventRegistry(), nil, newSpreadEventRegistry(), newCarryEventRegistry(), newAMMPoolEventRegistry(), newAMMPoolLaunchEventRegistry(), newAMMPoolNewPairEventRegistry()); err == nil || !strings.Contains(err.Error(), "order_book_event_registry=null") {
 		t.Fatalf("nil order book event registry error = %v", err)
 	}
 }
@@ -113,7 +113,7 @@ func newTestMessageRouter(t *testing.T) (*messageRouter, *requestTracker, *bboEv
 	t.Helper()
 	requests := newRequestTracker()
 	events := newBBOEventRegistry()
-	router, err := newMessageRouter(requests, events, newOrderBookEventRegistry(), newSpreadEventRegistry(), newCarryEventRegistry(), newAMMPoolEventRegistry(), newAMMPoolLaunchEventRegistry())
+	router, err := newMessageRouter(requests, events, newOrderBookEventRegistry(), newSpreadEventRegistry(), newCarryEventRegistry(), newAMMPoolEventRegistry(), newAMMPoolLaunchEventRegistry(), newAMMPoolNewPairEventRegistry())
 	if err != nil {
 		t.Fatalf("newMessageRouter() error = %v", err)
 	}

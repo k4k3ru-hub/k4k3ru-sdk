@@ -12,14 +12,15 @@ import (
 type EventType string
 
 const (
-	EventTypeAMMPoolLaunch EventType = "apl"
-	EventTypeAMMPool       EventType = "ap"
-	EventTypeBBO           EventType = "bbo"
-	EventTypeArbitrage     EventType = "ar"
-	EventTypeOrderBook     EventType = "ob"
-	EventTypeSpread        EventType = "sp"
-	EventTypeCarry         EventType = "cy"
-	EventTypeExecution     EventType = "ex"
+	EventTypeAMMPoolLaunch  EventType = "apl"
+	EventTypeAMMPoolNewPair EventType = "apnp"
+	EventTypeAMMPool        EventType = "ap"
+	EventTypeBBO            EventType = "bbo"
+	EventTypeArbitrage      EventType = "ar"
+	EventTypeOrderBook      EventType = "ob"
+	EventTypeSpread         EventType = "sp"
+	EventTypeCarry          EventType = "cy"
+	EventTypeExecution      EventType = "ex"
 )
 
 type Event struct {
@@ -69,7 +70,7 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 //   - 2026-08-30: Added.
 func (e Event) Validate() error {
 	switch e.Type {
-	case EventTypeAMMPoolLaunch, EventTypeAMMPool, EventTypeBBO, EventTypeArbitrage, EventTypeOrderBook, EventTypeSpread, EventTypeCarry, EventTypeExecution:
+	case EventTypeAMMPoolNewPair, EventTypeAMMPoolLaunch, EventTypeAMMPool, EventTypeBBO, EventTypeArbitrage, EventTypeOrderBook, EventTypeSpread, EventTypeCarry, EventTypeExecution:
 	default:
 		if e.Type == "" {
 			return k4k3ruSDKAppError.Tracef("failed to validate subscription event: %w: event_type=empty", k4k3ruSDKAppError.InvalidParameter())
