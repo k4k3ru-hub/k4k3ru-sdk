@@ -45,6 +45,13 @@ func (p Params) Normalize() Params {
 	p.Chain = strings.ToLower(strings.TrimSpace(p.Chain))
 	p.Network = strings.ToLower(strings.TrimSpace(p.Network))
 	p.Venue = strings.ToLower(strings.TrimSpace(p.Venue))
+	if p.HasSwap != nil {
+		v := *p.HasSwap
+		p.HasSwap = &v
+	}
+	if strings.Contains(p.MinLiquidityUSD, ".") {
+		p.MinLiquidityUSD = strings.TrimRight(strings.TrimRight(p.MinLiquidityUSD, "0"), ".")
+	}
 	return p
 }
 

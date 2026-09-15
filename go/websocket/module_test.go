@@ -29,7 +29,7 @@ func TestNewModuleComposesPhysicalClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("newModule() error = %v", err)
 	}
-	if module == nil || module.client == nil || module.client.physical != factory.client || module.requests == nil || module.bboEvents == nil || module.orderBookEvents == nil || module.spreadEvents == nil || module.router == nil || module.subscriptions == nil || module.BBO() == nil || module.OrderBook() == nil || module.Spread() == nil || module.Carry() == nil || module.carryEvents == nil || module.router.carryEvents != module.carryEvents || module.AMMPool() == nil || module.ammPoolEvents == nil || module.router.ammPoolEvents != module.ammPoolEvents || module.AMMPoolLaunch() == nil || module.AMMPoolLaunch().eventRouter != module.router.ammPoolLaunchEvents {
+	if module == nil || module.client == nil || module.client.physical != factory.client || module.requests == nil || module.bboEvents == nil || module.orderBookEvents == nil || module.spreadEvents == nil || module.router == nil || module.subscriptions == nil || module.BBO() == nil || module.OrderBook() == nil || module.Spread() == nil || module.Carry() == nil || module.carryEvents == nil || module.router.carryEvents != module.carryEvents || module.AMMPool() == nil || module.ammPoolEvents == nil || module.router.ammPoolEvents != module.ammPoolEvents || module.AMMPoolNewPair() == nil || module.AMMPoolNewPair().eventRouter != module.router.ammPoolNewPairEvents || module.AMMPoolLaunch() == nil || module.AMMPoolLaunch().eventRouter != module.router.ammPoolLaunchEvents {
 		t.Fatalf("newModule() = %#v", module)
 	}
 	if factory.endpointURL != config.EndpointURL {
