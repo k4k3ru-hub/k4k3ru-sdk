@@ -11,7 +11,7 @@ import (
 	k4k3ruWebSocket "github.com/k4k3ru-hub/websocket/go"
 )
 
-// TestNewModuleComposesPhysicalClient handles launch subscription state.
+// TestNewModuleComposesPhysicalClient verifies subscription composition and lifecycle.
 //
 // Version:
 //   - 2026-09-15: Added.
@@ -29,7 +29,7 @@ func TestNewModuleComposesPhysicalClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("newModule() error = %v", err)
 	}
-	if module == nil || module.client == nil || module.client.physical != factory.client || module.requests == nil || module.bboEvents == nil || module.orderBookEvents == nil || module.spreadEvents == nil || module.router == nil || module.subscriptions == nil || module.BBO() == nil || module.OrderBook() == nil || module.Spread() == nil || module.Carry() == nil || module.carryEvents == nil || module.router.carryEvents != module.carryEvents || module.AMMPool() == nil || module.ammPoolEvents == nil || module.router.ammPoolEvents != module.ammPoolEvents || module.AMMPoolNewPair() == nil || module.AMMPoolNewPair().eventRouter != module.router.ammPoolNewPairEvents || module.AMMPoolLaunch() == nil || module.AMMPoolLaunch().eventRouter != module.router.ammPoolLaunchEvents {
+	if module == nil || module.client == nil || module.client.physical != factory.client || module.requests == nil || module.bboEvents == nil || module.orderBookEvents == nil || module.spreadEvents == nil || module.router == nil || module.subscriptions == nil || module.BBO() == nil || module.OrderBook() == nil || module.Spread() == nil || module.Carry() == nil || module.carryEvents == nil || module.router.carryEvents != module.carryEvents || module.AMMPool() == nil || module.ammPoolEvents == nil || module.router.ammPoolEvents != module.ammPoolEvents || module.AMMPoolNewPair() == nil || module.AMMPoolNewPair().eventRouter != module.router.ammPoolNewPairEvents {
 		t.Fatalf("newModule() = %#v", module)
 	}
 	if factory.endpointURL != config.EndpointURL {
@@ -89,7 +89,7 @@ func TestNewModuleValidatesDependenciesAndConfig(t *testing.T) {
 	}
 }
 
-// TestModuleClose handles launch subscription state.
+// TestModuleClose verifies subscription composition and lifecycle.
 //
 // Version:
 //   - 2026-09-15: Added.
@@ -102,7 +102,7 @@ func TestModuleClose(t *testing.T) {
 	if err != nil {
 		t.Fatalf("register() error = %v", err)
 	}
-	router, err := newMessageRouter(requests, newBBOEventRegistry(), newOrderBookEventRegistry(), newSpreadEventRegistry(), newCarryEventRegistry(), newAMMPoolEventRegistry(), newAMMPoolLaunchEventRegistry(), newAMMPoolNewPairEventRegistry())
+	router, err := newMessageRouter(requests, newBBOEventRegistry(), newOrderBookEventRegistry(), newSpreadEventRegistry(), newCarryEventRegistry(), newAMMPoolEventRegistry(), newAMMPoolNewPairEventRegistry())
 	if err != nil {
 		t.Fatalf("newMessageRouter() error = %v", err)
 	}

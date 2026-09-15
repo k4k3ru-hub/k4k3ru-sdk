@@ -323,41 +323,14 @@ The reader epoch and version identify response ordering. None of these public
 operations initiate on-chain RPC calls. Solana price-source selection remains
 pending in the service; DTO/client support does not enable new price sources.
 
+## AMM new pairs
 
-## AMM pool launches
+Use [go/jsonrpc/markethub/ammpool/newpair](go/jsonrpc/markethub/ammpool/newpair/README.md)
+for `MarketHub.AMMPool.NewPair.Get/List/Subscribe/Unsubscribe`.
+`websocket.NewModule` composes `module.AMMPoolNewPair()`.
+Pool age is independent of token deployment time; use `MaxPoolAgeSeconds` to
+select recently created pools. List and subscription responses contain full
+replacement snapshots, coverage and security observations.
 
-The owning package `go/jsonrpc/markethub/ammpool/launch` provides `Params`,
-`ListParams`, `GetParams`, `Result` and `GetResult` for
-`MarketHub.AMMPool.Launch.List/Get/Subscribe/Unsubscribe`.
-`websocket.NewModule` composes `module.AMMPoolLaunch()`.
-
-```go
-import launch "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/ammpool/launch"
-
-// module is constructed with websocket.NewModule(ctx, config).
-params := launch.Params{Chain: "base", Network: "mainnet", MaxPoolAgeSeconds: 86400, MaxTokenAgeSeconds: 86400}
-subscription, err := module.AMMPoolLaunch().Subscribe(ctx, params)
-if err != nil {
-    return err
-}
-// Read launch.Result replacement snapshots from subscription.Events().
-if err := module.AMMPoolLaunch().Unsubscribe(ctx, subscription); err != nil {
-    return err
-}
-```
-
-`MaxPoolAgeSeconds` filters pool launch age; optional `MaxTokenAgeSeconds` requires at
-least one token with observed recent contract-creation evidence. Ages are seconds,
-maximum 604800; timestamps are Unix microseconds. List uses
-`launch.ListParams{Filter: params, Limit: 100}` with an optional cursor. Get uses a
-chain/network/venue/pool ID and the application's HTTP JSON-RPC transport.
-
-Event `apl` carries a complete replacement view. Delivery is coalesced, with
-assessment updates and age-based removals, not an exhaustive event history.
-History and cursors are process-local; check `Epoch`, `Coverage` and `Truncated`.
-Historical RPC failures remain unknown and do not qualify as new tokens. Owner,
-EIP-1967 slots and V4 hooks are observations, not safety guarantees; mint permission
-analysis, LP locks, holder concentration and sell simulation are unsupported.
-
-Launch parameters use `maxPoolAgeSeconds` on the wire and `MaxPoolAgeSeconds` in Go.
-The former Launch-only `maxAgeSeconds` field is rejected; update clients and servers together.
+The former Launch RPC group, SDK package and subscription client have been removed.
+Migrate to NewPair and update Gateway and MarketHub together.

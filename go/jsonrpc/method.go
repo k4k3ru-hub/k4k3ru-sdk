@@ -12,16 +12,12 @@ type Method string
 
 const (
 	MethodMarketHubAMMPoolGet                      Method = "MarketHub.AMMPool.Get"
-	MethodMarketHubAMMPoolLaunchGet                Method = "MarketHub.AMMPool.Launch.Get"
 	MethodMarketHubAMMPoolNewPairGet               Method = "MarketHub.AMMPool.NewPair.Get"
 	MethodMarketHubAMMPoolList                     Method = "MarketHub.AMMPool.List"
-	MethodMarketHubAMMPoolLaunchList               Method = "MarketHub.AMMPool.Launch.List"
 	MethodMarketHubAMMPoolNewPairList              Method = "MarketHub.AMMPool.NewPair.List"
 	MethodMarketHubAMMPoolSubscribe                Method = "MarketHub.AMMPool.Subscribe"
-	MethodMarketHubAMMPoolLaunchSubscribe          Method = "MarketHub.AMMPool.Launch.Subscribe"
 	MethodMarketHubAMMPoolNewPairSubscribe         Method = "MarketHub.AMMPool.NewPair.Subscribe"
 	MethodMarketHubAMMPoolUnsubscribe              Method = "MarketHub.AMMPool.Unsubscribe"
-	MethodMarketHubAMMPoolLaunchUnsubscribe        Method = "MarketHub.AMMPool.Launch.Unsubscribe"
 	MethodMarketHubAMMPoolNewPairUnsubscribe       Method = "MarketHub.AMMPool.NewPair.Unsubscribe"
 	MethodAccountAPIRevokeCredential               Method = "AccountAPI.RevokeCredential"
 	MethodAccountAPIListCredential                 Method = "AccountAPI.ListCredential"

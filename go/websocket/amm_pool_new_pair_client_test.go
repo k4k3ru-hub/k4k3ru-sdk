@@ -47,7 +47,7 @@ func TestAMMPoolNewPairClientRoutingAndCleanup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	router, err := newMessageRouter(newRequestTracker(), newBBOEventRegistry(), newOrderBookEventRegistry(), newSpreadEventRegistry(), newCarryEventRegistry(), newAMMPoolEventRegistry(), newAMMPoolLaunchEventRegistry(), newAMMPoolNewPairEventRegistry())
+	router, err := newMessageRouter(newRequestTracker(), newBBOEventRegistry(), newOrderBookEventRegistry(), newSpreadEventRegistry(), newCarryEventRegistry(), newAMMPoolEventRegistry(), newAMMPoolNewPairEventRegistry())
 	if err != nil {
 		t.Fatal(err)
 	}

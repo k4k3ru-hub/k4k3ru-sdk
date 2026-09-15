@@ -1,7 +1,7 @@
 # MarketHub.AMMPool.NewPair
 
 Methods: `MarketHub.AMMPool.NewPair.List`, `.Get`, `.Subscribe`, `.Unsubscribe`.
-The legacy `MarketHub.AMMPool.Launch` group remains available; new integrations should use NewPair.
+Use this group for pool discovery. The former Launch RPC group and its SDK types have been removed.
 
 ```go
 import newpair "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/ammpool/newpair"
