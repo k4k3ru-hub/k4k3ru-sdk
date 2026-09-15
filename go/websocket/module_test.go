@@ -11,6 +11,10 @@ import (
 	k4k3ruWebSocket "github.com/k4k3ru-hub/websocket/go"
 )
 
+// TestNewModuleComposesPhysicalClient handles launch subscription state.
+//
+// Version:
+//   - 2026-09-15: Added.
 func TestNewModuleComposesPhysicalClient(t *testing.T) {
 	t.Parallel()
 
@@ -25,7 +29,7 @@ func TestNewModuleComposesPhysicalClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("newModule() error = %v", err)
 	}
-	if module == nil || module.client == nil || module.client.physical != factory.client || module.requests == nil || module.bboEvents == nil || module.orderBookEvents == nil || module.spreadEvents == nil || module.router == nil || module.subscriptions == nil || module.BBO() == nil || module.OrderBook() == nil || module.Spread() == nil || module.Carry() == nil || module.carryEvents == nil || module.router.carryEvents != module.carryEvents || module.AMMPool() == nil || module.ammPoolEvents == nil || module.router.ammPoolEvents != module.ammPoolEvents {
+	if module == nil || module.client == nil || module.client.physical != factory.client || module.requests == nil || module.bboEvents == nil || module.orderBookEvents == nil || module.spreadEvents == nil || module.router == nil || module.subscriptions == nil || module.BBO() == nil || module.OrderBook() == nil || module.Spread() == nil || module.Carry() == nil || module.carryEvents == nil || module.router.carryEvents != module.carryEvents || module.AMMPool() == nil || module.ammPoolEvents == nil || module.router.ammPoolEvents != module.ammPoolEvents || module.AMMPoolLaunch() == nil || module.AMMPoolLaunch().eventRouter != module.router.ammPoolLaunchEvents {
 		t.Fatalf("newModule() = %#v", module)
 	}
 	if factory.endpointURL != config.EndpointURL {
@@ -85,6 +89,10 @@ func TestNewModuleValidatesDependenciesAndConfig(t *testing.T) {
 	}
 }
 
+// TestModuleClose handles launch subscription state.
+//
+// Version:
+//   - 2026-09-15: Added.
 func TestModuleClose(t *testing.T) {
 	t.Parallel()
 
@@ -94,7 +102,7 @@ func TestModuleClose(t *testing.T) {
 	if err != nil {
 		t.Fatalf("register() error = %v", err)
 	}
-	router, err := newMessageRouter(requests, newBBOEventRegistry(), newOrderBookEventRegistry(), newSpreadEventRegistry(), newCarryEventRegistry(), newAMMPoolEventRegistry())
+	router, err := newMessageRouter(requests, newBBOEventRegistry(), newOrderBookEventRegistry(), newSpreadEventRegistry(), newCarryEventRegistry(), newAMMPoolEventRegistry(), newAMMPoolLaunchEventRegistry())
 	if err != nil {
 		t.Fatalf("newMessageRouter() error = %v", err)
 	}

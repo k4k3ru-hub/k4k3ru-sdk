@@ -36,6 +36,7 @@ type Module struct {
 	spread          *SpreadClient
 	carry           *CarryClient
 	ammPool         *AMMPoolClient
+	ammPoolLaunch   *AMMPoolLaunchClient
 }
 
 // NewModule composes a K4K3RU WebSocket module.
@@ -49,6 +50,7 @@ type Module struct {
 //   - Configuration or composition error.
 //
 // Version:
+//   - 2026-09-15: Compose the AMM pool launch client and event registry.
 //   - 2026-09-11: Compose the AMMPool client and event registry.
 //   - 2026-09-06: Added the Carry client.
 //   - 2026-09-05: Added the Spread client.
@@ -104,7 +106,8 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 	spreadEvents := newSpreadEventRegistry()
 	carryEvents := newCarryEventRegistry()
 	ammPoolEvents := newAMMPoolEventRegistry()
-	router, err := newMessageRouter(requests, bboEvents, orderBookEvents, spreadEvents, carryEvents, ammPoolEvents)
+	ammPoolLaunchEvents := newAMMPoolLaunchEventRegistry()
+	router, err := newMessageRouter(requests, bboEvents, orderBookEvents, spreadEvents, carryEvents, ammPoolEvents, ammPoolLaunchEvents)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
 	}
@@ -148,6 +151,10 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
 	}
+	ammPoolLaunchClient, err := newAMMPoolLaunchClient(sender, subscriptions, ammPoolLaunchEvents)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create websocket module: %w", err)
+	}
 	return &Module{
 		client:          transportClient,
 		requests:        requests,
@@ -163,6 +170,7 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 		spread:          spreadClient,
 		carry:           carryClient,
 		ammPool:         ammPoolClient,
+		ammPoolLaunch:   ammPoolLaunchClient,
 	}, nil
 }
 
@@ -265,4 +273,15 @@ func (m *Module) AMMPool() *AMMPoolClient {
 		return nil
 	}
 	return m.ammPool
+}
+
+// AMMPoolLaunch returns the composed pool launch subscription client.
+//
+// Version:
+//   - 2026-09-15: Added.
+func (m *Module) AMMPoolLaunch() *AMMPoolLaunchClient {
+	if m == nil {
+		return nil
+	}
+	return m.ammPoolLaunch
 }

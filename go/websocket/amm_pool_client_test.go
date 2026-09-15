@@ -34,6 +34,7 @@ func (s *ammPoolSender) send(_ context.Context, method rpc.Method, raw json.RawM
 // TestAMMPoolClientRoutingAndCleanup verifies selector isolation, latest results, and unsubscribe cleanup.
 //
 // Version:
+//   - 2026-09-15: Support AMM pool launch monitoring.
 //   - 2026-09-11: Added.
 func TestAMMPoolClientRoutingAndCleanup(t *testing.T) {
 	registry := newAMMPoolEventRegistry()
@@ -46,7 +47,7 @@ func TestAMMPoolClientRoutingAndCleanup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	router, err := newMessageRouter(newRequestTracker(), newBBOEventRegistry(), newOrderBookEventRegistry(), newSpreadEventRegistry(), newCarryEventRegistry(), registry)
+	router, err := newMessageRouter(newRequestTracker(), newBBOEventRegistry(), newOrderBookEventRegistry(), newSpreadEventRegistry(), newCarryEventRegistry(), registry, newAMMPoolLaunchEventRegistry())
 	if err != nil {
 		t.Fatal(err)
 	}
