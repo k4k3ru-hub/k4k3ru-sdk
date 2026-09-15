@@ -335,7 +335,7 @@ The owning package `go/jsonrpc/markethub/ammpool/launch` provides `Params`,
 import launch "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/ammpool/launch"
 
 // module is constructed with websocket.NewModule(ctx, config).
-params := launch.Params{Chain: "base", Network: "mainnet", MaxAgeSeconds: 86400, MaxTokenAgeSeconds: 86400}
+params := launch.Params{Chain: "base", Network: "mainnet", MaxPoolAgeSeconds: 86400, MaxTokenAgeSeconds: 86400}
 subscription, err := module.AMMPoolLaunch().Subscribe(ctx, params)
 if err != nil {
     return err
@@ -346,7 +346,7 @@ if err := module.AMMPoolLaunch().Unsubscribe(ctx, subscription); err != nil {
 }
 ```
 
-`MaxAgeSeconds` filters pool launch age; optional `MaxTokenAgeSeconds` requires at
+`MaxPoolAgeSeconds` filters pool launch age; optional `MaxTokenAgeSeconds` requires at
 least one token with observed recent contract-creation evidence. Ages are seconds,
 maximum 604800; timestamps are Unix microseconds. List uses
 `launch.ListParams{Filter: params, Limit: 100}` with an optional cursor. Get uses a
@@ -358,3 +358,6 @@ History and cursors are process-local; check `Epoch`, `Coverage` and `Truncated`
 Historical RPC failures remain unknown and do not qualify as new tokens. Owner,
 EIP-1967 slots and V4 hooks are observations, not safety guarantees; mint permission
 analysis, LP locks, holder concentration and sell simulation are unsupported.
+
+Launch parameters use `maxPoolAgeSeconds` on the wire and `MaxPoolAgeSeconds` in Go.
+The former Launch-only `maxAgeSeconds` field is rejected; update clients and servers together.

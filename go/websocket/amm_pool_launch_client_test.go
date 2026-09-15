@@ -52,11 +52,11 @@ func TestAMMPoolLaunchClientRoutingAndCleanup(t *testing.T) {
 		t.Fatal(err)
 	}
 	router.ammPoolLaunchEvents = registry
-	first, err := client.Subscribe(context.Background(), dto.Params{Chain: " base ", MaxAgeSeconds: 5})
+	first, err := client.Subscribe(context.Background(), dto.Params{Chain: " base ", MaxPoolAgeSeconds: 5})
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := client.Subscribe(context.Background(), dto.Params{Chain: "base", MaxAgeSeconds: 30})
+	second, err := client.Subscribe(context.Background(), dto.Params{Chain: "base", MaxPoolAgeSeconds: 30})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,8 +65,8 @@ func TestAMMPoolLaunchClientRoutingAndCleanup(t *testing.T) {
 	}
 	// Route the actual wire envelope, including unavailable replacement snapshots.
 	for _, message := range []string{
-		`{"e":"apl","data":{"filter":{"chain":"base","maxAgeSeconds":5},"epoch":"epoch","version":1,"available":true,"compositeMid":"3000","pools":[]}}`,
-		`{"e":"apl","data":{"filter":{"chain":"base","maxAgeSeconds":5},"epoch":"epoch","version":2,"available":false,"compositeMid":null,"reason":"no_eligible_pools","pools":[]}}`,
+		`{"e":"apl","data":{"filter":{"chain":"base","maxPoolAgeSeconds":5},"epoch":"epoch","version":1,"available":true,"compositeMid":"3000","pools":[]}}`,
+		`{"e":"apl","data":{"filter":{"chain":"base","maxPoolAgeSeconds":5},"epoch":"epoch","version":2,"available":false,"compositeMid":null,"reason":"no_eligible_pools","pools":[]}}`,
 	} {
 		if err := router.route([]byte(message)); err != nil {
 			t.Fatal(err)
@@ -91,7 +91,7 @@ func TestAMMPoolLaunchClientRoutingAndCleanup(t *testing.T) {
 	if _, open := <-first.Events(); open {
 		t.Fatal("unsubscribed channel open")
 	}
-	if ok, err := registry.route(dto.Result{Filter: dto.Params{Chain: "base", MaxAgeSeconds: 30}}); err != nil || !ok {
+	if ok, err := registry.route(dto.Result{Filter: dto.Params{Chain: "base", MaxPoolAgeSeconds: 30}}); err != nil || !ok {
 		t.Fatal(ok, err)
 	}
 	if err := client.Unsubscribe(context.Background(), second); err != nil {
@@ -119,12 +119,12 @@ func TestAMMPoolLaunchClientFailedACKCanRetry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p := dto.Params{Chain: "base", MaxAgeSeconds: 30}
+	p := dto.Params{Chain: "base", MaxPoolAgeSeconds: 30}
 	if _, err := client.Subscribe(context.Background(), p); !errors.Is(err, sentinel) {
 		t.Fatal(err)
 	}
 	sender.err = nil
-	sender.ack = &dto.Params{Chain: "base", MaxAgeSeconds: 5}
+	sender.ack = &dto.Params{Chain: "base", MaxPoolAgeSeconds: 5}
 	if _, err := client.Subscribe(context.Background(), p); err == nil {
 		t.Fatal("wrong age acknowledged")
 	}

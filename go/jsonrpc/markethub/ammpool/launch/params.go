@@ -17,7 +17,7 @@ type Params struct {
 	Chain              string `json:"chain,omitempty"`
 	Network            string `json:"network,omitempty"`
 	Venue              string `json:"venue,omitempty"`
-	MaxAgeSeconds      uint32 `json:"maxAgeSeconds"`
+	MaxPoolAgeSeconds  uint32 `json:"maxPoolAgeSeconds"`
 	MaxTokenAgeSeconds uint32 `json:"maxTokenAgeSeconds,omitempty"`
 }
 type GetParams struct {
@@ -46,10 +46,10 @@ func (p Params) Normalize() Params {
 	return p
 }
 
-// Validate validates bounded launch and token age filters.
+// Validate validates bounded pool and token age filters.
 //
 // Version:
-//   - 2026-09-15: Added.
+//   - 2026-09-15: Use maxPoolAgeSeconds for the pool age selector.
 func (p Params) Validate() error {
 	p = p.Normalize()
 	for _, value := range []string{p.Chain, p.Network, p.Venue} {
@@ -60,7 +60,7 @@ func (p Params) Validate() error {
 	if p.Venue != "" && p.Venue != "uniswap-v3" && p.Venue != "uniswap-v4" && p.Venue != "aerodrome" {
 		return fmt.Errorf("failed to validate launch parameters: %w: venue=invalid", app.InvalidParameter())
 	}
-	if p.MaxAgeSeconds == 0 || p.MaxAgeSeconds > MaximumAgeSeconds || p.MaxTokenAgeSeconds > MaximumAgeSeconds {
+	if p.MaxPoolAgeSeconds == 0 || p.MaxPoolAgeSeconds > MaximumAgeSeconds || p.MaxTokenAgeSeconds > MaximumAgeSeconds {
 		return fmt.Errorf("failed to validate launch parameters: %w: age=out_of_range max_value=%d", app.InvalidParameter(), MaximumAgeSeconds)
 	}
 	return nil
@@ -69,13 +69,13 @@ func (p Params) Validate() error {
 // SubscriptionKey identifies the complete normalized launch filter.
 //
 // Version:
-//   - 2026-09-15: Added.
+//   - 2026-09-15: Use maxPoolAgeSeconds for the pool age selector.
 func (p Params) SubscriptionKey() (string, error) {
 	p = p.Normalize()
 	if err := p.Validate(); err != nil {
 		return "", fmt.Errorf("failed to create launch subscription key: %w", err)
 	}
-	return fmt.Sprintf("MarketHub.AMMPool.Launch:c=%s:n=%s:v=%s:age=%d:token_age=%d", p.Chain, p.Network, p.Venue, p.MaxAgeSeconds, p.MaxTokenAgeSeconds), nil
+	return fmt.Sprintf("MarketHub.AMMPool.Launch:c=%s:n=%s:v=%s:pool_age=%d:token_age=%d", p.Chain, p.Network, p.Venue, p.MaxPoolAgeSeconds, p.MaxTokenAgeSeconds), nil
 }
 
 // Normalize normalizes the pool's owning chain, venue and identifier.
@@ -93,13 +93,13 @@ func (p GetParams) Normalize() GetParams {
 // Validate requires an unambiguous EVM pool identity.
 //
 // Version:
-//   - 2026-09-15: Added.
+//   - 2026-09-15: Use maxPoolAgeSeconds for the pool age selector.
 func (p GetParams) Validate() error {
 	p = p.Normalize()
 	if p.Chain == "" || p.Network == "" || p.Venue == "" {
 		return fmt.Errorf("failed to validate launch identity: %w: selector=empty", app.InvalidParameter())
 	}
-	if err := (Params{Chain: p.Chain, Network: p.Network, Venue: p.Venue, MaxAgeSeconds: 1}).Validate(); err != nil {
+	if err := (Params{Chain: p.Chain, Network: p.Network, Venue: p.Venue, MaxPoolAgeSeconds: 1}).Validate(); err != nil {
 		return fmt.Errorf("failed to validate launch identity: %w", err)
 	}
 	if !poolID.MatchString(p.PoolID) || (p.Venue == "uniswap-v4" && len(p.PoolID) != 66) || (p.Venue != "uniswap-v4" && len(p.PoolID) != 42) {
@@ -111,7 +111,7 @@ func (p GetParams) Validate() error {
 // Validate validates pagination and the launch filter.
 //
 // Version:
-//   - 2026-09-15: Added.
+//   - 2026-09-15: Use maxPoolAgeSeconds for the pool age selector.
 func (p ListParams) Validate() error {
 	if err := p.Filter.Validate(); err != nil {
 		return fmt.Errorf("failed to validate launch list: %w", err)
@@ -140,7 +140,7 @@ func decode(data []byte, v any) error {
 // UnmarshalJSON rejects unknown fields and invalid filters.
 //
 // Version:
-//   - 2026-09-15: Added.
+//   - 2026-09-15: Use maxPoolAgeSeconds for the pool age selector.
 func (p *Params) UnmarshalJSON(data []byte) error {
 	if p == nil {
 		return fmt.Errorf("failed to decode launch parameters: destination=null")
@@ -157,7 +157,7 @@ func (p *Params) UnmarshalJSON(data []byte) error {
 // UnmarshalJSON rejects unknown fields and invalid pool identities.
 //
 // Version:
-//   - 2026-09-15: Added.
+//   - 2026-09-15: Use maxPoolAgeSeconds for the pool age selector.
 func (p *GetParams) UnmarshalJSON(data []byte) error {
 	if p == nil {
 		return fmt.Errorf("failed to decode launch identity: destination=null")
@@ -174,7 +174,7 @@ func (p *GetParams) UnmarshalJSON(data []byte) error {
 // UnmarshalJSON rejects unknown fields and invalid pagination.
 //
 // Version:
-//   - 2026-09-15: Added.
+//   - 2026-09-15: Use maxPoolAgeSeconds for the pool age selector.
 func (p *ListParams) UnmarshalJSON(data []byte) error {
 	if p == nil {
 		return fmt.Errorf("failed to decode launch list: destination=null")
