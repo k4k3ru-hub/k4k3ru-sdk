@@ -12,14 +12,15 @@ import (
 type EventType string
 
 const (
-	EventTypeAMMPoolNewPair EventType = "apnp"
-	EventTypeAMMPool        EventType = "ap"
-	EventTypeBBO            EventType = "bbo"
-	EventTypeArbitrage      EventType = "ar"
-	EventTypeOrderBook      EventType = "ob"
-	EventTypeSpread         EventType = "sp"
-	EventTypeCarry          EventType = "cy"
-	EventTypeExecution      EventType = "ex"
+	EventTypeAMMPoolNewPair  EventType = "apnp"
+	EventTypeAMMPool         EventType = "ap"
+	EventTypeBBO             EventType = "bbo"
+	EventTypeArbitrage       EventType = "ar"
+	EventTypeOrderBook       EventType = "ob"
+	EventTypeSpread          EventType = "sp"
+	EventTypeCarry           EventType = "cy"
+	EventTypeExecution       EventType = "ex"
+	EventTypeExecutionStatus EventType = "exs"
 )
 
 type Event struct {
@@ -62,6 +63,7 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 //   - Validation error.
 //
 // Version:
+//   - 2026-09-16: Accept execution observation events.
 //   - 2026-09-16: Remove retired Launch support; retain NewPair.
 //   - 2026-09-10: Accept AMM pool snapshots.
 //   - 2026-09-06: Added Carry support.
@@ -69,7 +71,7 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 //   - 2026-08-30: Added.
 func (e Event) Validate() error {
 	switch e.Type {
-	case EventTypeAMMPoolNewPair, EventTypeAMMPool, EventTypeBBO, EventTypeArbitrage, EventTypeOrderBook, EventTypeSpread, EventTypeCarry, EventTypeExecution:
+	case EventTypeAMMPoolNewPair, EventTypeAMMPool, EventTypeBBO, EventTypeArbitrage, EventTypeOrderBook, EventTypeSpread, EventTypeCarry, EventTypeExecution, EventTypeExecutionStatus:
 	default:
 		if e.Type == "" {
 			return k4k3ruSDKAppError.Tracef("failed to validate subscription event: %w: event_type=empty", k4k3ruSDKAppError.InvalidParameter())

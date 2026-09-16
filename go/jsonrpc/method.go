@@ -58,6 +58,8 @@ const (
 	MethodTradeHubSwapPrepare                      Method = "TradeHub.AMMPool.Swap.Prepare"
 	MethodTradeHubExecutionPrepare                 Method = "TradeHub.Execution.Prepare"
 	MethodTradeHubExecutionSubmit                  Method = "TradeHub.Execution.Submit"
+	MethodTradeHubExecutionSubscribe               Method = "TradeHub.Execution.Subscribe"
+	MethodTradeHubExecutionUnsubscribe             Method = "TradeHub.Execution.Unsubscribe"
 )
 
 // Validate validates the JSON-RPC method.

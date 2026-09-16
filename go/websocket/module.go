@@ -22,6 +22,7 @@ type ModuleConfig struct {
 
 // Module owns the composed K4K3RU WebSocket client graph.
 type Module struct {
+	execution       *ExecutionClient
 	client          *client
 	requests        *requestTracker
 	bboEvents       *bboEventRegistry
@@ -50,6 +51,7 @@ type Module struct {
 //   - Configuration or composition error.
 //
 // Version:
+//   - 2026-09-16: Compose the execution observation client.
 //   - 2026-09-16: Compose NewPair without the retired Launch client.
 //   - 2026-09-11: Compose the AMMPool client and event registry.
 //   - 2026-09-06: Added the Carry client.
@@ -107,10 +109,12 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 	carryEvents := newCarryEventRegistry()
 	ammPoolEvents := newAMMPoolEventRegistry()
 	ammPoolNewPairEvents := newAMMPoolNewPairEventRegistry()
+	executionEvents := newExecutionEventRegistry()
 	router, err := newMessageRouter(requests, bboEvents, orderBookEvents, spreadEvents, carryEvents, ammPoolEvents, ammPoolNewPairEvents)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
 	}
+	router.executionEvents = executionEvents
 	handler := &sessionHandler{receiver: router}
 	option := k4k3ruWebSocket.DefaultClientOption()
 	option.ConnectTimeout = config.ConnectTimeout
@@ -156,7 +160,12 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
 	}
+	executionClient, err := newExecutionClient(sender, executionEvents, subscriptions)
+	if err != nil {
+		return nil, err
+	}
 	return &Module{
+		execution:       executionClient,
 		client:          transportClient,
 		requests:        requests,
 		bboEvents:       bboEvents,
@@ -285,4 +294,15 @@ func (m *Module) AMMPoolNewPair() *AMMPoolNewPairClient {
 		return nil
 	}
 	return m.ammPoolNewPair
+}
+
+// Execution returns the composed TradeHub execution observation client.
+//
+// Version:
+//   - 2026-09-16: Added.
+func (m *Module) Execution() *ExecutionClient {
+	if m == nil {
+		return nil
+	}
+	return m.execution
 }

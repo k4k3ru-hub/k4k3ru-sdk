@@ -14,6 +14,7 @@ import (
 // TestNewModuleComposesPhysicalClient verifies subscription composition and lifecycle.
 //
 // Version:
+//   - 2026-09-16: Verify execution observer composition.
 //   - 2026-09-15: Added.
 func TestNewModuleComposesPhysicalClient(t *testing.T) {
 	t.Parallel()
@@ -29,7 +30,7 @@ func TestNewModuleComposesPhysicalClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("newModule() error = %v", err)
 	}
-	if module == nil || module.client == nil || module.client.physical != factory.client || module.requests == nil || module.bboEvents == nil || module.orderBookEvents == nil || module.spreadEvents == nil || module.router == nil || module.subscriptions == nil || module.BBO() == nil || module.OrderBook() == nil || module.Spread() == nil || module.Carry() == nil || module.carryEvents == nil || module.router.carryEvents != module.carryEvents || module.AMMPool() == nil || module.ammPoolEvents == nil || module.router.ammPoolEvents != module.ammPoolEvents || module.AMMPoolNewPair() == nil || module.AMMPoolNewPair().eventRouter != module.router.ammPoolNewPairEvents {
+	if module == nil || module.Execution() == nil || module.Execution().events != module.router.executionEvents || module.client == nil || module.client.physical != factory.client || module.requests == nil || module.bboEvents == nil || module.orderBookEvents == nil || module.spreadEvents == nil || module.router == nil || module.subscriptions == nil || module.BBO() == nil || module.OrderBook() == nil || module.Spread() == nil || module.Carry() == nil || module.carryEvents == nil || module.router.carryEvents != module.carryEvents || module.AMMPool() == nil || module.ammPoolEvents == nil || module.router.ammPoolEvents != module.ammPoolEvents || module.AMMPoolNewPair() == nil || module.AMMPoolNewPair().eventRouter != module.router.ammPoolNewPairEvents {
 		t.Fatalf("newModule() = %#v", module)
 	}
 	if factory.endpointURL != config.EndpointURL {

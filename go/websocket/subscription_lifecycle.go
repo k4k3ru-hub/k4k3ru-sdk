@@ -19,6 +19,7 @@ const (
 )
 
 type subscriptionLifecycle struct {
+	keepOpen  bool
 	mu        sync.Mutex
 	transport subscriptionTransport
 	states    map[string]subscriptionState
@@ -61,7 +62,7 @@ func (l *subscriptionLifecycle) subscribe(ctx context.Context, key string, opera
 	defer l.mu.Unlock()
 	if err != nil {
 		delete(l.states, key)
-		if len(l.states) == 0 {
+		if len(l.states) == 0 && !l.keepOpen {
 			if disconnectErr := l.transport.disconnect(); disconnectErr != nil {
 				return fmt.Errorf("failed to subscribe websocket lifecycle: %w: %w", err, disconnectErr)
 			}
@@ -109,7 +110,7 @@ func (l *subscriptionLifecycle) unsubscribe(ctx context.Context, key string, ope
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	delete(l.states, key)
-	if len(l.states) != 0 {
+	if len(l.states) != 0 || l.keepOpen {
 		return nil
 	}
 	if err := l.transport.disconnect(); err != nil {

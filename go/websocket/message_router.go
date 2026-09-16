@@ -6,6 +6,7 @@ import (
 	"fmt"
 	dtoAMMPool "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/ammpool"
 	dtoAMMPoolNewPair "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/ammpool/newpair"
+	execution "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/execution"
 
 	k4k3ruSDKJSONRPC "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc"
 	k4k3ruSDKJSONRPCBBO "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/bbo"
@@ -16,6 +17,7 @@ import (
 )
 
 type messageRouter struct {
+	executionEvents      *executionEventRegistry
 	requests             *requestTracker
 	bboEvents            *bboEventRegistry
 	orderBookEvents      *orderBookEventRegistry
@@ -54,6 +56,7 @@ func newMessageRouter(requests *requestTracker, bboEvents *bboEventRegistry, ord
 // HandleMessage routes responses and typed subscription events.
 //
 // Version:
+//   - 2026-09-16: Route execution observation and transport interruptions.
 //   - 2026-09-16: Remove retired Launch event routing.
 //   - 2026-09-11: Route AMMPool events.
 func (r *messageRouter) HandleMessage(message []byte) {
@@ -65,11 +68,16 @@ func (r *messageRouter) HandleMessage(message []byte) {
 	}
 }
 
+// HandleClose interrupts pending requests and active execution observers.
+//
+// Version:
+//   - 2026-09-16: Notify execution observers of transport closure.
 func (r *messageRouter) HandleClose() {
 	if r == nil || r.requests == nil {
 		return
 	}
 	r.requests.failAll(errWebSocketConnectionClosed)
+	r.executionEvents.interrupt()
 }
 
 func (r *messageRouter) route(message []byte) error {
@@ -106,6 +114,15 @@ func (r *messageRouter) route(message []byte) error {
 		return fmt.Errorf("failed to route websocket event: %w", err)
 	}
 	switch event.Type {
+	case k4k3ruSDKSubscription.EventTypeExecutionStatus:
+		var result execution.SubscriptionEvent
+		if err := json.Unmarshal(event.Data, &result); err != nil {
+			r.executionEvents.interrupt()
+			return err
+		}
+		if r.executionEvents != nil {
+			r.executionEvents.route(result)
+		}
 	case k4k3ruSDKSubscription.EventTypeBBO:
 		var result k4k3ruSDKJSONRPCBBO.Result
 		if err := json.Unmarshal(event.Data, &result); err != nil {
