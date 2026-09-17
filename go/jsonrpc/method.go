@@ -54,6 +54,7 @@ const (
 	MethodTradeHubSpreadGet                        Method = "TradeHub.Spread.Get"
 	MethodTradeHubSpreadSubscribe                  Method = "TradeHub.Spread.Subscribe"
 	MethodTradeHubSpreadUnsubscribe                Method = "TradeHub.Spread.Unsubscribe"
+	MethodTradeHubAMMPoolList                      Method = "TradeHub.AMMPool.List"
 	MethodTradeHubSwapQuote                        Method = "TradeHub.AMMPool.Swap.Quote"
 	MethodTradeHubSwapPrepare                      Method = "TradeHub.AMMPool.Swap.Prepare"
 	MethodTradeHubExecutionPrepare                 Method = "TradeHub.Execution.Prepare"

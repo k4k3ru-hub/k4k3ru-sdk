@@ -334,3 +334,12 @@ replacement snapshots, coverage and security observations.
 
 The former Launch RPC group, SDK package and subscription client have been removed.
 Migrate to NewPair and update Gateway and MarketHub together.
+
+### TradeHub の Swap 対象 Pool 一覧
+
+`jsonrpc.MethodTradeHubAMMPoolList`（`TradeHub.AMMPool.List`）の公開型は
+`jsonrpc/tradehub/ammpool` の `ListParams` / `ListResult` です。
+Swap 対応・allowlist 登録済みの Pool と、token0/token1 の asset ID・symbol・decimals、
+手数料率を取得するための契約です。残高・allowance・流動性による実行可否は保証しません。
+[リクエスト・レスポンス仕様](go/jsonrpc/tradehub/ammpool/README.md)を参照してください。
+SDK の型定義追加に対応するサーバー・Gateway の実装は別途必要です。
