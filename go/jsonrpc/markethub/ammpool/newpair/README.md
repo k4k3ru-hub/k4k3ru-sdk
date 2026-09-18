@@ -13,7 +13,8 @@ if err != nil {
     return err
 }
 for result := range subscription.Events() {
-    // Replace the previous list with result.Pairs; absence removes a pair.
+    // Read result.Pairs and result.ExcludedPairs.
+    // With truncated=true, absence from Pairs does not prove exclusion.
     _ = result
 }
 ```
@@ -21,10 +22,21 @@ for result := range subscription.Events() {
 `ListParams{Filter: filter, Limit: 100}` is the List request payload. Get uses
 `GetParams{Chain, Network, Venue, PoolID}`. Timestamps are Unix microseconds.
 Optional filters are chain, network and venue; empty values mean all.
-The server controls the lifecycle window (default 24 hours), using first liquidity
-when observed and pool creation otherwise. Read `FirstLiquidityAt`, `FirstSwapAt`
-and `LiquidityUSD` to evaluate activity. The removed age, swap and USD threshold
-request fields are rejected; deploy matching server and client versions together.
+The new server contract uses pool creation time for the 24-hour lifecycle, a
+confirmed observed swap, liquidity of at least 1,000 USD, and a fresh successful
+valuation. `SwapObservedAt` is not necessarily the first swap in pool history;
+null means no swap has been observed, not that no swap ever occurred.
+`SwapObservedPosition` identifies the observed event; `ConfirmedAt` is nullable
+until its confirmation completes. `LiquidityEvaluatedAt` records the last
+successful evaluation. All nullable timestamps are Unix microseconds.
+
+`LiquidityUSD` keeps its Finding representation (decimal string value or unknown).
+`LiquidityMethod` describes the valuation basis. The agreed valuation uses LP
+principal across all price ranges, excluding uncollected fees/direct transfers,
+with 1 USDC = 1 USD as a conversion assumption. FDV/MarketCap are not included.
+A failed refresh or stale evaluation must not be rewritten as zero liquidity.
+The valuation interval and freshness duration are server configuration, not request
+parameters. The removed age, swap and USD threshold request fields remain rejected.
 
 Token `id` may represent an EVM contract, native currency, Solana mint, or Sui coin
 type. Pool identifiers preserve case. Position number/index strings and optional
@@ -35,13 +47,32 @@ WebSocket event type: `apnp`. Each event is a bounded replacement snapshot; insp
 `truncated` and use List pagination for larger result sets. Subscription identity
 includes all normalized filters. Unsubscribe with the owning subscription client.
 
-## Incomplete backfill
+## Listing and exclusions
 
-`Pair.BackfillAbandonedAt` (`backfillAbandonedAt`) is a nullable Unix timestamp in
-microseconds. A value means initial-event backfill was abandoned after the retry
-budget was exhausted. The pool remains publicly available until lifecycle expiry;
-its observed first-event fields do not prove that missing history was checked.
+`Result.Pairs` contains listed pairs only (`isListed=true`). Subscribe snapshots
+also carry `Result.ExcludedPairs`: the last full data for previously listed pools
+that left the listing (`isListed=false`, `exclusionReason` set). Previously unlisted
+candidates need not be exposed. Get/List use the same listing conditions; the
+exclusion list supplements Subscribe. Exclusion reasons include `age_exceeded`,
+`liquidity_below_minimum`, `liquidity_unavailable`, `liquidity_stale`,
+`swap_unconfirmed`, and `creation_reverted`. Treat reasons as extensible strings.
 
-Coverage can report `backfill-abandoned` with reason `backfill_retry_exhausted`.
-This is a source-level history gap, not a statement that every pool in the source
-is abandoned. Latest discovery continues after a successful current-block probe.
+For `liquidity_stale`, the last value and evaluation time remain available. A pair
+that qualifies again returns to `pairs` without an exclusion reason. SDK routing
+preserves `excludedPairs` when replacing an unread snapshot with a newer snapshot.
+This is latest-state delivery, not a durable history of every transition.
+Exclusion retention limits remain a server implementation detail to be finalized;
+do not assume every exclusion can be replayed. When `truncated=true`, absence from
+`pairs` does not prove exclusion. Resynchronize on epoch changes or reconnects.
+
+## Compatibility and rollout
+
+This is a breaking type/wire update: `firstLiquidityAt`, `firstSwapAt` and
+`backfillAbandonedAt` are removed rather than aliased to fields with different
+meanings. New nullable evidence fields serialize as JSON null when unknown.
+`isListed` always serializes; no listing inference is made from an older response
+that omits it. Deploy matching server and client versions together.
+
+This SDK change defines and decodes the new contract. It does not implement the
+server's listing policy, valuation worker, exclusion retention or notification
+production; those service changes follow separately.

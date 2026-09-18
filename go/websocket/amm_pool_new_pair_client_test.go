@@ -34,6 +34,7 @@ func (s *ammPoolNewPairSender) send(_ context.Context, method rpc.Method, raw js
 // TestAMMPoolNewPairClientRoutingAndCleanup verifies selector isolation, latest results, and unsubscribe cleanup.
 //
 // Version:
+//   - 2026-09-19: Verify excluded pairs in replacement snapshots.
 //   - 2026-09-16: Support AMM pool new pair monitoring.
 //   - 2026-09-11: Added.
 func TestAMMPoolNewPairClientRoutingAndCleanup(t *testing.T) {
@@ -63,10 +64,10 @@ func TestAMMPoolNewPairClientRoutingAndCleanup(t *testing.T) {
 	if first.Params().Chain != "base" {
 		t.Fatal(first.Params())
 	}
-	// Route the actual wire envelope, including unavailable replacement snapshots.
+	// Route the actual wire envelope, including exclusion data in the latest snapshot.
 	for _, message := range []string{
-		`{"e":"apnp","data":{"filter":{"chain":"base","network":"sepolia"},"epoch":"epoch","version":1,"available":true,"compositeMid":"3000","pools":[]}}`,
-		`{"e":"apnp","data":{"filter":{"chain":"base","network":"sepolia"},"epoch":"epoch","version":2,"available":false,"compositeMid":null,"reason":"no_eligible_pools","pools":[]}}`,
+		`{"e":"apnp","data":{"filter":{"chain":"base","network":"sepolia"},"epoch":"epoch","version":1,"pairs":[{"poolId":"pool","isListed":true}],"excludedPairs":[]}}`,
+		`{"e":"apnp","data":{"filter":{"chain":"base","network":"sepolia"},"epoch":"epoch","version":2,"pairs":[],"excludedPairs":[{"poolId":"pool","isListed":false,"exclusionReason":"liquidity_stale","liquidityUsd":{"status":"known","value":"2000"},"liquidityEvaluatedAt":1789711411000000}]}}`,
 	} {
 		if err := router.route([]byte(message)); err != nil {
 			t.Fatal(err)
@@ -74,8 +75,12 @@ func TestAMMPoolNewPairClientRoutingAndCleanup(t *testing.T) {
 	}
 	select {
 	case result := <-first.Events():
-		if result.Version != 2 || len(result.Pairs) != 0 {
+		if result.Version != 2 || len(result.Pairs) != 0 || len(result.ExcludedPairs) != 1 {
 			t.Fatal(result)
+		}
+		excluded := result.ExcludedPairs[0]
+		if excluded.IsListed || excluded.ExclusionReason != "liquidity_stale" || excluded.LiquidityUSD.Value != "2000" || excluded.LiquidityEvaluatedAt == nil {
+			t.Fatal(excluded)
 		}
 	default:
 		t.Fatal("missing latest replacement")

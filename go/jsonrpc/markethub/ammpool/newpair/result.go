@@ -29,29 +29,33 @@ type Position struct {
 }
 
 type Pair struct {
-	BackfillAbandonedAt *int64             `json:"backfillAbandonedAt"`
-	ChainFamily         string             `json:"chainFamily"`
-	Chain               string             `json:"chain"`
-	Network             string             `json:"network"`
-	Venue               string             `json:"venue"`
-	PoolID              string             `json:"poolId"`
-	Protocol            string             `json:"protocol"`
-	Source              string             `json:"source"`
-	Creation            Position           `json:"creation"`
-	PoolCreatedAt       int64              `json:"poolCreatedAt"`
-	FirstLiquidityAt    *int64             `json:"firstLiquidityAt"`
-	FirstSwapAt         *int64             `json:"firstSwapAt"`
-	LastObservedAt      int64              `json:"lastObservedAt"`
-	LiquidityUSD        Finding            `json:"liquidityUsd"`
-	LiquidityMethod     string             `json:"liquidityMethod,omitempty"`
-	Token0              Token              `json:"token0"`
-	Token1              Token              `json:"token1"`
-	Security            map[string]Finding `json:"security"`
-	AssessmentStatus    string             `json:"assessmentStatus"`
-	AssessedAt          *int64             `json:"assessedAt"`
-	EvaluatorVersion    string             `json:"evaluatorVersion"`
-	ProtocolState       json.RawMessage    `json:"protocolState,omitempty"`
-	UnsupportedChecks   []string           `json:"unsupportedChecks"`
+	ChainFamily   string   `json:"chainFamily"`
+	Chain         string   `json:"chain"`
+	Network       string   `json:"network"`
+	Venue         string   `json:"venue"`
+	PoolID        string   `json:"poolId"`
+	Protocol      string   `json:"protocol"`
+	Source        string   `json:"source"`
+	Creation      Position `json:"creation"`
+	PoolCreatedAt int64    `json:"poolCreatedAt"`
+	// SwapObservedAt records an observed swap, not necessarily the first historical swap.
+	SwapObservedAt       *int64             `json:"swapObservedAt"`
+	SwapObservedPosition *Position          `json:"swapObservedPosition"`
+	ConfirmedAt          *int64             `json:"confirmedAt"`
+	LiquidityEvaluatedAt *int64             `json:"liquidityEvaluatedAt"`
+	IsListed             bool               `json:"isListed"`
+	ExclusionReason      string             `json:"exclusionReason,omitempty"`
+	LastObservedAt       int64              `json:"lastObservedAt"`
+	LiquidityUSD         Finding            `json:"liquidityUsd"`
+	LiquidityMethod      string             `json:"liquidityMethod,omitempty"`
+	Token0               Token              `json:"token0"`
+	Token1               Token              `json:"token1"`
+	Security             map[string]Finding `json:"security"`
+	AssessmentStatus     string             `json:"assessmentStatus"`
+	AssessedAt           *int64             `json:"assessedAt"`
+	EvaluatorVersion     string             `json:"evaluatorVersion"`
+	ProtocolState        json.RawMessage    `json:"protocolState,omitempty"`
+	UnsupportedChecks    []string           `json:"unsupportedChecks"`
 }
 
 type Coverage struct {
@@ -67,14 +71,15 @@ type Coverage struct {
 }
 
 type Result struct {
-	Filter     Params     `json:"filter"`
-	Epoch      string     `json:"epoch"`
-	Version    uint64     `json:"version"`
-	Timestamp  int64      `json:"timestamp"`
-	Pairs      []Pair     `json:"pairs"`
-	Coverage   []Coverage `json:"coverage"`
-	Truncated  bool       `json:"truncated"`
-	NextCursor string     `json:"nextCursor,omitempty"`
+	Filter        Params     `json:"filter"`
+	Epoch         string     `json:"epoch"`
+	Version       uint64     `json:"version"`
+	Timestamp     int64      `json:"timestamp"`
+	Pairs         []Pair     `json:"pairs"`
+	ExcludedPairs []Pair     `json:"excludedPairs"`
+	Coverage      []Coverage `json:"coverage"`
+	Truncated     bool       `json:"truncated"`
+	NextCursor    string     `json:"nextCursor,omitempty"`
 }
 
 type GetResult struct {
