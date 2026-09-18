@@ -10,16 +10,10 @@ import (
 	"strings"
 )
 
-// MaximumAgeSeconds bounds the server's pool query window.
-const MaximumAgeSeconds uint32 = 604800
-
 type Params struct {
-	Chain             string `json:"chain,omitempty"`
-	Network           string `json:"network,omitempty"`
-	Venue             string `json:"venue,omitempty"`
-	MaxPoolAgeSeconds uint32 `json:"maxPoolAgeSeconds"`
-	MinLiquidityUSD   string `json:"minLiquidityUsd,omitempty"`
-	HasSwap           *bool  `json:"hasSwap,omitempty"`
+	Chain   string `json:"chain,omitempty"`
+	Network string `json:"network,omitempty"`
+	Venue   string `json:"venue,omitempty"`
 }
 type GetParams struct {
 	Chain   string `json:"chain"`
@@ -35,30 +29,23 @@ type ListParams struct {
 
 var selector = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,63}$`)
 var poolID = regexp.MustCompile(`^[A-Za-z0-9:_-]{1,128}$`)
-var usd = regexp.MustCompile(`^(0|[1-9][0-9]{0,19})(\.[0-9]{1,18})?$`)
 
 // Normalize normalizes new pair selectors.
 //
 // Version:
 //   - 2026-09-16: Added.
+//   - 2026-09-18: Use server lifecycle retention with scope-only request filters.
 func (p Params) Normalize() Params {
 	p.Chain = strings.ToLower(strings.TrimSpace(p.Chain))
 	p.Network = strings.ToLower(strings.TrimSpace(p.Network))
 	p.Venue = strings.ToLower(strings.TrimSpace(p.Venue))
-	if p.HasSwap != nil {
-		v := *p.HasSwap
-		p.HasSwap = &v
-	}
-	if strings.Contains(p.MinLiquidityUSD, ".") {
-		p.MinLiquidityUSD = strings.TrimRight(strings.TrimRight(p.MinLiquidityUSD, "0"), ".")
-	}
 	return p
 }
 
-// Validate validates pool age and activity filters.
+// Validate validates chain, network and venue filters.
 //
 // Version:
-//   - 2026-09-16: Use maxPoolAgeSeconds for the pool age selector.
+//   - 2026-09-18: Limit filters to chain, network and venue.
 func (p Params) Validate() error {
 	p = p.Normalize()
 	for _, value := range []string{p.Chain, p.Network, p.Venue} {
@@ -66,29 +53,19 @@ func (p Params) Validate() error {
 			return fmt.Errorf("failed to validate new pair parameters: %w: selector=invalid", app.InvalidParameter())
 		}
 	}
-	if p.MaxPoolAgeSeconds == 0 || p.MaxPoolAgeSeconds > MaximumAgeSeconds {
-		return fmt.Errorf("failed to validate new pair parameters: %w: age=out_of_range max_value=%d", app.InvalidParameter(), MaximumAgeSeconds)
-	}
-	if p.MinLiquidityUSD != "" && !usd.MatchString(p.MinLiquidityUSD) {
-		return fmt.Errorf("failed to validate new pair parameters: %w: min_liquidity_usd=invalid", app.InvalidParameter())
-	}
 	return nil
 }
 
 // SubscriptionKey identifies the complete normalized new pair filter.
 //
 // Version:
-//   - 2026-09-16: Use maxPoolAgeSeconds for the pool age selector.
+//   - 2026-09-18: Limit filters to chain, network and venue.
 func (p Params) SubscriptionKey() (string, error) {
 	p = p.Normalize()
 	if err := p.Validate(); err != nil {
 		return "", fmt.Errorf("failed to create new pair subscription key: %w", err)
 	}
-	swap := "any"
-	if p.HasSwap != nil {
-		swap = fmt.Sprint(*p.HasSwap)
-	}
-	return fmt.Sprintf("MarketHub.AMMPool.NewPair:c=%s:n=%s:v=%s:pool_age=%d:liquidity=%s:swap=%s", p.Chain, p.Network, p.Venue, p.MaxPoolAgeSeconds, p.MinLiquidityUSD, swap), nil
+	return fmt.Sprintf("MarketHub.AMMPool.NewPair:c=%s:n=%s:v=%s", p.Chain, p.Network, p.Venue), nil
 }
 
 // Normalize normalizes the pool's owning chain, venue and identifier.
@@ -109,13 +86,13 @@ func (p GetParams) Normalize() GetParams {
 // Validate requires an unambiguous chain-neutral pool identity.
 //
 // Version:
-//   - 2026-09-16: Use maxPoolAgeSeconds for the pool age selector.
+//   - 2026-09-18: Limit filters to chain, network and venue.
 func (p GetParams) Validate() error {
 	p = p.Normalize()
 	if p.Chain == "" || p.Network == "" || p.Venue == "" {
 		return fmt.Errorf("failed to validate new pair identity: %w: selector=empty", app.InvalidParameter())
 	}
-	if err := (Params{Chain: p.Chain, Network: p.Network, Venue: p.Venue, MaxPoolAgeSeconds: 1}).Validate(); err != nil {
+	if err := (Params{Chain: p.Chain, Network: p.Network, Venue: p.Venue}).Validate(); err != nil {
 		return fmt.Errorf("failed to validate new pair identity: %w", err)
 	}
 	if !poolID.MatchString(p.PoolID) {
@@ -127,7 +104,7 @@ func (p GetParams) Validate() error {
 // Validate validates pagination and the new pair filter.
 //
 // Version:
-//   - 2026-09-16: Use maxPoolAgeSeconds for the pool age selector.
+//   - 2026-09-18: Limit filters to chain, network and venue.
 func (p ListParams) Validate() error {
 	if err := p.Filter.Validate(); err != nil {
 		return fmt.Errorf("failed to validate new pair list: %w", err)
@@ -156,7 +133,7 @@ func decode(data []byte, v any) error {
 // UnmarshalJSON rejects unknown fields and invalid filters.
 //
 // Version:
-//   - 2026-09-16: Use maxPoolAgeSeconds for the pool age selector.
+//   - 2026-09-18: Limit filters to chain, network and venue.
 func (p *Params) UnmarshalJSON(data []byte) error {
 	if p == nil {
 		return fmt.Errorf("failed to decode new pair parameters: destination=null")
@@ -173,7 +150,7 @@ func (p *Params) UnmarshalJSON(data []byte) error {
 // UnmarshalJSON rejects unknown fields and invalid pool identities.
 //
 // Version:
-//   - 2026-09-16: Use maxPoolAgeSeconds for the pool age selector.
+//   - 2026-09-18: Limit filters to chain, network and venue.
 func (p *GetParams) UnmarshalJSON(data []byte) error {
 	if p == nil {
 		return fmt.Errorf("failed to decode new pair identity: destination=null")
@@ -190,7 +167,7 @@ func (p *GetParams) UnmarshalJSON(data []byte) error {
 // UnmarshalJSON rejects unknown fields and invalid pagination.
 //
 // Version:
-//   - 2026-09-16: Use maxPoolAgeSeconds for the pool age selector.
+//   - 2026-09-18: Limit filters to chain, network and venue.
 func (p *ListParams) UnmarshalJSON(data []byte) error {
 	if p == nil {
 		return fmt.Errorf("failed to decode new pair list: destination=null")

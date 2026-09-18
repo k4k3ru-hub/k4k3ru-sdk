@@ -16,27 +16,20 @@ func TestChainNeutralIdentifiers(t *testing.T) {
 	}
 }
 func TestFiltersAndIsolation(t *testing.T) {
-	yes := true
-	p := Params{MaxPoolAgeSeconds: 86400, HasSwap: &yes, MinLiquidityUSD: "1000.00"}
-	normalized := p.Normalize()
-	yes = false
-	if !*normalized.HasSwap {
-		t.Fatal("normalized filter retained mutable pointer")
+	p := Params{Chain: " BASE ", Network: "MAINNET", Venue: "Uniswap-V4"}
+	a, err := p.SubscriptionKey()
+	b, other := (Params{Chain: "base", Network: "mainnet", Venue: "uniswap-v4"}).SubscriptionKey()
+	if err != nil || other != nil || a != b {
+		t.Fatal(a, b, err, other)
 	}
-	q := normalized
-	q.MinLiquidityUSD = "1000"
-	a, e := q.SubscriptionKey()
-	if e != nil {
-		t.Fatal(e)
-	}
-	b, e := normalized.SubscriptionKey()
-	if e != nil || a != b {
-		t.Fatal(a, b, e)
-	}
-	for _, raw := range []string{`{"maxPoolAgeSeconds":86400,"maxTokenAgeSeconds":10}`, `{"maxPoolAgeSeconds":0}`, `{"maxPoolAgeSeconds":86400,"minLiquidityUsd":"NaN"}`, `{"maxPoolAgeSeconds":86400,"minLiquidityUsd":"-1"}`} {
+	for _, raw := range []string{`{"maxPoolAgeSeconds":86400}`, `{"hasSwap":false}`, `{"minLiquidityUsd":"0"}`, `{"maxTokenAgeSeconds":10}`} {
 		var p Params
 		if json.Unmarshal([]byte(raw), &p) == nil {
-			t.Fatal("invalid filter accepted", raw)
+			t.Fatal("removed filter accepted", raw)
 		}
+	}
+	var all Params
+	if err := json.Unmarshal([]byte(`{}`), &all); err != nil {
+		t.Fatal(err)
 	}
 }

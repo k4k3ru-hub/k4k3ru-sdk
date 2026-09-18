@@ -6,7 +6,7 @@ Use this group for pool discovery. The former Launch RPC group and its SDK types
 ```go
 import newpair "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/ammpool/newpair"
 
-filter := newpair.Params{Chain: "base", MaxPoolAgeSeconds: 86400}
+filter := newpair.Params{Chain: "base"}
 // ws is a websocket.Module constructed with websocket.NewModule.
 subscription, err := ws.AMMPoolNewPair().Subscribe(ctx, filter)
 if err != nil {
@@ -20,10 +20,11 @@ for result := range subscription.Events() {
 
 `ListParams{Filter: filter, Limit: 100}` is the List request payload. Get uses
 `GetParams{Chain, Network, Venue, PoolID}`. Timestamps are Unix microseconds.
-Pool age is independent of token deployment time. `minLiquidityUsd` is a decimal
-string; unknown valuations never pass this filter, including a threshold of zero.
-`hasSwap` is optional: true requires an observed swap, false requires no observed
-swap, omitted includes both.
+Optional filters are chain, network and venue; empty values mean all.
+The server controls the lifecycle window (default 24 hours), using first liquidity
+when observed and pool creation otherwise. Read `FirstLiquidityAt`, `FirstSwapAt`
+and `LiquidityUSD` to evaluate activity. The removed age, swap and USD threshold
+request fields are rejected; deploy matching server and client versions together.
 
 Token `id` may represent an EVM contract, native currency, Solana mint, or Sui coin
 type. Pool identifiers preserve case. Position number/index strings and optional

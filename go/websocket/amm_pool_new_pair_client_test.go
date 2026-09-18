@@ -52,11 +52,11 @@ func TestAMMPoolNewPairClientRoutingAndCleanup(t *testing.T) {
 		t.Fatal(err)
 	}
 	router.ammPoolNewPairEvents = registry
-	first, err := client.Subscribe(context.Background(), dto.Params{Chain: " base ", MaxPoolAgeSeconds: 5})
+	first, err := client.Subscribe(context.Background(), dto.Params{Chain: " base ", Network: "sepolia"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := client.Subscribe(context.Background(), dto.Params{Chain: "base", MaxPoolAgeSeconds: 30})
+	second, err := client.Subscribe(context.Background(), dto.Params{Chain: "base", Network: "mainnet"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,8 +65,8 @@ func TestAMMPoolNewPairClientRoutingAndCleanup(t *testing.T) {
 	}
 	// Route the actual wire envelope, including unavailable replacement snapshots.
 	for _, message := range []string{
-		`{"e":"apnp","data":{"filter":{"chain":"base","maxPoolAgeSeconds":5},"epoch":"epoch","version":1,"available":true,"compositeMid":"3000","pools":[]}}`,
-		`{"e":"apnp","data":{"filter":{"chain":"base","maxPoolAgeSeconds":5},"epoch":"epoch","version":2,"available":false,"compositeMid":null,"reason":"no_eligible_pools","pools":[]}}`,
+		`{"e":"apnp","data":{"filter":{"chain":"base","network":"sepolia"},"epoch":"epoch","version":1,"available":true,"compositeMid":"3000","pools":[]}}`,
+		`{"e":"apnp","data":{"filter":{"chain":"base","network":"sepolia"},"epoch":"epoch","version":2,"available":false,"compositeMid":null,"reason":"no_eligible_pools","pools":[]}}`,
 	} {
 		if err := router.route([]byte(message)); err != nil {
 			t.Fatal(err)
@@ -82,7 +82,7 @@ func TestAMMPoolNewPairClientRoutingAndCleanup(t *testing.T) {
 	}
 	select {
 	case <-second.Events():
-		t.Fatal("age selectors crossed")
+		t.Fatal("network selectors crossed")
 	default:
 	}
 	if err := client.Unsubscribe(context.Background(), first); err != nil {
@@ -91,7 +91,7 @@ func TestAMMPoolNewPairClientRoutingAndCleanup(t *testing.T) {
 	if _, open := <-first.Events(); open {
 		t.Fatal("unsubscribed channel open")
 	}
-	if ok, err := registry.route(dto.Result{Filter: dto.Params{Chain: "base", MaxPoolAgeSeconds: 30}}); err != nil || !ok {
+	if ok, err := registry.route(dto.Result{Filter: dto.Params{Chain: "base", Network: "mainnet"}}); err != nil || !ok {
 		t.Fatal(ok, err)
 	}
 	if err := client.Unsubscribe(context.Background(), second); err != nil {
@@ -119,14 +119,14 @@ func TestAMMPoolNewPairClientFailedACKCanRetry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p := dto.Params{Chain: "base", MaxPoolAgeSeconds: 30}
+	p := dto.Params{Chain: "base", Network: "mainnet"}
 	if _, err := client.Subscribe(context.Background(), p); !errors.Is(err, sentinel) {
 		t.Fatal(err)
 	}
 	sender.err = nil
-	sender.ack = &dto.Params{Chain: "base", MaxPoolAgeSeconds: 5}
+	sender.ack = &dto.Params{Chain: "base", Network: "sepolia"}
 	if _, err := client.Subscribe(context.Background(), p); err == nil {
-		t.Fatal("wrong age acknowledged")
+		t.Fatal("wrong network acknowledged")
 	}
 	sender.ack = nil
 	sub, err := client.Subscribe(context.Background(), p)
@@ -136,7 +136,7 @@ func TestAMMPoolNewPairClientFailedACKCanRetry(t *testing.T) {
 	if err := client.Unsubscribe(context.Background(), sub); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.Subscribe(context.Background(), dto.Params{Chain: "base"}); err == nil {
-		t.Fatal("missing age accepted")
+	if _, err := client.Subscribe(context.Background(), dto.Params{Chain: "!invalid"}); err == nil {
+		t.Fatal("invalid scope accepted")
 	}
 }

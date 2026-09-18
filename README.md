@@ -328,8 +328,9 @@ pending in the service; DTO/client support does not enable new price sources.
 Use [go/jsonrpc/markethub/ammpool/newpair](go/jsonrpc/markethub/ammpool/newpair/README.md)
 for `MarketHub.AMMPool.NewPair.Get/List/Subscribe/Unsubscribe`.
 `websocket.NewModule` composes `module.AMMPoolNewPair()`.
-Pool age is independent of token deployment time; use `MaxPoolAgeSeconds` to
-select recently created pools. List and subscription responses contain full
+Filter by chain, network and venue. The server controls the lifecycle window
+(default 24 hours); liquidity and swap observations are response data.
+List and subscription responses contain full
 replacement snapshots, coverage and security observations.
 
 The former Launch RPC group, SDK package and subscription client have been removed.
