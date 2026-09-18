@@ -34,3 +34,14 @@ integer precision. These types do not imply an adapter is deployed for every cha
 WebSocket event type: `apnp`. Each event is a bounded replacement snapshot; inspect
 `truncated` and use List pagination for larger result sets. Subscription identity
 includes all normalized filters. Unsubscribe with the owning subscription client.
+
+## Incomplete backfill
+
+`Pair.BackfillAbandonedAt` (`backfillAbandonedAt`) is a nullable Unix timestamp in
+microseconds. A value means initial-event backfill was abandoned after the retry
+budget was exhausted. The pool remains publicly available until lifecycle expiry;
+its observed first-event fields do not prove that missing history was checked.
+
+Coverage can report `backfill-abandoned` with reason `backfill_retry_exhausted`.
+This is a source-level history gap, not a statement that every pool in the source
+is abandoned. Latest discovery continues after a successful current-block probe.
