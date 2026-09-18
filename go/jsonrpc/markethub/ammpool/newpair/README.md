@@ -23,7 +23,7 @@ for result := range subscription.Events() {
 `GetParams{Chain, Network, Venue, PoolID}`. Timestamps are Unix microseconds.
 Optional filters are chain, network and venue; empty values mean all.
 The new server contract uses pool creation time for the 24-hour lifecycle, a
-confirmed observed swap, liquidity of at least 1,000 USD, and a fresh successful
+confirmed observed swap, liquidity of at least 1,000 USD, and a synchronized LP state with a successful
 valuation. `SwapObservedAt` is not necessarily the first swap in pool history;
 null means no swap has been observed, not that no swap ever occurred.
 `SwapObservedPosition` identifies the observed event; `ConfirmedAt` is nullable
@@ -35,8 +35,7 @@ successful evaluation. All nullable timestamps are Unix microseconds.
 principal across all price ranges, excluding uncollected fees/direct transfers,
 with 1 USDC = 1 USD as a conversion assumption. FDV/MarketCap are not included.
 A failed refresh or stale evaluation must not be rewritten as zero liquidity.
-The valuation interval and freshness duration are server configuration, not request
-parameters. The removed age, swap and USD threshold request fields remain rejected.
+Capture retry budgets are server configuration, not request parameters. The removed age, swap and USD threshold request fields remain rejected.
 
 Token `id` may represent an EVM contract, native currency, Solana mint, or Sui coin
 type. Pool identifiers preserve case. Position number/index strings and optional
@@ -76,3 +75,18 @@ that omits it. Deploy matching server and client versions together.
 This SDK change defines and decodes the new contract. It does not implement the
 server's listing policy, valuation worker, exclusion retention or notification
 production; those service changes follow separately.
+
+### Live LP synchronization
+
+`lpStateStatus` is `syncing`, `synced` or `unavailable`. A missing/unknown status
+must not be interpreted as synced. `lpStatePosition` identifies the last established
+LP state, including an optional transaction/event position; it is not proof that
+all subsequent blocks were checked. Synchronization is process-local and must be
+re-established after a restart.
+
+`liquidityEvaluatedAt` is the time of the last adopted USD calculation. It is no
+longer the LP-state block timestamp. There is no fifteen-minute expiry: quiet
+synchronized pools remain eligible until their creation-based 24-hour limit.
+Disconnects or detected gaps withdraw listing with `lp_state_unavailable`;
+initial/recovery capture uses `lp_state_syncing`. Missing reference prices use
+`usd_reference_unavailable`. Last amounts/times remain available in excludedPairs.

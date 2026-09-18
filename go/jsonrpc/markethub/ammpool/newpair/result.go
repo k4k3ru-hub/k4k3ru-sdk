@@ -39,9 +39,13 @@ type Pair struct {
 	Creation      Position `json:"creation"`
 	PoolCreatedAt int64    `json:"poolCreatedAt"`
 	// SwapObservedAt records an observed swap, not necessarily the first historical swap.
-	SwapObservedAt       *int64             `json:"swapObservedAt"`
-	SwapObservedPosition *Position          `json:"swapObservedPosition"`
-	ConfirmedAt          *int64             `json:"confirmedAt"`
+	SwapObservedAt       *int64    `json:"swapObservedAt"`
+	SwapObservedPosition *Position `json:"swapObservedPosition"`
+	ConfirmedAt          *int64    `json:"confirmedAt"`
+	// LPStateStatus is process-local: syncing, synced or unavailable. Missing means unverified.
+	LPStateStatus   string    `json:"lpStateStatus"`
+	LPStatePosition *Position `json:"lpStatePosition"`
+	// LiquidityEvaluatedAt is the time of the last adopted USD calculation, not a block timestamp.
 	LiquidityEvaluatedAt *int64             `json:"liquidityEvaluatedAt"`
 	IsListed             bool               `json:"isListed"`
 	ExclusionReason      string             `json:"exclusionReason,omitempty"`

@@ -76,3 +76,29 @@ func TestUnknownObservationWire(t *testing.T) {
 		t.Fatal("empty lists lost")
 	}
 }
+
+// TestLPStateWire verifies additive synchronization fields and legacy uncertainty.
+//
+// Version:
+//   - 2026-09-19: Added.
+func TestLPStateWire(t *testing.T) {
+	var legacy Pair
+	if err := json.Unmarshal([]byte(`{"poolId":"old","isListed":true}`), &legacy); err != nil {
+		t.Fatal(err)
+	}
+	if legacy.LPStateStatus != "" || legacy.LPStatePosition != nil {
+		t.Fatal("legacy synchronization invented")
+	}
+	p := Pair{LPStateStatus: "synced", LPStatePosition: &Position{Kind: "block", Number: "123", ID: "hash", EventIndex: "2"}}
+	raw, err := json.Marshal(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded Pair
+	if err = json.Unmarshal(raw, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(p, decoded) {
+		t.Fatal("position lost")
+	}
+}
