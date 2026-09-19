@@ -9,9 +9,18 @@ type Metric struct {
 	Reason string  `json:"reason,omitempty"`
 }
 type APR struct {
-	Fee    Metric `json:"fee"`
-	Reward Metric `json:"reward"`
-	Total  Metric `json:"total"`
+	Fee     Metric      `json:"fee"`
+	Reward  Metric      `json:"reward"`
+	Total   Metric      `json:"total"`
+	Rewards []RewardAPR `json:"rewards"`
+	// complete, partial, or unknown. Empty legacy values mean unknown.
+	RewardsStatus string `json:"rewardsStatus,omitempty"`
+}
+type RewardAPR struct {
+	TokenID string `json:"tokenId"`
+	APR     Metric `json:"apr"`
+	// provider_reported, single_reward, or unknown.
+	Attribution string `json:"attribution"`
 }
 type Period struct {
 	Period    string `json:"period"`
@@ -46,8 +55,10 @@ type Pool struct {
 	FeeRate              Metric   `json:"feeRate"`
 	TVLUSD               Metric   `json:"tvlUsd"`
 	Periods              []Period `json:"periods"`
-	Rewards              []Reward `json:"rewards"`
-	RewardsStatus        string   `json:"rewardsStatus"`
+	// APR is independent of Periods: its observation period is unspecified.
+	APR           *APR     `json:"apr,omitempty"`
+	Rewards       []Reward `json:"rewards"`
+	RewardsStatus string   `json:"rewardsStatus"`
 }
 type Result struct {
 	Filter     Params `json:"filter"`
