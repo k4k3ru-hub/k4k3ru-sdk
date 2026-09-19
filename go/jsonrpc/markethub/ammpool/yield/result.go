@@ -19,8 +19,6 @@ type APR struct {
 type RewardAPR struct {
 	TokenID string `json:"tokenId"`
 	APR     Metric `json:"apr"`
-	// provider_reported, single_reward, or unknown.
-	Attribution string `json:"attribution"`
 }
 type Period struct {
 	Period    string `json:"period"`

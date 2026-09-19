@@ -1,6 +1,7 @@
 package yield
 
 import (
+	"bytes"
 	"encoding/json"
 	"reflect"
 	"testing"
@@ -19,7 +20,7 @@ func TestRewardAPRCompatibility(t *testing.T) {
 		t.Fatal("legacy fields invented")
 	}
 	for _, raw := range []string{
-		`{"apr":{"fee":{"value":null,"status":"unavailable"},"reward":{"value":null,"status":"unavailable"},"total":{"value":"1.1","status":"available"},"rewards":[{"tokenId":"token","apr":{"value":"0.2","status":"available"},"attribution":"provider_reported"}],"rewardsStatus":"complete"}}`,
+		`{"apr":{"fee":{"value":null,"status":"unavailable"},"reward":{"value":null,"status":"unavailable"},"total":{"value":"1.1","status":"available"},"rewards":[{"tokenId":"token","apr":{"value":"0.2","status":"available"}}],"rewardsStatus":"complete"}}`,
 		`{"apr":{"rewards":[],"rewardsStatus":"complete"}}`,
 		`{"apr":{"rewards":null,"rewardsStatus":"unknown"}}`,
 	} {
@@ -30,6 +31,9 @@ func TestRewardAPRCompatibility(t *testing.T) {
 		encoded, err := json.Marshal(p)
 		if err != nil {
 			t.Fatal(err)
+		}
+		if bytes.Contains(encoded, []byte(`"attribution"`)) {
+			t.Fatal("removed field serialized")
 		}
 		if err := json.Unmarshal(encoded, &again); err != nil {
 			t.Fatal(err)
