@@ -59,6 +59,7 @@ func TestListParamsStrictDecode(t *testing.T) {
 // TestListWireContract verifies token order, numeric fields, and request method encoding.
 //
 // Version:
+//   - 2026-09-19: Support manual swap pool discovery.
 //   - 2026-09-17: Added.
 func TestListWireContract(t *testing.T) {
 	const payload = `{"pools":[{"chain":"base","network":"mainnet","venue":"uniswap-v3","poolId":"pool","token0":{"assetId":"weth-address","symbol":"WETH","decimals":18},"token1":{"assetId":"usdc-address","symbol":"USDC","decimals":6},"fee":500}]}`
@@ -73,14 +74,14 @@ func TestListWireContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(encoded) != payload {
+	if string(encoded) != payload[:len(payload)-1]+`,"supportedScopes":null}` {
 		t.Fatalf("wire mismatch: %s", encoded)
 	}
 	empty, err := json.Marshal(ListResult{Pools: []PoolMetadata{}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(empty) != `{"pools":[]}` {
+	if string(empty) != `{"pools":[],"supportedScopes":null}` {
 		t.Fatalf("unexpected empty result: %s", empty)
 	}
 	params, err := json.Marshal(ListParams{})

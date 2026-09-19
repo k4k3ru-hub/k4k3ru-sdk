@@ -1,10 +1,17 @@
 package ammpool
 
 type ListResult struct {
-	Pools []PoolMetadata `json:"pools"`
+	Pools           []PoolMetadata `json:"pools"`
+	SupportedScopes []Scope        `json:"supportedScopes"`
 }
 
-// PoolMetadata describes a swap-supported, allowlisted pool, not a guarantee
+type Scope struct {
+	Chain   string `json:"chain"`
+	Network string `json:"network"`
+	Venue   string `json:"venue"`
+}
+
+// PoolMetadata describes a swap-supported pool, not a guarantee
 // that a swap can execute with the caller's balance or current liquidity.
 type PoolMetadata struct {
 	Chain   string        `json:"chain"`

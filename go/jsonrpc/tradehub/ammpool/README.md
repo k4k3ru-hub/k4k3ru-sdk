@@ -1,7 +1,6 @@
 # TradeHub AMM Pool list
 
-`TradeHub.AMMPool.List` returns pools that TradeHub supports for Swap execution
-and includes in its configured allowlist. It is distinct from the broader
+`TradeHub.AMMPool.List` returns pools configured as Swap candidates on supported execution scopes. It is distinct from the broader
 MarketHub pool catalog. Being listed does not guarantee wallet balance,
 allowance, liquidity, a successful quote, or successful execution.
 
@@ -31,6 +30,7 @@ rejected. Call `Normalize` and `Validate` before constructing an outbound reques
 
 ```json
 {
+  "supportedScopes": [{"chain":"base","network":"sepolia","venue":"uniswap-v3"}],
   "pools": [{
     "chain": "base",
     "network": "sepolia",
@@ -51,7 +51,7 @@ rejected. Call `Normalize` and `Validate` before constructing an outbound reques
 }
 ```
 
-An empty result is `{"pools":[]}`. Result producers must initialize `Pools` to
+A result with no matching scope or candidate is `{"pools":[],"supportedScopes":[]}`. Result producers must initialize `Pools` to
 an empty slice when there are no matches. Consumers must not rely on list order.
 
 - Identify a pool by chain, network, venue, and `poolId`.
@@ -67,3 +67,39 @@ an empty slice when there are no matches. Consumers must not rely on list order.
 
 Authentication, routing, and deployment availability are server concerns;
 this package does not imply that the endpoint allows anonymous access.
+
+## Supported scopes and manual pools
+
+List additionally returns `supportedScopes`, an array of `{chain, network, venue}`.
+It is derived from configured, composed Swap providers and remains populated
+when `pools` is empty. All three List filters apply to both arrays. Existing
+`pools` fields retain their shape and represent configured candidates, not every
+pool accepted for Swap. Servers initialize both result arrays, including empty
+arrays. Clients must not rely on ordering.
+
+```json
+{"pools":[],"supportedScopes":[{"chain":"base","network":"sepolia","venue":"uniswap-v3"}]}
+```
+
+`TradeHub.AMMPool.Get` resolves a manually supplied pool. Use `GetParams` and
+`GetResult` from this package with the caller's HTTP transport. All parameters
+are required; unknown fields, null/non-object parameters, and invalid or zero
+EVM addresses are rejected. Scope values and pool addresses are normalized.
+
+```json
+{"id":"pool-1","method":"TradeHub.AMMPool.Get","params":{"chain":"base","network":"sepolia","venue":"uniswap-v3","poolId":"0x94bfc0574ff48e92ce43d495376c477b1d0eeec0"}}
+```
+
+The result is `{"pool": PoolMetadata}` using the same metadata shape as List.
+Unsupported scopes are rejected before on-chain lookup. For supported Base
+Uniswap V3 deployments, Get reads pool metadata through the configured RPC,
+checks the chain, Factory and derived pool address, and resolves token metadata.
+Callers cannot supply a Router, Factory or RPC endpoint. Metadata resolution does
+not register the pool, guarantee liquidity, or establish token safety. Quote and
+Prepare validate pool/token identity again; they do not depend on a prior Get.
+Their existing request/response shapes, Submit and observation APIs are unchanged.
+
+Gateway Get uses the same optional-authentication, quota and billing policy as
+List. The internal TradeHub method requires Gateway authentication. Deploy the
+updated shared method policy to CRM as well as Gateway and TradeHub so signed
+Get requests are authenticated correctly.
