@@ -12,6 +12,7 @@ import (
 type EventType string
 
 const (
+	EventTypeAMMPoolYield    EventType = "apyld"
 	EventTypeAMMPoolNewPair  EventType = "apnp"
 	EventTypeAMMPool         EventType = "ap"
 	EventTypeBBO             EventType = "bbo"
@@ -63,6 +64,7 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 //   - Validation error.
 //
 // Version:
+//   - 2026-09-19: Accept AMM pool yield events.
 //   - 2026-09-16: Accept execution observation events.
 //   - 2026-09-16: Remove retired Launch support; retain NewPair.
 //   - 2026-09-10: Accept AMM pool snapshots.
@@ -71,7 +73,7 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 //   - 2026-08-30: Added.
 func (e Event) Validate() error {
 	switch e.Type {
-	case EventTypeAMMPoolNewPair, EventTypeAMMPool, EventTypeBBO, EventTypeArbitrage, EventTypeOrderBook, EventTypeSpread, EventTypeCarry, EventTypeExecution, EventTypeExecutionStatus:
+	case EventTypeAMMPoolYield, EventTypeAMMPoolNewPair, EventTypeAMMPool, EventTypeBBO, EventTypeArbitrage, EventTypeOrderBook, EventTypeSpread, EventTypeCarry, EventTypeExecution, EventTypeExecutionStatus:
 	default:
 		if e.Type == "" {
 			return k4k3ruSDKAppError.Tracef("failed to validate subscription event: %w: event_type=empty", k4k3ruSDKAppError.InvalidParameter())
