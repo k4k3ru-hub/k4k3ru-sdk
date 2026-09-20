@@ -90,3 +90,34 @@ synchronized pools remain eligible until their creation-based 24-hour limit.
 Disconnects or detected gaps withdraw listing with `lp_state_unavailable`;
 initial/recovery capture uses `lp_state_syncing`. Missing reference prices use
 `usd_reference_unavailable`. Last amounts/times remain available in excludedPairs.
+
+
+## Cumulative activity
+
+`Pair.activity` is optional for compatibility with older servers. It contains
+observed cumulative activity throughout the monitoring lifetime, including time
+before listing and temporary exclusion. It has no completeness or gap status.
+Missing history is not inferred as zero and no full-history guarantee is made.
+
+- `startedAt` / `updatedAt`: aggregation start / last incorporated activity update,
+  in Unix microseconds. `startedAt` is not a claim that recovered events began then.
+- `swapCount`: total Swap event count, as a decimal string.
+- `token0ToToken1` / `token1ToToken0`: `count`, `token0Amount`, `token1Amount`,
+  `volumeUsd`. A zero-amount Swap is included only in `swapCount`.
+- `liquidityAdded` / `liquidityRemoved`: `count`, `token0Amount`, `token1Amount`.
+- `netToken0Liquidity` / `netToken1Liquidity`: additions minus removals.
+
+Quantities use token units and normalized decimal strings, without float64.
+Unavailable quantities are JSON null. V4 LP quantities are null after a liquidity
+change because ModifyLiquidity does not emit token amounts. LP reductions refer
+to principal removed from positions, not subsequent Collect transfers; fees and
+Donate events are excluded. Swap amounts are pool-level, not final user receipts.
+
+USD volume uses one available shared reference leg per swap and excludes gas.
+The existing 1 USDC = 1 USD convention applies. Values are fixed at observation
+and truncated to 18 decimals. A directional USD volume is null if any of its
+counted swaps could not be priced. Recovery does not use current spot prices for
+old trades; only directly configured USDC amounts can be priced during recovery.
+
+HTTP List/Get and the `apnp` stream use the same Activity type. Request parameters,
+listing conditions and other existing response fields remain unchanged.
