@@ -121,3 +121,13 @@ old trades; only directly configured USDC amounts can be priced during recovery.
 
 HTTP List/Get and the `apnp` stream use the same Activity type. Request parameters,
 listing conditions and other existing response fields remain unchanged.
+
+## Pool swap fee observations
+
+`Pair.Fees` is optional for compatibility with older servers. Current MarketHub
+listing requires both directional rates. `rate` is a decimal fraction (`"0.003"`
+means 0.3%); nil does not mean zero. Fees exclude token taxes, gas and price impact.
+Variable fees are reference values for `Position` and `ReferenceSender` at
+`ObservedAt` (Unix microseconds), not next-order guarantees. No fee status or
+freshness TTL is supplied. Use `CloneFees` when retaining independently mutable
+snapshots. `fees_unavailable` is a possible exclusion reason.

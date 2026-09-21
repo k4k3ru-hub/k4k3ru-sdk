@@ -29,6 +29,7 @@ type Position struct {
 }
 
 type Pair struct {
+	Fees          *Fees     `json:"fees"`
 	Activity      *Activity `json:"activity,omitempty"`
 	ChainFamily   string    `json:"chainFamily"`
 	Chain         string    `json:"chain"`
