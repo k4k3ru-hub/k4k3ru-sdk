@@ -7,6 +7,7 @@ type ListVenuesParams struct {
 type ListVenuesVenue struct {
 	LiquidityModel string `json:"liquidityModel"`
 	Name           string `json:"name"`
+	DisplayName    string `json:"displayName"`
 	Status         string `json:"status"`
 	UpdatedAt      string `json:"updatedAt"`
 }

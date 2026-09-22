@@ -32,15 +32,15 @@ func TestMarketHubListVenuesResultJSON(t *testing.T) {
 
 	want := ListVenuesResult{
 		Venues: []ListVenuesVenue{
-			{LiquidityModel: "order-book", Name: "binance", Status: "active", UpdatedAt: "2026-08-29T12:34:56Z"},
-			{LiquidityModel: "order-book", Name: "btse", Status: "failed", UpdatedAt: "2026-08-29T12:35:56Z"},
+			{LiquidityModel: "order-book", Name: "binance", DisplayName: "Binance", Status: "active", UpdatedAt: "2026-08-29T12:34:56Z"},
+			{LiquidityModel: "order-book", Name: "btse", DisplayName: "BTSE", Status: "failed", UpdatedAt: "2026-08-29T12:35:56Z"},
 		},
 	}
 	data, err := json.Marshal(want)
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
 	}
-	wantJSON := `{"venues":[{"liquidityModel":"order-book","name":"binance","status":"active","updatedAt":"2026-08-29T12:34:56Z"},{"liquidityModel":"order-book","name":"btse","status":"failed","updatedAt":"2026-08-29T12:35:56Z"}]}`
+	wantJSON := `{"venues":[{"liquidityModel":"order-book","name":"binance","displayName":"Binance","status":"active","updatedAt":"2026-08-29T12:34:56Z"},{"liquidityModel":"order-book","name":"btse","displayName":"BTSE","status":"failed","updatedAt":"2026-08-29T12:35:56Z"}]}`
 	if string(data) != wantJSON {
 		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}
