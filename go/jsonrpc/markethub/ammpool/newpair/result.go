@@ -29,6 +29,7 @@ type Position struct {
 }
 
 type Pair struct {
+	TokenTaxes    *TokenTaxes  `json:"tokenTaxes"`
 	LPPrincipal   *LPPrincipal `json:"lpPrincipal"`
 	Fees          *Fees        `json:"fees"`
 	Activity      *Activity    `json:"activity,omitempty"`

@@ -144,3 +144,27 @@ Variable fees are reference values for `Position` and `ReferenceSender` at
 `ObservedAt` (Unix microseconds), not next-order guarantees. No fee status or
 freshness TTL is supplied. Use `CloneFees` when retaining independently mutable
 snapshots. `fees_unavailable` is a possible exclusion reason.
+
+## Token tax observations
+
+`Pair.TokenTaxes` is nullable and contains independently nullable `token0` and
+`token1` observations. A missing field in an older response and explicit JSON null
+both decode as nil. Each observation contains nullable `buyRate`, `sellRate`,
+`canChange`, `hasExemptions`, plus `source`, `observedAt` and `position`.
+Rates are decimal fractions: `"0.01"` means 1%; `"0"` is confirmed zero and differs
+from null. False is a confirmed negative finding and differs from null as well.
+`observedAt` uses Unix microseconds; `position` identifies the evaluated block.
+`CloneTokenTaxes` / `CloneTokenTax` detach pointer fields for retained snapshots.
+
+Initial server analysis covers reviewed code-only tax-free models on Base mainnet
+and native currency. The onchain-defined Base USDC address is trusted and skipped:
+its observation is null, not an inferred zero-tax verdict. An unknown, unsupported,
+or failed analysis also remains null, without excluding an otherwise listed pool.
+Analysis runs asynchronously, so a later `apnp` replacement snapshot may contain
+observations missing in an earlier List/Get/Subscribe result.
+
+`source` is `contract_analysis` or `native_currency`. These findings describe token
+tax rules at the observed block; they do not prove tradability, LP protection,
+owner renouncement, or future fees. Pool swap fees, token taxes, gas and price
+impact remain separate fields/responsibilities. There is no new request parameter,
+status enum, or subscription operation for this additive response field.
