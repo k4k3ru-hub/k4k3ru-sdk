@@ -49,10 +49,11 @@ func TestMarketHubListSymbolsResultJSON(t *testing.T) {
 	t.Parallel()
 
 	want := ListSymbolsResult{Venues: []ListSymbolsVenue{{
-		Name:  "binance",
-		Page:  1,
-		Limit: 100,
-		Total: 2,
+		LiquidityModel: "order-book",
+		Name:           "binance",
+		Page:           1,
+		Limit:          100,
+		Total:          2,
 		Symbols: []ListSymbolsSymbol{
 			{Symbol: "BTC/USDT", MarketTypes: []string{"spot", "perp"}},
 			{Symbol: "ETH/USDT", MarketTypes: []string{"spot"}},
@@ -62,7 +63,7 @@ func TestMarketHubListSymbolsResultJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
 	}
-	wantJSON := `{"venues":[{"name":"binance","page":1,"limit":100,"total":2,"symbols":[{"symbol":"BTC/USDT","marketTypes":["spot","perp"]},{"symbol":"ETH/USDT","marketTypes":["spot"]}]}]}`
+	wantJSON := `{"venues":[{"liquidityModel":"order-book","name":"binance","page":1,"limit":100,"total":2,"symbols":[{"symbol":"BTC/USDT","marketTypes":["spot","perp"]},{"symbol":"ETH/USDT","marketTypes":["spot"]}]}]}`
 	if string(data) != wantJSON {
 		t.Fatalf("Marshal() = %s, want %s", data, wantJSON)
 	}

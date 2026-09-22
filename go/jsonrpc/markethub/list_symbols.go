@@ -1,6 +1,7 @@
 package markethub
 
 type ListSymbolsParams struct {
+	SourceFilter *ListSourceFilter `json:"sourceFilter,omitempty"`
 	// BaseAsset filters by the exact, case-sensitive canonical base asset. Empty selects all assets.
 	BaseAsset string                   `json:"baseAsset,omitempty"`
 	Venues    []ListSymbolsVenueParams `json:"venues,omitempty"`
@@ -19,11 +20,12 @@ type ListSymbolsSymbol struct {
 }
 
 type ListSymbolsVenue struct {
-	Name    string              `json:"name"`
-	Page    uint64              `json:"page"`
-	Limit   uint64              `json:"limit"`
-	Total   uint64              `json:"total"`
-	Symbols []ListSymbolsSymbol `json:"symbols"`
+	LiquidityModel string              `json:"liquidityModel"`
+	Name           string              `json:"name"`
+	Page           uint64              `json:"page"`
+	Limit          uint64              `json:"limit"`
+	Total          uint64              `json:"total"`
+	Symbols        []ListSymbolsSymbol `json:"symbols"`
 }
 
 type ListSymbolsResult struct {

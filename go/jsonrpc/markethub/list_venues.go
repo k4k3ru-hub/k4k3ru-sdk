@@ -1,11 +1,14 @@
 package markethub
 
-type ListVenuesParams struct{}
+type ListVenuesParams struct {
+	SourceFilter *ListSourceFilter `json:"sourceFilter,omitempty"`
+}
 
 type ListVenuesVenue struct {
-	Name      string `json:"name"`
-	Status    string `json:"status"`
-	UpdatedAt string `json:"updatedAt"`
+	LiquidityModel string `json:"liquidityModel"`
+	Name           string `json:"name"`
+	Status         string `json:"status"`
+	UpdatedAt      string `json:"updatedAt"`
 }
 
 type ListVenuesResult struct {

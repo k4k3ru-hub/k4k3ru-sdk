@@ -1,5 +1,18 @@
 # MarketHub.AMMPool.NewPair
 
+`Pair.LPPrincipal` optionally returns Token0/Token1 principal amounts as exact
+decimal strings in whole-token units. `AmountPercentage` compares those quantities
+without price weighting: 1 token versus 99,999 tokens gives 0.001% versus 99.999%.
+Percentages use 0–100, unlike the fractional rates in `Fees`. Token0 is truncated
+to 18 decimal places; Token1 is its complement to 100. Both percentages are nil
+when the total amount is zero. A rounded 0% does not imply an exactly zero amount.
+Principal covers all price ranges, excluding uncollected fees and direct transfers;
+it is distinct from active liquidity, USD value and LP protection.
+`EvaluatedAt` (Unix microseconds) and `Position` describe the adopted LP observation
+and do not change on USD-reference-only updates. Missing/unverified LP state returns
+nil; older JSON without the field remains readable. `CloneLPPrincipal` copies an
+observation for independent retention. Quantity imbalance is not a listing filter.
+
 Methods: `MarketHub.AMMPool.NewPair.List`, `.Get`, `.Subscribe`, `.Unsubscribe`.
 Use this group for pool discovery. The former Launch RPC group and its SDK types have been removed.
 
