@@ -10,14 +10,16 @@ import (
 // Validate validates a subscription acknowledgement.
 //
 // Version:
+//   - 2026-09-24: Require the durable Scalping execution reference.
 //   - 2026-09-23: Added.
 func (r SubscribeResult) Validate() error {
-	return v.Text("validate scalping subscription", "subscription_key", r.SubscriptionKey, 128)
+	return validateSubscriptionReference("validate scalping subscription", r.ExecutionID, r.SubscriptionKey)
 }
 
 // UnmarshalJSON decodes a validated subscription acknowledgement.
 //
 // Version:
+//   - 2026-09-24: Require the durable Scalping execution reference.
 //   - 2026-09-23: Added.
 func (r *SubscribeResult) UnmarshalJSON(data []byte) error {
 	if r == nil {
@@ -25,7 +27,7 @@ func (r *SubscribeResult) UnmarshalJSON(data []byte) error {
 	}
 	type wire SubscribeResult
 	var decoded wire
-	if err := v.Decode(data, &decoded, "subscriptionKey"); err != nil {
+	if err := v.Decode(data, &decoded, "executionId", "subscriptionKey"); err != nil {
 		return fmt.Errorf("failed to decode scalping subscription: %w", err)
 	}
 	value := SubscribeResult(decoded)
@@ -39,8 +41,10 @@ func (r *SubscribeResult) UnmarshalJSON(data []byte) error {
 // Normalize trims the opaque subscription key without changing its case.
 //
 // Version:
+//   - 2026-09-24: Require the durable Scalping execution reference.
 //   - 2026-09-23: Added.
 func (p UnsubscribeParams) Normalize() UnsubscribeParams {
+	p.ExecutionID = strings.TrimSpace(p.ExecutionID)
 	p.SubscriptionKey = strings.TrimSpace(p.SubscriptionKey)
 	return p
 }
@@ -48,10 +52,11 @@ func (p UnsubscribeParams) Normalize() UnsubscribeParams {
 // Validate validates the subscription to stop without cancelling any orders.
 //
 // Version:
+//   - 2026-09-24: Require the durable Scalping execution reference.
 //   - 2026-09-23: Added.
 func (p UnsubscribeParams) Validate() error {
 	p = p.Normalize()
-	return v.Text("validate scalping unsubscription", "subscription_key", p.SubscriptionKey, 128)
+	return validateSubscriptionReference("validate scalping unsubscription", p.ExecutionID, p.SubscriptionKey)
 }
 
 // UnmarshalJSON decodes an error with an explicit retryability decision.
@@ -77,6 +82,7 @@ func (e *StreamError) UnmarshalJSON(data []byte) error {
 // UnmarshalJSON decodes a validated unsubscription request.
 //
 // Version:
+//   - 2026-09-24: Require the durable Scalping execution reference.
 //   - 2026-09-23: Added.
 func (p *UnsubscribeParams) UnmarshalJSON(data []byte) error {
 	if p == nil {
@@ -84,7 +90,7 @@ func (p *UnsubscribeParams) UnmarshalJSON(data []byte) error {
 	}
 	type wire UnsubscribeParams
 	var decoded wire
-	if err := v.Decode(data, &decoded, "subscriptionKey"); err != nil {
+	if err := v.Decode(data, &decoded, "executionId", "subscriptionKey"); err != nil {
 		return fmt.Errorf("failed to decode scalping unsubscription: %w", err)
 	}
 	value := UnsubscribeParams(decoded).Normalize()
@@ -98,14 +104,16 @@ func (p *UnsubscribeParams) UnmarshalJSON(data []byte) error {
 // Validate validates an unsubscription acknowledgement.
 //
 // Version:
+//   - 2026-09-24: Require the durable Scalping execution reference.
 //   - 2026-09-23: Added.
 func (r UnsubscribeResult) Validate() error {
-	return v.Text("validate scalping unsubscription result", "subscription_key", r.SubscriptionKey, 128)
+	return validateSubscriptionReference("validate scalping unsubscription result", r.ExecutionID, r.SubscriptionKey)
 }
 
 // UnmarshalJSON decodes a validated unsubscription acknowledgement.
 //
 // Version:
+//   - 2026-09-24: Require the durable Scalping execution reference.
 //   - 2026-09-23: Added.
 func (r *UnsubscribeResult) UnmarshalJSON(data []byte) error {
 	if r == nil {
@@ -113,7 +121,7 @@ func (r *UnsubscribeResult) UnmarshalJSON(data []byte) error {
 	}
 	type wire UnsubscribeResult
 	var decoded wire
-	if err := v.Decode(data, &decoded, "subscriptionKey"); err != nil {
+	if err := v.Decode(data, &decoded, "executionId", "subscriptionKey"); err != nil {
 		return fmt.Errorf("failed to decode scalping unsubscription result: %w", err)
 	}
 	value := UnsubscribeResult(decoded)
@@ -128,10 +136,11 @@ func (r *UnsubscribeResult) UnmarshalJSON(data []byte) error {
 // Sequence ordering and connection ownership are checked by the event consumer.
 //
 // Version:
+//   - 2026-09-24: Require the durable Scalping execution reference.
 //   - 2026-09-23: Added.
 func (e SubscriptionEvent) Validate() error {
 	const op = "validate scalping event"
-	if err := v.Text(op, "subscription_key", e.SubscriptionKey, 128); err != nil {
+	if err := validateSubscriptionReference(op, e.ExecutionID, e.SubscriptionKey); err != nil {
 		return err
 	}
 	if e.Sequence == 0 {
@@ -161,6 +170,7 @@ func (e SubscriptionEvent) Validate() error {
 // UnmarshalJSON decodes a validated snapshot or error event.
 //
 // Version:
+//   - 2026-09-24: Require the durable Scalping execution reference.
 //   - 2026-09-23: Added.
 func (e *SubscriptionEvent) UnmarshalJSON(data []byte) error {
 	if e == nil {
@@ -168,7 +178,7 @@ func (e *SubscriptionEvent) UnmarshalJSON(data []byte) error {
 	}
 	type wire SubscriptionEvent
 	var decoded wire
-	if err := v.Decode(data, &decoded, "subscriptionKey", "sequence", "kind"); err != nil {
+	if err := v.Decode(data, &decoded, "executionId", "subscriptionKey", "sequence", "kind"); err != nil {
 		return fmt.Errorf("failed to decode scalping event: %w", err)
 	}
 	value := SubscriptionEvent(decoded)
@@ -177,4 +187,11 @@ func (e *SubscriptionEvent) UnmarshalJSON(data []byte) error {
 	}
 	*e = value
 	return nil
+}
+
+func validateSubscriptionReference(operation, executionID, key string) error {
+	if err := v.Text(operation, "execution_id", executionID, 128); err != nil {
+		return err
+	}
+	return v.Text(operation, "subscription_key", key, 128)
 }

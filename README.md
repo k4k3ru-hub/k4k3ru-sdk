@@ -347,13 +347,16 @@ SDK の型定義追加に対応するサーバー・Gateway の実装は別途�
 
 ### TradeHub Scalping と共通 Open / Close ルール
 
-`TradeHub.Scalping.Get/Subscribe/Unsubscribe` の公開型を
-[`jsonrpc/tradehub/scalping`](go/jsonrpc/tradehub/scalping/README.md) に用意しています。
+[`jsonrpc/tradehub/scalping`](go/jsonrpc/tradehub/scalping/README.md) の
+`SubscribeParams` で、新規開始（`idempotencyKey`＋設定）と再購読（`executionId`のみ）を指定します。
+`websocket.NewModule` が `module.Scalping()` を組み立て、ACK・候補snapshot・errorを受信できます。
+実行IDは再接続後も維持し、購読IDとsequenceは新しい接続で更新します。
+
 共通の `Rule`・`AssetRef`・`MarketRef` は
 [`jsonrpc/tradehub/executionrule`](go/jsonrpc/tradehub/executionrule/README.md) から参照します。
-`marketType` は Params 直下で指定し、Rule の Open / Close は両方必須です。
-数量は基準資産の最小単位整数文字列で指定し、検出条件や実行制約の既定値は補完しません。
+`marketType` はJSONのparams直下、RuleのOpen / Closeは両方必須です。
+購読開始・解除ではOMS注文を作成・取消しません。
 
-今回の追加は DTO・validation・JSON-RPC メソッド名です。
-サーバーの条件評価・配信、WebSocket 購読クライアント、Agent・OMS への接続は別途必要です。
-既存 Swap の request / result は維持しています。
+TradeHub側の保存・配信と合わせて更新してください。現在の配信元は
+`evaluation_unavailable`を返し、MarketHubの実データによる条件評価は次工程です。
+`Scalping.Get`は将来の注文・ポジション取得用として保留しています。

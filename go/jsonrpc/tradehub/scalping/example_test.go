@@ -9,11 +9,12 @@ import (
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/scalping"
 )
 
-// ExampleParams builds a Spot request without signing or placing an order.
+// ExampleSubscribeParams builds a Spot request without signing or placing an order.
 //
 // Version:
+//   - 2026-09-24: Encode an idempotent subscription start.
 //   - 2026-09-23: Added.
-func ExampleParams() {
+func ExampleSubscribeParams() {
 	// Replace placeholder asset and pool IDs with resolved provider metadata.
 	market := rule.MarketRef{Venue: "cetus", Network: "mainnet", Chain: "sui", PoolID: "POOL_ID"}
 	slippage, count := uint64(100), uint64(10)
@@ -32,19 +33,19 @@ func ExampleParams() {
 		fmt.Println(err)
 		return
 	}
-	wire, err := json.Marshal(p)
+	wire, err := json.Marshal(scalping.SubscribeParams{IdempotencyKey: "start-one", Params: &p})
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	var decoded scalping.Params
+	var decoded scalping.SubscribeParams
 	if err := json.Unmarshal(wire, &decoded); err != nil {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println(jsonrpc.MethodTradeHubScalpingGet)
-	fmt.Println(decoded.MarketType, decoded.ExecutionRule.Open.Spot.Amount)
+	fmt.Println(jsonrpc.MethodTradeHubScalpingSubscribe)
+	fmt.Println(decoded.Params.MarketType, decoded.Params.ExecutionRule.Open.Spot.Amount)
 	// Output:
-	// TradeHub.Scalping.Get
+	// TradeHub.Scalping.Subscribe
 	// spot 1000000
 }

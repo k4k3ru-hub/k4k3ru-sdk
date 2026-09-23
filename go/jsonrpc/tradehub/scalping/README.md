@@ -6,18 +6,25 @@ Import shared round-trip rules and market/asset references from
 `github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/executionrule`.
 There are no root-package aliases or new production dependencies.
 
-The method identifiers are `jsonrpc.MethodTradeHubScalpingGet`,
-`MethodTradeHubScalpingSubscribe`, and `MethodTradeHubScalpingUnsubscribe`.
-This addition supplies the public data contract. It does not install a TradeHub
-handler or add a `websocket.Module` Scalping client. HTTP JSON-RPC callers can
-use the existing envelopes and their own transport after server support is
-deployed. WebSocket composition and the execution providers are separate work.
+The implemented subscription identifiers are `jsonrpc.MethodTradeHubScalpingSubscribe`
+and `MethodTradeHubScalpingUnsubscribe`. Use `websocket.NewModule` and
+`module.Scalping()` for authenticated candidate notifications. The existing
+`MethodTradeHubScalpingGet` constant is reserved for future order/position state
+retrieval; it is not a one-shot candidate evaluation operation.
 
 ## Request
 
-Get and Subscribe share `Params`. `marketType` appears once, directly inside
-JSON-RPC `params`, alongside `baseAsset`, `quoteAsset`, `markets`, `conditions`,
-and `executionRule`. Every field is required. `executionRule.open` and
+`Params` describes immutable execution settings. `SubscribeParams` has two modes:
+
+- Start: `IdempotencyKey` plus `Params: &settings` in Go. The JSON encoding flattens
+  the settings, keeping `marketType` directly beside `idempotencyKey` in JSON-RPC
+  params. Repeating the same key and normalized settings for the same account
+  returns the same durable execution ID. Different settings conflict.
+- Resume: `ExecutionID` only. Any additional JSON field, including null settings
+  or an idempotency key, is rejected. Saved settings cannot be overwritten.
+
+`marketType`, `baseAsset`, `quoteAsset`, `markets`, `conditions`, and
+`executionRule` are required for a new execution. `executionRule.open` and
 `executionRule.close` are both required, non-null objects. A future ordinary
 Swap wrapper can omit the entire rule for a single swap; an incomplete Rule is
 never valid. Existing Swap request/response types are unchanged.
@@ -28,6 +35,7 @@ units and are not trading recommendations or SDK defaults.
 
 ```json
 {
+  "idempotencyKey": "my-scalping-start-001",
   "marketType": "spot",
   "baseAsset": {
     "chain": "sui", "network": "mainnet", "assetId": "0x2::sui::SUI"
@@ -172,25 +180,67 @@ metric presence, and observation age at evaluation. This does not re-evaluate
 the signal or compare expiry against the caller's current clock. Candidate
 selection and Prepare must do fresh execution checks.
 
-Get/Subscribe results contain **no prepared execution, signing payload, OMS
-order ID, or inventory reservation guarantee**. Agent selects and reserves
-funds before Prepare. Prepare does not write OMS; first Submit creates and
-links the OMS order before transmission. This SDK change implements none of
-those side effects.
+The subscription ACK and every event include the Scalping `executionId` and
+`subscriptionKey`. The execution ID survives socket/process restarts; the key
+belongs to a connection. This execution groups potential Open/Close trades and
+is distinct from a single prepared transaction's `TradeHub.Execution` ID.
+Do not pass a Scalping ID to Execution.Submit. There is no OMS order, prepared
+transaction, signing payload or inventory reservation created by Subscribe.
+Prepare still does not write OMS; first Submit remains the order-creation boundary.
 
-Subscribe uses Params directly and returns SubscribeResult with an opaque
-`subscriptionKey`. SubscriptionEvent carries a positive sequence and exactly
-one `snapshot` (Result) or `error` (code and explicit retryability). Snapshots
-replace the full requested-market state, so not_matched/unavailable withdraw
-old candidates. The consumer checks the active subscription key and monotonic
-sequence; a new connection gets a new subscription key. Unsubscribe accepts
-the key and acknowledges it. Stopping candidate notifications does not cancel
-existing Open orders or their independently persisted Close monitoring.
+```go
+subscription, err := module.Scalping().Subscribe(ctx, scalping.SubscribeParams{
+    IdempotencyKey: "my-scalping-start-001",
+    Params:         &settings, // scalping.Params, validated before sending
+})
+if err != nil {
+    return err
+}
+executionID := subscription.Reference().ExecutionID // retain for reconnect
+// Consume subscription.Events() and subscription.Errors().
+if err := module.Scalping().Unsubscribe(ctx, subscription); err != nil {
+    return err
+}
+resumed, err := module.Scalping().Subscribe(ctx, scalping.SubscribeParams{
+    ExecutionID: executionID,
+})
+if err != nil {
+    return err
+}
+_ = resumed
+```
+
+After an interrupted start before receiving the ACK, retry the same start key
+and settings. After an ACK, reconnect explicitly using the execution ID.
+Authentication is required; the owner is taken from credentials, never request
+parameters. Unsubscribe requires both identifiers and acknowledges both. It
+stops notifications, leaving saved settings and existing order/Close management
+intact. It is not an execution deletion or order cancellation operation.
+
+Notification envelope type `sc` carries `SubscriptionEvent`: a positive sequence
+and exactly one full `snapshot` (Result) or `error` (code and retryability).
+The server acknowledges before sending the initial update. Available sources
+send an initial snapshot then replacement snapshots, including not_matched and
+unavailable transitions. The SDK buffers the ACK/event race and rejects events
+from old keys or executions and non-increasing sequences. Sequences restart at
+one for a new key. Consumers replace candidate state; a stream error or connection
+loss invalidates all previous actionable candidates. A `retryable: true` error
+keeps the stream open; a false value ends the stream. Transport loss closes the
+handle and reports through Errors. Buffer overflow also reports an interruption;
+release that handle before resubscribing. No automatic trading or reconnect is
+performed.
+
+The accompanying service currently composes an explicit unavailable evaluator:
+ACK is followed by `evaluation_unavailable` with `retryable: true`, and the stream
+stays open. It invents neither candidate snapshots nor asset metadata. Real
+MarketHub indicator calculation is a separately approved next stage; injected
+sources already exercise initial/matched/withdrawn snapshot delivery in tests.
+The DTO/client and server changes must be deployed together.
 
 ## Verification
 
 Tests cover Spot/Perp requests, Close requirements, optional zero values,
-cross-chain Close references, exact range boundaries, strict JSON, non-aliasing
+cross-chain Close references, idempotent start/resume forms, exact range boundaries, strict JSON, non-aliasing
 normalization, snapshot states, candidate expiry, request/result identity,
 metadata decimal presence, and subscription event variants. They use no live
 venues, credentials, trading balances, or transactions.

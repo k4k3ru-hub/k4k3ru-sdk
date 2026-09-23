@@ -7,6 +7,7 @@ import (
 	dtoAMMPool "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/ammpool"
 	dtoAMMPoolNewPair "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/ammpool/newpair"
 	execution "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/execution"
+	scalping "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/scalping"
 
 	k4k3ruSDKJSONRPC "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc"
 	k4k3ruSDKJSONRPCBBO "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/bbo"
@@ -17,6 +18,7 @@ import (
 )
 
 type messageRouter struct {
+	scalpingEvents       *scalpingEventRegistry
 	executionEvents      *executionEventRegistry
 	requests             *requestTracker
 	bboEvents            *bboEventRegistry
@@ -56,6 +58,7 @@ func newMessageRouter(requests *requestTracker, bboEvents *bboEventRegistry, ord
 // HandleMessage routes responses and typed subscription events.
 //
 // Version:
+//   - 2026-09-24: Route Scalping notifications.
 //   - 2026-09-16: Route execution observation and transport interruptions.
 //   - 2026-09-16: Remove retired Launch event routing.
 //   - 2026-09-11: Route AMMPool events.
@@ -71,6 +74,7 @@ func (r *messageRouter) HandleMessage(message []byte) {
 // HandleClose interrupts pending requests and active execution observers.
 //
 // Version:
+//   - 2026-09-24: Interrupt Scalping subscriptions on transport closure.
 //   - 2026-09-16: Notify execution observers of transport closure.
 func (r *messageRouter) HandleClose() {
 	if r == nil || r.requests == nil {
@@ -78,6 +82,7 @@ func (r *messageRouter) HandleClose() {
 	}
 	r.requests.failAll(errWebSocketConnectionClosed)
 	r.executionEvents.interrupt()
+	r.scalpingEvents.interrupt()
 }
 
 func (r *messageRouter) route(message []byte) error {
@@ -114,10 +119,17 @@ func (r *messageRouter) route(message []byte) error {
 		return fmt.Errorf("failed to route websocket event: %w", err)
 	}
 	switch event.Type {
+	case k4k3ruSDKSubscription.EventTypeScalping:
+		var value scalping.SubscriptionEvent
+		if err := json.Unmarshal(event.Data, &value); err != nil {
+			return fmt.Errorf("failed to route scalping event: %w", err)
+		}
+		r.scalpingEvents.route(value)
 	case k4k3ruSDKSubscription.EventTypeExecutionStatus:
 		var result execution.SubscriptionEvent
 		if err := json.Unmarshal(event.Data, &result); err != nil {
 			r.executionEvents.interrupt()
+			r.scalpingEvents.interrupt()
 			return err
 		}
 		if r.executionEvents != nil {

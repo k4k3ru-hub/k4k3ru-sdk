@@ -1,14 +1,17 @@
 package scalping
 
 type SubscribeResult struct {
+	ExecutionID     string `json:"executionId"`
 	SubscriptionKey string `json:"subscriptionKey"`
 }
 
 type UnsubscribeParams struct {
+	ExecutionID     string `json:"executionId"`
 	SubscriptionKey string `json:"subscriptionKey"`
 }
 
 type UnsubscribeResult struct {
+	ExecutionID     string `json:"executionId"`
 	SubscriptionKey string `json:"subscriptionKey"`
 }
 
@@ -20,6 +23,7 @@ const (
 )
 
 type SubscriptionEvent struct {
+	ExecutionID     string       `json:"executionId"`
 	SubscriptionKey string       `json:"subscriptionKey"`
 	Sequence        uint64       `json:"sequence"`
 	Kind            EventKind    `json:"kind"`

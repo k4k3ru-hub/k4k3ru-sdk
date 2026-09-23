@@ -12,6 +12,7 @@ import (
 type EventType string
 
 const (
+	EventTypeScalping        EventType = "sc"
 	EventTypeAMMPoolYield    EventType = "apyld"
 	EventTypeAMMPoolNewPair  EventType = "apnp"
 	EventTypeAMMPool         EventType = "ap"
@@ -64,6 +65,7 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 //   - Validation error.
 //
 // Version:
+//   - 2026-09-24: Accept Scalping candidate notifications.
 //   - 2026-09-19: Accept AMM pool yield events.
 //   - 2026-09-16: Accept execution observation events.
 //   - 2026-09-16: Remove retired Launch support; retain NewPair.
@@ -73,7 +75,7 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 //   - 2026-08-30: Added.
 func (e Event) Validate() error {
 	switch e.Type {
-	case EventTypeAMMPoolYield, EventTypeAMMPoolNewPair, EventTypeAMMPool, EventTypeBBO, EventTypeArbitrage, EventTypeOrderBook, EventTypeSpread, EventTypeCarry, EventTypeExecution, EventTypeExecutionStatus:
+	case EventTypeScalping, EventTypeAMMPoolYield, EventTypeAMMPoolNewPair, EventTypeAMMPool, EventTypeBBO, EventTypeArbitrage, EventTypeOrderBook, EventTypeSpread, EventTypeCarry, EventTypeExecution, EventTypeExecutionStatus:
 	default:
 		if e.Type == "" {
 			return k4k3ruSDKAppError.Tracef("failed to validate subscription event: %w: event_type=empty", k4k3ruSDKAppError.InvalidParameter())

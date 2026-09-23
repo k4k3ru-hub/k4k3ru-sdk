@@ -156,12 +156,13 @@ func TestMetadataRequiresDecimalCount(t *testing.T) {
 // TestSubscriptionEvents verifies snapshot and error exclusivity and strict decoding.
 //
 // Version:
+//   - 2026-09-24: Include the durable execution reference.
 //   - 2026-09-23: Added.
 func TestSubscriptionEvents(t *testing.T) {
 	r := matchedResult()
 	events := []SubscriptionEvent{
-		{SubscriptionKey: "subscription-1", Sequence: 1, Kind: EventKindSnapshot, Snapshot: &r},
-		{SubscriptionKey: "subscription-1", Sequence: 2, Kind: EventKindError, Error: &StreamError{Code: "stream_unavailable", Retryable: true}},
+		{ExecutionID: "scalp_one", SubscriptionKey: "subscription-1", Sequence: 1, Kind: EventKindSnapshot, Snapshot: &r},
+		{ExecutionID: "scalp_one", SubscriptionKey: "subscription-1", Sequence: 2, Kind: EventKindError, Error: &StreamError{Code: "stream_unavailable", Retryable: true}},
 	}
 	for _, event := range events {
 		wire, err := json.Marshal(event)
@@ -177,28 +178,28 @@ func TestSubscriptionEvents(t *testing.T) {
 		}
 	}
 	for _, event := range []SubscriptionEvent{
-		{SubscriptionKey: "subscription-1", Sequence: 0, Kind: EventKindSnapshot, Snapshot: &r},
-		{SubscriptionKey: "subscription-1", Sequence: 1, Kind: EventKindSnapshot, Snapshot: &r, Error: &StreamError{Code: "error"}},
-		{SubscriptionKey: "subscription-1", Sequence: 1, Kind: EventKindError},
+		{ExecutionID: "scalp_one", SubscriptionKey: "subscription-1", Sequence: 0, Kind: EventKindSnapshot, Snapshot: &r},
+		{ExecutionID: "scalp_one", SubscriptionKey: "subscription-1", Sequence: 1, Kind: EventKindSnapshot, Snapshot: &r, Error: &StreamError{Code: "error"}},
+		{ExecutionID: "scalp_one", SubscriptionKey: "subscription-1", Sequence: 1, Kind: EventKindError},
 	} {
 		if err := event.Validate(); !errors.Is(err, apperror.InvalidParameter()) {
 			t.Fatal("invalid event accepted")
 		}
 	}
 	var event SubscriptionEvent
-	if err := json.Unmarshal([]byte(`{"subscriptionKey":"key","sequence":1,"kind":"error","error":{"code":"unavailable"}}`), &event); !errors.Is(err, apperror.InvalidParameter()) {
+	if err := json.Unmarshal([]byte(`{"executionId":"scalp_one","subscriptionKey":"key","sequence":1,"kind":"error","error":{"code":"unavailable"}}`), &event); !errors.Is(err, apperror.InvalidParameter()) {
 		t.Fatal("unspecified retryability accepted")
 	}
 	var ack SubscribeResult
-	if err := json.Unmarshal([]byte(`{"subscriptionKey":"key"}`), &ack); err != nil {
+	if err := json.Unmarshal([]byte(`{"executionId":"scalp_one","subscriptionKey":"key"}`), &ack); err != nil {
 		t.Fatal(err)
 	}
 	var unsubscribe UnsubscribeParams
-	if err := json.Unmarshal([]byte(`{"subscriptionKey":"key","cancelOrders":true}`), &unsubscribe); !errors.Is(err, apperror.InvalidParameter()) {
+	if err := json.Unmarshal([]byte(`{"executionId":"scalp_one","subscriptionKey":"key","cancelOrders":true}`), &unsubscribe); !errors.Is(err, apperror.InvalidParameter()) {
 		t.Fatal("unknown cancellation field accepted")
 	}
 	var result UnsubscribeResult
-	if err := json.Unmarshal([]byte(`{"subscriptionKey":"key"}`), &result); err != nil {
+	if err := json.Unmarshal([]byte(`{"executionId":"scalp_one","subscriptionKey":"key"}`), &result); err != nil {
 		t.Fatal(err)
 	}
 }

@@ -22,6 +22,7 @@ type ModuleConfig struct {
 
 // Module owns the composed K4K3RU WebSocket client graph.
 type Module struct {
+	scalping        *ScalpingClient
 	execution       *ExecutionClient
 	client          *client
 	requests        *requestTracker
@@ -51,6 +52,7 @@ type Module struct {
 //   - Configuration or composition error.
 //
 // Version:
+//   - 2026-09-24: Compose the Scalping subscription client.
 //   - 2026-09-16: Compose the execution observation client.
 //   - 2026-09-16: Compose NewPair without the retired Launch client.
 //   - 2026-09-11: Compose the AMMPool client and event registry.
@@ -110,11 +112,13 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 	ammPoolEvents := newAMMPoolEventRegistry()
 	ammPoolNewPairEvents := newAMMPoolNewPairEventRegistry()
 	executionEvents := newExecutionEventRegistry()
+	scalpingEvents := newScalpingEventRegistry()
 	router, err := newMessageRouter(requests, bboEvents, orderBookEvents, spreadEvents, carryEvents, ammPoolEvents, ammPoolNewPairEvents)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
 	}
 	router.executionEvents = executionEvents
+	router.scalpingEvents = scalpingEvents
 	handler := &sessionHandler{receiver: router}
 	option := k4k3ruWebSocket.DefaultClientOption()
 	option.ConnectTimeout = config.ConnectTimeout
@@ -164,7 +168,12 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 	if err != nil {
 		return nil, err
 	}
+	scalpingClient, err := newScalpingClient(sender, scalpingEvents, subscriptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create websocket module: %w", err)
+	}
 	return &Module{
+		scalping:        scalpingClient,
 		execution:       executionClient,
 		client:          transportClient,
 		requests:        requests,
@@ -305,4 +314,15 @@ func (m *Module) Execution() *ExecutionClient {
 		return nil
 	}
 	return m.execution
+}
+
+// Scalping returns the composed TradeHub Scalping WebSocket client.
+//
+// Version:
+//   - 2026-09-24: Added.
+func (m *Module) Scalping() *ScalpingClient {
+	if m == nil {
+		return nil
+	}
+	return m.scalping
 }
