@@ -2,6 +2,11 @@ package scalping
 
 import rule "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/executionrule"
 
+const (
+	DefaultWindowMS uint64 = 60_000
+	MaximumWindowMS uint64 = 60_000
+)
+
 type Params struct {
 	MarketType    rule.MarketType  `json:"marketType"`
 	BaseAsset     rule.AssetRef    `json:"baseAsset"`
@@ -12,6 +17,8 @@ type Params struct {
 }
 
 type Conditions struct {
+	// WindowMS uses DefaultWindowMS when omitted from JSON. Go callers must
+	// supply a positive value explicitly; zero is invalid in both forms.
 	WindowMS          uint64        `json:"windowMs"`
 	MaximumDataAgeMS  uint64        `json:"maximumDataAgeMs"`
 	PriceChangeBPS    *DecimalRange `json:"priceChangeBps,omitempty"`

@@ -27,6 +27,7 @@ func (p Params) Normalize() Params {
 // Asset equivalence, market metadata, and executable inventory need server checks.
 //
 // Version:
+//   - 2026-09-24: Enforce the maximum observation window through Conditions validation.
 //   - 2026-09-23: Added.
 func (p Params) Validate() error {
 	p = p.Normalize()
@@ -57,6 +58,7 @@ func (p Params) Validate() error {
 // UnmarshalJSON decodes and validates parameters, rejecting unknown fields.
 //
 // Version:
+//   - 2026-09-24: Resolve omitted observation windows while rejecting explicit invalid values.
 //   - 2026-09-23: Added.
 func (p *Params) UnmarshalJSON(data []byte) error {
 	if p == nil {
@@ -72,6 +74,39 @@ func (p *Params) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("failed to decode scalping parameters: %w", err)
 	}
 	*p = value
+	return nil
+}
+
+// UnmarshalJSON defaults an omitted window and validates explicit condition values.
+// Null and zero windows are rejected. Decode failure leaves the receiver unchanged.
+//
+// Version:
+//   - 2026-09-24: Added.
+func (c *Conditions) UnmarshalJSON(data []byte) error {
+	const op = "decode scalping conditions"
+	if c == nil {
+		return v.Invalid(op, "destination", "null")
+	}
+	// Shadow only the wire field to distinguish omission from explicit null,
+	// preserving the existing uint64 field used by Go callers.
+	type fields Conditions
+	window := DefaultWindowMS
+	decoded := struct {
+		fields
+		WindowMS *uint64 `json:"windowMs"`
+	}{WindowMS: &window}
+	if err := v.Decode(data, &decoded, "maximumDataAgeMs"); err != nil {
+		return fmt.Errorf("failed to decode scalping conditions: %w", err)
+	}
+	if decoded.WindowMS == nil {
+		return v.Invalid(op, "window_ms", "null")
+	}
+	value := Conditions(decoded.fields).Normalize()
+	value.WindowMS = *decoded.WindowMS
+	if err := value.Validate(); err != nil {
+		return fmt.Errorf("failed to decode scalping conditions: %w", err)
+	}
+	*c = value
 	return nil
 }
 
@@ -101,12 +136,16 @@ func normalizeDecimalRange(r *DecimalRange) *DecimalRange {
 // Validate validates the observation window and explicit AND condition bounds.
 //
 // Version:
+//   - 2026-09-24: Limit explicit windows to 1 through MaximumWindowMS milliseconds.
 //   - 2026-09-23: Added.
 func (c Conditions) Validate() error {
 	const op = "validate scalping conditions"
 	c = c.Normalize()
 	if c.WindowMS == 0 {
 		return v.Invalid(op, "window_ms", "empty")
+	}
+	if c.WindowMS > MaximumWindowMS {
+		return v.Invalid(op, "window_ms", "out_of_range")
 	}
 	if c.MaximumDataAgeMS == 0 {
 		return v.Invalid(op, "maximum_data_age_ms", "empty")

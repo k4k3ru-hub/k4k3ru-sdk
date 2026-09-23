@@ -352,6 +352,10 @@ SDK の型定義追加に対応するサーバー・Gateway の実装は別途�
 `websocket.NewModule` が `module.Scalping()` を組み立て、ACK・候補snapshot・errorを受信できます。
 実行IDは再接続後も維持し、購読IDとsequenceは新しい接続で更新します。
 
+`conditions.windowMs`はJSON省略時60,000ms、指定範囲は1〜60,000msです。
+明示的な0・null・上限超過は拒否します。Goでは`WindowMS: scalping.DefaultWindowMS`などを
+明示し、売買条件と`maximumDataAgeMs`は引き続きユーザーが指定します。
+
 共通の `Rule`・`AssetRef`・`MarketRef` は
 [`jsonrpc/tradehub/executionrule`](go/jsonrpc/tradehub/executionrule/README.md) から参照します。
 `marketType` はJSONのparams直下、RuleのOpen / Closeは両方必須です。

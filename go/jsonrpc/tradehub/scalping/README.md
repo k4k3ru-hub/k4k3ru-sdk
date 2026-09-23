@@ -31,7 +31,8 @@ never valid. Existing Swap request/response types are unchanged.
 
 The following is a **params-only structure example**, with placeholder asset
 and pool IDs. Replace those with resolved metadata; the numbers illustrate
-units and are not trading recommendations or SDK defaults.
+units and are not trading recommendations or SDK defaults. The omitted
+`conditions.windowMs` defaults to 60000 (60 seconds).
 
 ```json
 {
@@ -47,7 +48,6 @@ units and are not trading recommendations or SDK defaults.
     {"venue": "cetus", "chain": "sui", "network": "mainnet", "poolId": "OPEN_POOL_ID"}
   ],
   "conditions": {
-    "windowMs": 30000,
     "maximumDataAgeMs": 2000,
     "priceChangeBps": {"minimum": "25"},
     "tradeCount": {"minimum": 10}
@@ -134,7 +134,22 @@ absent values; explicit zero bounds are preserved.
 | `quoteVolume` | nonnegative integer reference QuoteAsset atomic units |
 | `tradeCount` | nonnegative count |
 | `buyVolumeRatioBps` | decimal basis points in 0..10000 |
-| `windowMs`, `maximumDataAgeMs` | positive milliseconds |
+| `windowMs` | integer milliseconds in 1..60000; omitted JSON defaults to 60000 |
+| `maximumDataAgeMs` | required positive integer milliseconds |
+
+An omitted JSON `windowMs` becomes `DefaultWindowMS` (60000) before validation
+and persistence. Explicit zero, null, and values above `MaximumWindowMS` (60000)
+are rejected, never replaced or clamped. Set `"windowMs": 30000` for a shorter
+30-second window. This is the observation period, not the notification interval.
+No metric thresholds or data-age limit receive defaults.
+
+Go callers retain the existing `uint64` field and must explicitly set
+`Conditions.WindowMS`, for example `WindowMS: scalping.DefaultWindowMS`.
+Go's zero value is invalid; `Normalize()` does not supply the JSON omission
+default. After JSON decoding, omission and an explicit 60000 produce identical
+settings, so a retry with the same idempotency key does not conflict.
+Resume uses the saved window without applying a new configuration. Saved windows
+above 60000 fail validation when loaded; existing settings are not rewritten.
 
 Decimal/integer strings are compared with exact arithmetic, never float64.
 Exponent notation, fractions such as `1/2`, leading `+`, and non-finite values

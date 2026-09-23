@@ -12,6 +12,7 @@ import (
 // ExampleSubscribeParams builds a Spot request without signing or placing an order.
 //
 // Version:
+//   - 2026-09-24: Use the default observation window constant for Go requests.
 //   - 2026-09-24: Encode an idempotent subscription start.
 //   - 2026-09-23: Added.
 func ExampleSubscribeParams() {
@@ -23,7 +24,7 @@ func ExampleSubscribeParams() {
 		BaseAsset:  rule.AssetRef{Chain: "sui", Network: "mainnet", AssetID: "0x2::sui::SUI"},
 		QuoteAsset: rule.AssetRef{Chain: "sui", Network: "mainnet", AssetID: "USDC_COIN_TYPE"},
 		Markets:    []rule.MarketRef{market},
-		Conditions: scalping.Conditions{WindowMS: 30000, MaximumDataAgeMS: 2000, TradeCount: &scalping.CountRange{Minimum: &count}},
+		Conditions: scalping.Conditions{WindowMS: scalping.DefaultWindowMS, MaximumDataAgeMS: 2000, TradeCount: &scalping.CountRange{Minimum: &count}},
 		ExecutionRule: rule.Rule{
 			Open:  rule.OpenRule{Spot: &rule.SpotOpenRule{Amount: "1000000"}, MaximumSlippageBPS: &slippage, ExecutionTTLMS: 30000},
 			Close: rule.CloseRule{TakeProfit: &rule.Trigger{Type: rule.TriggerTypePrice, Value: "2.1"}, Spot: &rule.SpotCloseRule{Markets: []rule.MarketRef{market}}, MaximumSlippageBPS: &slippage, ExecutionTTLMS: 30000},
@@ -45,7 +46,9 @@ func ExampleSubscribeParams() {
 	}
 	fmt.Println(jsonrpc.MethodTradeHubScalpingSubscribe)
 	fmt.Println(decoded.Params.MarketType, decoded.Params.ExecutionRule.Open.Spot.Amount)
+	fmt.Println(decoded.Params.Conditions.WindowMS)
 	// Output:
 	// TradeHub.Scalping.Subscribe
 	// spot 1000000
+	// 60000
 }

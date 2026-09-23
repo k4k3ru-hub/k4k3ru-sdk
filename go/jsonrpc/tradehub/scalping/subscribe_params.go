@@ -82,6 +82,7 @@ func (p SubscribeParams) MarshalJSON() ([]byte, error) {
 // Decode failure leaves the receiver unchanged.
 //
 // Version:
+//   - 2026-09-24: Apply the default observation window to omitted start parameters.
 //   - 2026-09-24: Added.
 func (p *SubscribeParams) UnmarshalJSON(data []byte) error {
 	const op = "decode scalping subscription parameters"
