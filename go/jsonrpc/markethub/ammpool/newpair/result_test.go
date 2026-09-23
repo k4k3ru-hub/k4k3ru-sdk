@@ -6,6 +6,36 @@ import (
 	"testing"
 )
 
+// TestTrustedSecurityWire preserves policy without serializing an invented observed value.
+//
+// Version:
+//   - 2026-09-23: Added.
+func TestTrustedSecurityWire(t *testing.T) {
+	raw := []byte(`{"security":{"owner":{"status":"trusted","reason":"sdk_definition"},"implementation":{"status":"trusted","reason":"sdk_definition"},"admin":{"status":"trusted","reason":"sdk_definition"},"beacon":{"status":"trusted","reason":"sdk_definition"}}}`)
+	var token Token
+	if err := json.Unmarshal(raw, &token); err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := json.Marshal(token)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fields struct {
+		Security map[string]map[string]json.RawMessage `json:"security"`
+	}
+	if err := json.Unmarshal(encoded, &fields); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"owner", "implementation", "admin", "beacon"} {
+		if token.Security[key] != (Finding{Status: "trusted", Reason: "sdk_definition"}) {
+			t.Fatal("trust policy lost", key)
+		}
+		if _, present := fields.Security[key]["value"]; present || len(fields.Security[key]) != 2 {
+			t.Fatal("trusted check serialized an observation", key)
+		}
+	}
+}
+
 // TestObservationAndExclusionWire preserves the last evaluation and chain-neutral swap evidence.
 //
 // Version:

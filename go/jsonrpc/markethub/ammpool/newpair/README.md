@@ -55,6 +55,22 @@ type. Pool identifiers preserve case. Position number/index strings and optional
 chain-specific details support blocks, slots and checkpoints without loss of
 integer precision. These types do not imply an adapter is deployed for every chain.
 
+For ERC20 tokens registered in onchain's token metadata definitions, `security.owner`,
+`security.implementation`, `security.admin`, and `security.beacon` return
+`{"status":"trusted","reason":"sdk_definition"}` without `value`. The server
+matches chain, network, and token address, never the symbol. These four RPC checks
+are skipped by policy; this does not mean ownership was renounced, no proxy exists,
+or the pool/counter-token is trusted. Symbol and decimals retain `known` with their
+definition values. Native currency keeps `not_applicable` for contract checks.
+When the token definition includes a non-empty name, `name` also returns `known`
+with its definition value and `sdk_definition`, skipping the `name()` RPC.
+Unregistered tokens and definitions without a name retain the existing name RPC.
+Trust is current configuration, not a historical observation: it applies at discovery,
+snapshot restoration, and even when block-dependent metadata is unavailable.
+`assessmentStatus`/`assessedAt` still describe metadata processing separately.
+Finding statuses are extensible strings; clients should display unrecognized values.
+This policy does not infer tax rates or modify the `TokenTaxes` contract.
+
 WebSocket event type: `apnp`. Each event is a bounded replacement snapshot; inspect
 `truncated` and use List pagination for larger result sets. Subscription identity
 includes all normalized filters. Unsubscribe with the owning subscription client.
@@ -168,3 +184,29 @@ tax rules at the observed block; they do not prove tradability, LP protection,
 owner renouncement, or future fees. Pool swap fees, token taxes, gas and price
 impact remain separate fields/responsibilities. There is no new request parameter,
 status enum, or subscription operation for this additive response field.
+
+## Token Controls
+
+`Pair.Token0.Controls` and `Pair.Token1.Controls` expose token capabilities using
+`TokenControls`. Existing JSON without Controls decodes to nil. Every finding
+contains `status` and an explicit nullable `value`; `observed` false is a real
+boolean, while `unknown`, `pending`, `trusted` and `not_applicable` carry null.
+
+The groups are `ownership`, `transferRestrictions`, `minting`, `upgrade` and
+`balanceControl`. Taxes remain in `Pair.TokenTaxes`. Controls describe the block
+pinned at analysis start, independently of the pool-creation observations.
+`ObservedAt` is Unix microseconds, and `Position` identifies that block. Both are
+null when there are no observed fields. A partial owner acquisition failure can
+coexist with verified code findings at the same block.
+
+Base onchain-defined token addresses are trusted by policy without analysis;
+this does not mean their controls are absent. Native currency is not applicable.
+Unsupported chains or unavailable analysis may leave Controls nil. Unknown
+models do not affect NewPair listing. `CloneTokenControls` detaches every mutable
+value and position; `NewTokenControls(status, reason)` creates a uniform null
+observation for pending, unknown, trusted or not-applicable states.
+
+`minting.present` describes a runtime mint entry point. `canMint` describes the
+token's permission path at the observed block, not transaction success. Supply
+cap values, when available, use raw smallest-unit decimal strings. Controls do
+not cover LP protection or promise continuous monitoring.

@@ -3,12 +3,15 @@ package newpair
 import "encoding/json"
 
 type Finding struct {
+	// Status is extensible. Token security "trusted" with reason "sdk_definition"
+	// means the check was skipped by policy; Value is omitted, not an observation.
 	Status string `json:"status"`
 	Value  string `json:"value,omitempty"`
 	Reason string `json:"reason,omitempty"`
 }
 
 type Token struct {
+	Controls *TokenControls     `json:"controls"`
 	ID       string             `json:"id"`
 	Kind     string             `json:"kind"`
 	Name     Finding            `json:"name"`
