@@ -344,3 +344,16 @@ Swap 対応・allowlist 登録済みの Pool と、token0/token1 の asset ID・
 手数料率を取得するための契約です。残高・allowance・流動性による実行可否は保証しません。
 [リクエスト・レスポンス仕様](go/jsonrpc/tradehub/ammpool/README.md)を参照してください。
 SDK の型定義追加に対応するサーバー・Gateway の実装は別途必要です。
+
+### TradeHub Scalping と共通 Open / Close ルール
+
+`TradeHub.Scalping.Get/Subscribe/Unsubscribe` の公開型を
+[`jsonrpc/tradehub/scalping`](go/jsonrpc/tradehub/scalping/README.md) に用意しています。
+共通の `Rule`・`AssetRef`・`MarketRef` は
+[`jsonrpc/tradehub/executionrule`](go/jsonrpc/tradehub/executionrule/README.md) から参照します。
+`marketType` は Params 直下で指定し、Rule の Open / Close は両方必須です。
+数量は基準資産の最小単位整数文字列で指定し、検出条件や実行制約の既定値は補完しません。
+
+今回の追加は DTO・validation・JSON-RPC メソッド名です。
+サーバーの条件評価・配信、WebSocket 購読クライアント、Agent・OMS への接続は別途必要です。
+既存 Swap の request / result は維持しています。
