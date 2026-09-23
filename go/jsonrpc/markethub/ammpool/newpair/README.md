@@ -13,6 +13,24 @@ and do not change on USD-reference-only updates. Missing/unverified LP state ret
 nil; older JSON without the field remains readable. `CloneLPPrincipal` copies an
 observation for independent retention. Quantity imbalance is not a listing filter.
 
+`Pair.LPProtection` optionally describes Token0/Token1 principal protection across
+all positions. `lockedLiquidityPercentage` covers time-limited locks;
+`permanentlyProtectedLiquidityPercentage` covers verified permanent protection.
+These are decimal strings in [0,100], or null when unresolved or that token has no
+principal. `allPositionsProtected` is an independent nullable boolean, never
+derived from rounded percentages. `canWeakenProtection` separates current custody
+from authority to weaken it; current 100% and a true authority finding can coexist.
+
+Statuses are `pending`, `available`, `stale`, `unavailable`, `unsupported`, and may
+be extended. Only `available` is usable for current conditions. `stale` retains the
+past values, original `observedAt` (analysis completion in Unix microseconds) and
+block `position`; expiry/reconnect do not advance them. Reorg-cancelled observations
+are cleared. Pending or unresolved values are null, never inferred zero/false.
+Authority findings use `observed` with a boolean, or `pending`, `unknown`,
+`not_applicable` with null; token definitions never make LP custody trusted.
+Old JSON without `lpProtection` remains readable. `CloneLPProtection` detaches all
+mutable fields. LP protection does not determine NewPair listing eligibility.
+
 Methods: `MarketHub.AMMPool.NewPair.List`, `.Get`, `.Subscribe`, `.Unsubscribe`.
 Use this group for pool discovery. The former Launch RPC group and its SDK types have been removed.
 

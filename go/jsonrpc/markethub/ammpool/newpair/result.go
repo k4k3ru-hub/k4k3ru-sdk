@@ -32,19 +32,20 @@ type Position struct {
 }
 
 type Pair struct {
-	TokenTaxes    *TokenTaxes  `json:"tokenTaxes"`
-	LPPrincipal   *LPPrincipal `json:"lpPrincipal"`
-	Fees          *Fees        `json:"fees"`
-	Activity      *Activity    `json:"activity,omitempty"`
-	ChainFamily   string       `json:"chainFamily"`
-	Chain         string       `json:"chain"`
-	Network       string       `json:"network"`
-	Venue         string       `json:"venue"`
-	PoolID        string       `json:"poolId"`
-	Protocol      string       `json:"protocol"`
-	Source        string       `json:"source"`
-	Creation      Position     `json:"creation"`
-	PoolCreatedAt int64        `json:"poolCreatedAt"`
+	LPProtection  *LPProtection `json:"lpProtection"`
+	TokenTaxes    *TokenTaxes   `json:"tokenTaxes"`
+	LPPrincipal   *LPPrincipal  `json:"lpPrincipal"`
+	Fees          *Fees         `json:"fees"`
+	Activity      *Activity     `json:"activity,omitempty"`
+	ChainFamily   string        `json:"chainFamily"`
+	Chain         string        `json:"chain"`
+	Network       string        `json:"network"`
+	Venue         string        `json:"venue"`
+	PoolID        string        `json:"poolId"`
+	Protocol      string        `json:"protocol"`
+	Source        string        `json:"source"`
+	Creation      Position      `json:"creation"`
+	PoolCreatedAt int64         `json:"poolCreatedAt"`
 	// SwapObservedAt records an observed swap, not necessarily the first historical swap.
 	SwapObservedAt       *int64    `json:"swapObservedAt"`
 	SwapObservedPosition *Position `json:"swapObservedPosition"`
