@@ -7,6 +7,10 @@ import (
 	"testing"
 )
 
+// TestSubmitParamsValidate checks supported payload shapes.
+//
+// Version:
+//   - 2026-09-25: Require a serialized Sui signature.
 func TestSubmitParamsValidate(t *testing.T) {
 	t.Parallel()
 
@@ -66,7 +70,7 @@ func TestSubmitParamsValidate(t *testing.T) {
 					ChainFamily:      ChainFamilySui,
 					Encoding:         PayloadEncodingBase64,
 					TransactionBytes: base64.StdEncoding.EncodeToString([]byte{1, 2, 3}),
-					Signatures:       []string{"signature"},
+					Signatures:       []string{base64.StdEncoding.EncodeToString(make([]byte, 97))},
 				},
 			},
 		},
@@ -111,5 +115,34 @@ func TestSubmitParamsUnmarshalJSON(t *testing.T) {
 	}
 	if err := json.Unmarshal([]byte(`{"executionId":"execution-1","payloadDigest":"digest"} {}`), &params); err == nil {
 		t.Fatal("Unmarshal() error = nil, want trailing value error")
+	}
+}
+
+// TestSuiSignedPayloadBounds rejects missing, excessive, and unsupported signatures.
+//
+// Version:
+//   - 2026-09-25: Added.
+func TestSuiSignedPayloadBounds(t *testing.T) {
+	valid := SignedPayload{ChainFamily: ChainFamilySui, Encoding: PayloadEncodingBase64, TransactionBytes: "AA==", Signatures: []string{base64.StdEncoding.EncodeToString(make([]byte, 97))}}
+	for name, mutate := range map[string]func(*SignedPayload){
+		"missing":  func(p *SignedPayload) { p.Signatures = nil },
+		"multiple": func(p *SignedPayload) { p.Signatures = append(p.Signatures, p.Signatures[0]) },
+		"oversized": func(p *SignedPayload) {
+			p.TransactionBytes = strings.Repeat("A", base64.StdEncoding.EncodedLen(1<<20)+1)
+		},
+		"scheme": func(p *SignedPayload) {
+			b := make([]byte, 97)
+			b[0] = 1
+			p.Signatures = []string{base64.StdEncoding.EncodeToString(b)}
+		},
+		"malformed": func(p *SignedPayload) { p.Signatures = []string{strings.Repeat("!", 132)} },
+	} {
+		t.Run(name, func(t *testing.T) {
+			p := valid
+			mutate(&p)
+			if p.Validate() == nil {
+				t.Fatal("accepted invalid signature or payload")
+			}
+		})
 	}
 }

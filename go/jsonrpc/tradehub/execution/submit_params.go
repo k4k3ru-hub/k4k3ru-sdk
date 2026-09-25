@@ -91,11 +91,13 @@ func (p SubmitParams) Validate() error {
 }
 
 // Validate validates a signed transaction payload.
+// Sui initially accepts one serialized Ed25519 signature and at most 1 MiB of BCS.
 //
 // Returns:
 //   - Validation error.
 //
 // Version:
+//   - 2026-09-25: Require bounded Sui payloads and an Ed25519 signature.
 //   - 2026-09-10: Added.
 func (p SignedPayload) Validate() error {
 	p.ChainFamily = ChainFamily(strings.ToLower(strings.TrimSpace(string(p.ChainFamily))))
@@ -118,6 +120,22 @@ func (p SignedPayload) Validate() error {
 			return invalidSignedPayloadParameterError("transaction_bytes=invalid")
 		}
 	case ChainFamilySui, ChainFamilySolana:
+		if p.ChainFamily == ChainFamilySui {
+			if len(p.TransactionBytes) > base64.StdEncoding.EncodedLen(1<<20) {
+				return invalidSignedPayloadParameterError("transaction_bytes=too_long")
+			}
+			if len(p.Signatures) != 1 {
+				return invalidSignedPayloadParameterError("signatures=invalid")
+			}
+			value := strings.TrimSpace(p.Signatures[0])
+			if len(value) != base64.StdEncoding.EncodedLen(97) {
+				return invalidSignedPayloadParameterError("signature=invalid")
+			}
+			raw, err := base64.StdEncoding.Strict().DecodeString(value)
+			if err != nil || len(raw) != 97 || raw[0] != 0 {
+				return invalidSignedPayloadParameterError("signature=invalid")
+			}
+		}
 		if p.Encoding != PayloadEncodingBase64 {
 			return invalidSignedPayloadParameterError("encoding=invalid")
 		}

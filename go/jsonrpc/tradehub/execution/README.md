@@ -34,3 +34,22 @@ Protocol heartbeat traffic does not keep it alive. Other application traffic on
 the same connection does. A pending transaction can therefore outlive its watch;
 resubscribe explicitly to obtain a fresh snapshot. Call `module.Close()` when
 the caller is finished with the connection.
+
+## Sui Submit
+
+Use `SubmitParams` with the original Prepare `executionId` and `payloadDigest`.
+Set `SignedPayload{ChainFamily: ChainFamilySui, Encoding: PayloadEncodingBase64,
+TransactionBytes: preparedBytes, Signatures: []string{signatureBase64}}`.
+`TransactionBytes` is the unchanged full TransactionData BCS in base64;
+`signatureBase64` encodes the 97-byte Ed25519 `flag || signature || publicKey`.
+The server checks the signature, ownership, exact prepared bytes and gas owner.
+The signing intent digest and the returned base58 onchain `TransactionID` differ.
+
+The initial relay supports configured Cetus swaps on Sui Testnet with sender-paid
+gas. Prepare writes Execution only; first valid Submit writes an OMS order and a
+submitted/pending record before broadcast. Quantities in the request are atomic
+integer strings; OMS order quantity uses input-token decimals. Submit acceptance
+does not mean a successful swap or a fill. Sui observation and fill/PnL accounting
+are not yet connected. Retry an uncertain Submit with identical params, including
+after Prepare TTL if a claim was committed; do not rebuild or spend reserved coins
+until the onchain result has been reconciled.
