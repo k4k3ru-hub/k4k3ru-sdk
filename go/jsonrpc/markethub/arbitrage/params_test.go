@@ -81,6 +81,10 @@ func TestParamsNormalizeDoesNotMutateSourceFilter(t *testing.T) {
 	}
 }
 
+// TestParamsValidateRejectsInvalidValues verifies structural request validation.
+//
+// Version:
+//   - 2026-09-25: Use an empty network to test identifier format, not a name allowlist.
 func TestParamsValidateRejectsInvalidValues(t *testing.T) {
 	t.Parallel()
 
@@ -90,7 +94,7 @@ func TestParamsValidateRejectsInvalidValues(t *testing.T) {
 	}{
 		{name: "arbitrage type", mutate: func(p *Params) { p.ArbitrageType = "cross-chain" }},
 		{name: "chain", mutate: func(p *Params) { p.Chain = "invalid" }},
-		{name: "network", mutate: func(p *Params) { p.Network = "invalid" }},
+		{name: "network", mutate: func(p *Params) { p.Network = "" }},
 		{name: "symbol", mutate: func(p *Params) { p.Symbol = "WBTC" }},
 		{name: "input asset", mutate: func(p *Params) { p.InputAsset = "ETH" }},
 		{name: "amount", mutate: func(p *Params) { p.AmountIn = "0" }},
