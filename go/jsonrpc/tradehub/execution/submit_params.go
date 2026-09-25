@@ -20,9 +20,10 @@ type SignedPayload struct {
 }
 
 type SubmitParams struct {
-	ExecutionID   string         `json:"executionId"`
-	PayloadDigest string         `json:"payloadDigest"`
-	SignedPayload *SignedPayload `json:"signedPayload,omitempty"`
+	OpenExecutionID string         `json:"openExecutionId,omitempty"`
+	ExecutionID     string         `json:"executionId"`
+	PayloadDigest   string         `json:"payloadDigest"`
+	SignedPayload   *SignedPayload `json:"signedPayload,omitempty"`
 }
 
 // Normalize applies canonical formatting to execution submission parameters.
@@ -31,8 +32,10 @@ type SubmitParams struct {
 //   - Normalized parameters.
 //
 // Version:
+//   - 2026-09-25: Normalize the optional full-close reference.
 //   - 2026-09-10: Added.
 func (p SubmitParams) Normalize() SubmitParams {
+	p.OpenExecutionID = strings.TrimSpace(p.OpenExecutionID)
 	p.ExecutionID = strings.TrimSpace(p.ExecutionID)
 	p.PayloadDigest = strings.TrimSpace(p.PayloadDigest)
 	if p.SignedPayload != nil {
@@ -57,9 +60,18 @@ func (p SubmitParams) Normalize() SubmitParams {
 //   - Validation error.
 //
 // Version:
+//   - 2026-09-25: Validate the optional full-close reference.
 //   - 2026-09-10: Added.
 func (p SubmitParams) ValidateReference() error {
 	p = p.Normalize()
+	if p.OpenExecutionID != "" {
+		if err := validateObservationID(p.OpenExecutionID, "open_execution_id"); err != nil {
+			return k4k3ruSDKAppError.Tracef("failed to validate trade hub execution submission parameters: %w", err)
+		}
+		if p.OpenExecutionID == p.ExecutionID {
+			return invalidSubmitParameterError("open_execution_id=self")
+		}
+	}
 	if p.ExecutionID == "" {
 		return invalidSubmitParameterError("execution_id=empty")
 	}
@@ -75,6 +87,7 @@ func (p SubmitParams) ValidateReference() error {
 //   - Validation error.
 //
 // Version:
+//   - 2026-09-25: Limit explicit full-close references to Sui submissions.
 //   - 2026-09-10: Added.
 func (p SubmitParams) Validate() error {
 	p = p.Normalize()
@@ -83,6 +96,9 @@ func (p SubmitParams) Validate() error {
 	}
 	if p.SignedPayload == nil {
 		return invalidSubmitParameterError("signed_payload=null")
+	}
+	if p.OpenExecutionID != "" && p.SignedPayload.ChainFamily != ChainFamilySui {
+		return invalidSubmitParameterError("open_execution_id=unsupported")
 	}
 	if err := p.SignedPayload.Validate(); err != nil {
 		return k4k3ruSDKAppError.Tracef("failed to validate trade hub execution submission parameters: %w", err)

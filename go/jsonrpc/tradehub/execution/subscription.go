@@ -30,12 +30,14 @@ const (
 )
 
 type ExecutionSnapshot struct {
+	OMS        *ExecutionOMS     `json:"oms,omitempty"`
 	Status     ObservationStatus `json:"status"`
 	ObservedAt int64             `json:"observedAt"`
 	Onchain    *OnchainExecution `json:"onchain,omitempty"`
 	Failure    *ExecutionFailure `json:"failure,omitempty"`
 }
 type OnchainExecution struct {
+	Checkpoint    *uint64     `json:"checkpoint,omitempty"`
 	ChainFamily   ChainFamily `json:"chainFamily"`
 	Chain         string      `json:"chain"`
 	Network       string      `json:"network"`
@@ -111,18 +113,19 @@ func (p UnsubscribeParams) Validate() error {
 //   - 2026-09-16: Added.
 func (p SubscribeResult) Validate() error { return (UnsubscribeParams(p)).Validate() }
 
-// Terminal reports whether receipt inclusion has completed this observation.
-// It does not imply chain finality.
+// Terminal reports whether the chain-specific completion condition has been met.
+// EVM uses receipt inclusion; Sui uses checkpoint inclusion.
 //
 // Version:
-//   - 2026-09-16: Added.
+//   - 2026-09-25: Describe the Sui checkpoint completion condition.
 func (s ObservationStatus) Terminal() bool {
 	return s == ObservationStatusSuccess || s == ObservationStatusFailed
 }
 
-// Validate validates an initial single-transaction EVM observation event.
+// Validate validates a single-transaction EVM or checkpointed Sui observation.
 //
 // Version:
+//   - 2026-09-25: Include Sui OMS fills, gas, and explicit round-trip PnL.
 //   - 2026-09-16: Added.
 func (e SubscriptionEvent) Validate() error {
 	if err := (UnsubscribeParams{e.ExecutionID, e.SubscriptionKey}).Validate(); err != nil {
@@ -145,6 +148,12 @@ func (e SubscriptionEvent) Validate() error {
 		return observationInvalid("snapshot=invalid")
 	}
 	o := s.Onchain
+	if o.ChainFamily == ChainFamilySui {
+		return validateSuiSnapshot(s)
+	}
+	if o.Checkpoint != nil || s.OMS != nil {
+		return observationInvalid("evm_snapshot=invalid")
+	}
 	if o.ChainFamily != ChainFamilyEVM || o.Chain != "base" || (o.Network != "mainnet" && o.Network != "sepolia") || !observationHash(o.TransactionID) {
 		return observationInvalid("onchain=invalid")
 	}
