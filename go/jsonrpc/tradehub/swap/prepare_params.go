@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	sui "github.com/k4k3ru-hub/onchain/go/sui"
 	"io"
+	"math"
 	"math/big"
 	"strings"
+	"time"
 
 	k4k3ruSDKAppError "github.com/k4k3ru-hub/k4k3ru-sdk/go/apperror"
 	k4k3ruSDKMarketHubArbitrage "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/arbitrage"
@@ -25,7 +28,8 @@ type PrepareParams struct {
 	MaximumSlippageBPS *uint64                                     `json:"maximumSlippageBps"`
 	Signer             string                                      `json:"signer"`
 	Recipient          string                                      `json:"recipient"`
-	ApprovalAmount     string                                      `json:"approvalAmount"`
+	ApprovalAmount     string                                      `json:"approvalAmount,omitempty"`
+	Sui                *SuiPrepareParams                           `json:"sui,omitempty"`
 	StateReference     *k4k3ruSDKMarketHubArbitrage.StateReference `json:"stateReference,omitempty"`
 	ExecutionTTLMS     *uint64                                     `json:"executionTtlMs"`
 	IdempotencyKey     string                                      `json:"idempotencyKey"`
@@ -38,6 +42,7 @@ type PrepareParams struct {
 //
 // Version:
 //   - 2026-09-10: Added.
+//   - 2026-09-24: Support explicit Sui coin and gas selections.
 func (p PrepareParams) Normalize() PrepareParams {
 	quote := Params{
 		Chain: p.Chain, Network: p.Network, Venue: p.Venue, PoolID: p.PoolID,
@@ -50,6 +55,23 @@ func (p PrepareParams) Normalize() PrepareParams {
 	p.Recipient = strings.TrimSpace(p.Recipient)
 	p.ApprovalAmount = strings.TrimSpace(p.ApprovalAmount)
 	p.IdempotencyKey = strings.TrimSpace(p.IdempotencyKey)
+	if p.Sui != nil {
+		normalized := p.Sui.Normalize()
+		p.Sui = &normalized
+	}
+	if p.Chain == k4k3ruOnchainCore.ChainSui {
+		for _, field := range []*string{&p.PoolID, &p.Signer, &p.Recipient} {
+			if a, err := sui.ParseAddress(*field); err == nil {
+				*field = a.String()
+			}
+		}
+		for _, field := range []*string{&p.TokenInAssetID, &p.TokenOutAssetID} {
+			if t, err := sui.NormalizeMoveType(*field); err == nil {
+				*field = t
+			}
+		}
+	}
+
 	return p
 }
 
@@ -60,6 +82,7 @@ func (p PrepareParams) Normalize() PrepareParams {
 //
 // Version:
 //   - 2026-09-10: Added.
+//   - 2026-09-24: Support explicit Sui coin and gas selections.
 func (p PrepareParams) Validate() error {
 	p = p.Normalize()
 	quote := Params{
@@ -76,15 +99,27 @@ func (p PrepareParams) Validate() error {
 	if p.Recipient == "" {
 		return invalidPrepareParameter("recipient=empty")
 	}
-	approvalAmount, ok := new(big.Int).SetString(p.ApprovalAmount, 10)
-	if !ok {
-		return invalidPrepareParameter("approval_amount=invalid")
-	}
-	if approvalAmount.Sign() <= 0 || approvalAmount.BitLen() > 256 {
-		return invalidPrepareParameter("approval_amount=out_of_range")
+	if p.Chain == k4k3ruOnchainCore.ChainSui {
+		if err := validateSuiPrepare(p); err != nil {
+			return err
+		}
+	} else {
+		if p.Sui != nil {
+			return invalidPrepareParameter("sui=invalid")
+		}
+		approvalAmount, ok := new(big.Int).SetString(p.ApprovalAmount, 10)
+		if !ok {
+			return invalidPrepareParameter("approval_amount=invalid")
+		}
+		if approvalAmount.Sign() <= 0 || approvalAmount.BitLen() > 256 {
+			return invalidPrepareParameter("approval_amount=out_of_range")
+		}
 	}
 	if p.ExecutionTTLMS == nil {
 		return invalidPrepareParameter("execution_ttl_ms=null")
+	}
+	if *p.ExecutionTTLMS > uint64(math.MaxInt64/int64(time.Millisecond)) {
+		return invalidPrepareParameter("execution_ttl_ms=out_of_range")
 	}
 	if *p.ExecutionTTLMS == 0 {
 		return invalidPrepareParameter("execution_ttl_ms=empty")

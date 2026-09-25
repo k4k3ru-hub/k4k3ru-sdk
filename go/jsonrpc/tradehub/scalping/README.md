@@ -189,6 +189,50 @@ Observed statistics are not accounting quantities; the engine must establish
 window coverage, asset conversion, numeric precision, and rounding before
 evaluating thresholds.
 
+The agreed observation contract uses venue/chain transaction time within
+`[evaluatedAt - windowMs, evaluatedAt)`. The start is inclusive and the end is
+exclusive. `lastObservedAt` is the latest valid transaction time in that window;
+receive time and retransmissions do not refresh it. Unknown transaction time
+makes the market unavailable.
+
+| Metric | Definition |
+| --- | --- |
+| `priceChangeBps` | `10000 * (last window price / first window price - 1)`; unavailable with fewer than two events |
+| `quoteVolume` | Sum of exact Quote quantities, converted to reference atomic units and floored once after summation |
+| `tradeCount` | Deduplicated normalized Trade/Swap event count after cancellations; not necessarily the venue's individual fill count |
+| `buyVolumeRatioBps` | `10000 * buy Base quantity / (buy + sell Base quantity)`; unavailable if any included event has unknown side |
+
+Bps are rounded to 18 decimal places using nearest, ties-to-even rounding.
+Thresholds compare the same rounded values published in Metrics. Perp shorts
+retain the Base price direction and buy-side meaning. Unknown metrics are omitted,
+not replaced with zero; unavailable unrequested indicators alone do not prevent
+evaluation of the requested indicators. Missing window coverage, a data gap,
+or inability to compute any requested indicator makes the market unavailable.
+
+MarketHub's initial exact-input adapters are Hyperliquid Trade and Cetus Swap.
+MarketHub tracks subscription readiness, connection generations and observed losses.
+Cetus starts coverage on the first successful upstream notification; Hyperliquid
+Spot starts on the Trade subscription ACK. Neither backdates coverage to a trade time.
+A new or interrupted connection must collect the entire requested window before
+matching. TradeHub reads the signed internal window feed every second and emits
+replacement snapshots, including when no new trades arrive.
+
+The initial connected sources are configured Cetus Spot pools and enabled
+Hyperliquid Spot instruments. Cetus asset IDs/decimals come from its Token catalog;
+Hyperliquid Spot uses metadata `tokenId` and `weiDecimals`, not order size precision.
+Asset identity must match chain/venue, network and identifier. Equivalent Sui Move
+type addresses are normalized; ticker aliases do not establish cross-venue asset
+equivalence. Reversed pairs and unconfigured networks are unavailable. Hyperliquid
+Perp exact trades are retained, but its underlying/reference asset mapping remains
+unavailable until authoritative metadata is connected.
+
+Candidates use inclusive AND comparisons. Their exclusive `expiresAt` is capped
+by two polling intervals (currently 2 seconds), the first millisecond outside
+`maximumDataAgeMs`, and the first known event leaving the window. A matched
+candidate keeps its ID with increasing revisions; a source restart, observation
+interruption, nonmatch, unavailability or expired lease ends that identity.
+`open.executionTtlMs` does not determine candidate expiry.
+
 Use `Result.Validate()` for snapshot invariants and `Result.ValidateFor(params)`
 to additionally check market/asset identity, complete market coverage, requested
 metric presence, and observation age at evaluation. This does not re-evaluate
@@ -245,12 +289,20 @@ handle and reports through Errors. Buffer overflow also reports an interruption;
 release that handle before resubscribing. No automatic trading or reconnect is
 performed.
 
-The accompanying service currently composes an explicit unavailable evaluator:
-ACK is followed by `evaluation_unavailable` with `retryable: true`, and the stream
-stays open. It invents neither candidate snapshots nor asset metadata. Real
-MarketHub indicator calculation is a separately approved next stage; injected
-sources already exercise initial/matched/withdrawn snapshot delivery in tests.
-The DTO/client and server changes must be deployed together.
+The service composes the MarketHub-backed evaluator. Unknown asset metadata
+initially produces `asset_metadata_unavailable` with `retryable: true`; it never
+invents symbols or decimal counts. Once verified metadata is available, warm-up,
+data gaps, stale observations and unavailable markets appear in replacement
+snapshots. An internal transport failure withdraws previous candidates and is
+retried. The stream stays open through these temporary failures.
+
+The initial server admits up to 64 markets per subscription and 256 evaluator
+subscriptions per TradeHub process, with 16 concurrent internal reads. Polling
+is not a guarantee of detecting every intra-second threshold crossing. Agent
+selection, inventory reservation, Prepare, local signing, Submit and OMS recording
+remain separate execution work. This feed neither prepares nor submits orders.
+Deploy the MarketHub and TradeHub service changes together; no new public SDK
+request/result fields or database migrations are required by this connection.
 
 ## Verification
 
