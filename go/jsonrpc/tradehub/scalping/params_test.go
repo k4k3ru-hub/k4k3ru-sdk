@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/apperror"
+	market "github.com/k4k3ru-hub/k4k3ru-sdk/go/finance/market"
 	rule "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/executionrule"
 )
 
@@ -15,7 +16,7 @@ func pointer[T any](value T) *T { return &value }
 
 func spotParams() Params {
 	return Params{
-		MarketType: rule.MarketTypeSpot,
+		MarketType: market.MarketTypeSpot,
 		BaseAsset:  rule.AssetRef{Chain: "sui", Network: "mainnet", AssetID: "0x2::sui::SUI"},
 		QuoteAsset: rule.AssetRef{Chain: "sui", Network: "mainnet", AssetID: "usdc-asset-id"},
 		Markets:    []rule.MarketRef{{Venue: "cetus", Chain: "sui", Network: "mainnet", PoolID: "sui-usdc-pool"}},
@@ -29,7 +30,7 @@ func spotParams() Params {
 
 func perpParams() Params {
 	p := spotParams()
-	p.MarketType = rule.MarketTypePerp
+	p.MarketType = market.MarketTypePerpetual
 	p.Markets = []rule.MarketRef{{Venue: "hyperliquid", Network: "mainnet", VenueSymbol: "SUI"}}
 	p.ExecutionRule.Open.Spot = nil
 	p.ExecutionRule.Open.Perp = &rule.PerpOpenRule{Side: rule.PositionSideShort, Quantity: "1000000000", Leverage: 1, MarginMode: rule.MarginModeIsolated}
@@ -68,11 +69,12 @@ func TestParamsRoundTrip(t *testing.T) {
 // TestParamsValidation verifies conflicting rules and exact numeric bounds.
 //
 // Version:
+//   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
 //   - 2026-09-23: Added.
 func TestParamsValidation(t *testing.T) {
 	tests := map[string]func(*Params){
 		"missing type":      func(p *Params) { p.MarketType = "" },
-		"wrong type":        func(p *Params) { p.MarketType = rule.MarketTypePerp },
+		"wrong type":        func(p *Params) { p.MarketType = market.MarketTypePerpetual },
 		"mixed variants":    func(p *Params) { p.ExecutionRule.Open.Perp = perpParams().ExecutionRule.Open.Perp },
 		"no close":          func(p *Params) { p.ExecutionRule.Close = rule.CloseRule{} },
 		"no trigger":        func(p *Params) { p.ExecutionRule.Close.TakeProfit = nil; p.ExecutionRule.Close.StopLoss = nil },
@@ -184,6 +186,7 @@ func TestParamsJSONRejectsOverrides(t *testing.T) {
 // TestNormalizeDoesNotAlias verifies request copies and absence of trading defaults.
 //
 // Version:
+//   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
 //   - 2026-09-23: Added.
 func TestNormalizeDoesNotAlias(t *testing.T) {
 	p := spotParams()
@@ -194,7 +197,7 @@ func TestNormalizeDoesNotAlias(t *testing.T) {
 		t.Fatal(err)
 	}
 	n := p.Normalize()
-	if n.MarketType != rule.MarketTypeSpot || *n.Conditions.PriceChangeBPS.Minimum != "0.25" {
+	if n.MarketType != market.MarketTypeSpot || *n.Conditions.PriceChangeBPS.Minimum != "0.25" {
 		t.Fatal("normalization failed")
 	}
 	n.Markets[0].PoolID = "changed"

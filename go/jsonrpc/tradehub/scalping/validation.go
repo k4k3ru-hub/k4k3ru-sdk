@@ -3,7 +3,6 @@ package scalping
 import (
 	"fmt"
 	"math/big"
-	"strings"
 
 	rule "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/executionrule"
 	v "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/internal/validation"
@@ -12,9 +11,10 @@ import (
 // Normalize returns independent canonical parameters without adding defaults.
 //
 // Version:
+//   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
 //   - 2026-09-23: Added.
 func (p Params) Normalize() Params {
-	p.MarketType = rule.MarketType(strings.ToLower(strings.TrimSpace(string(p.MarketType))))
+	p.MarketType = p.MarketType.Normalize()
 	p.BaseAsset = p.BaseAsset.Normalize()
 	p.QuoteAsset = p.QuoteAsset.Normalize()
 	p.Markets = rule.NormalizeMarkets(p.Markets)
@@ -27,11 +27,12 @@ func (p Params) Normalize() Params {
 // Asset equivalence, market metadata, and executable inventory need server checks.
 //
 // Version:
+//   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
 //   - 2026-09-24: Enforce the maximum observation window through Conditions validation.
 //   - 2026-09-23: Added.
 func (p Params) Validate() error {
 	p = p.Normalize()
-	if err := p.MarketType.Validate(); err != nil {
+	if err := validateMarketType(p.MarketType); err != nil {
 		return fmt.Errorf("failed to validate scalping parameters: %w", err)
 	}
 	if err := p.BaseAsset.Validate(); err != nil {
@@ -49,7 +50,7 @@ func (p Params) Validate() error {
 	if err := p.Conditions.Validate(); err != nil {
 		return fmt.Errorf("failed to validate scalping parameters: %w", err)
 	}
-	if err := p.ExecutionRule.Validate(p.MarketType); err != nil {
+	if err := p.ExecutionRule.Validate(rule.MarketType(p.MarketType)); err != nil {
 		return fmt.Errorf("failed to validate scalping parameters: %w", err)
 	}
 	return nil

@@ -347,6 +347,13 @@ SDK の型定義追加に対応するサーバー・Gateway の実装は別途�
 
 ### TradeHub Scalping と共通 Open / Close ルール
 
+共通の金融モデルを [`go/finance`](go/finance/README.md) に追加しました。
+ScalpingのMarketTypeは `finance/market` の型を使い、公開値は `spot` / `perpetual` です。
+TradeHub Scalpingも旧値 `perp` はエラーとし、保存済み設定の再購読時にも自動変換しません。
+新しい単一シンボルのMarketHub Scalping
+[`Params`](go/jsonrpc/markethub/scalping/README.md) も追加しています。
+このMarketHub側の追加はrequest型までで、Get / Subscribeの公開・配信接続は後続作業です。
+
 [`jsonrpc/tradehub/scalping`](go/jsonrpc/tradehub/scalping/README.md) の
 `SubscribeParams` で、新規開始（`idempotencyKey`＋設定）と再購読（`executionId`のみ）を指定します。
 `websocket.NewModule` が `module.Scalping()` を組み立て、ACK・候補snapshot・errorを受信できます。

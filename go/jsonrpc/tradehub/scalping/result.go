@@ -1,6 +1,9 @@
 package scalping
 
-import rule "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/executionrule"
+import (
+	market "github.com/k4k3ru-hub/k4k3ru-sdk/go/finance/market"
+	rule "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/executionrule"
+)
 
 type EvaluationStatus string
 
@@ -18,7 +21,7 @@ type AssetMetadata struct {
 
 type Result struct {
 	EvaluationID string             `json:"evaluationId"`
-	MarketType   rule.MarketType    `json:"marketType"`
+	MarketType   market.MarketType  `json:"marketType"`
 	BaseAsset    AssetMetadata      `json:"baseAsset"`
 	QuoteAsset   AssetMetadata      `json:"quoteAsset"`
 	EvaluatedAt  int64              `json:"evaluatedAt"`

@@ -1,6 +1,9 @@
 package scalping
 
-import rule "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/executionrule"
+import (
+	market "github.com/k4k3ru-hub/k4k3ru-sdk/go/finance/market"
+	rule "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/executionrule"
+)
 
 const (
 	DefaultWindowMS uint64 = 60_000
@@ -8,12 +11,12 @@ const (
 )
 
 type Params struct {
-	MarketType    rule.MarketType  `json:"marketType"`
-	BaseAsset     rule.AssetRef    `json:"baseAsset"`
-	QuoteAsset    rule.AssetRef    `json:"quoteAsset"`
-	Markets       []rule.MarketRef `json:"markets"`
-	Conditions    Conditions       `json:"conditions"`
-	ExecutionRule rule.Rule        `json:"executionRule"`
+	MarketType    market.MarketType `json:"marketType"`
+	BaseAsset     rule.AssetRef     `json:"baseAsset"`
+	QuoteAsset    rule.AssetRef     `json:"quoteAsset"`
+	Markets       []rule.MarketRef  `json:"markets"`
+	Conditions    Conditions        `json:"conditions"`
+	ExecutionRule rule.Rule         `json:"executionRule"`
 }
 
 type Conditions struct {

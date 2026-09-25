@@ -4,6 +4,9 @@ Import request, result, and subscription DTOs from
 `github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/scalping`.
 Import shared round-trip rules and market/asset references from
 `github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/executionrule`.
+`Params.MarketType` and `Result.MarketType` use the owning
+`github.com/k4k3ru-hub/k4k3ru-sdk/go/finance/market` type. Go callers should use
+`market.MarketTypeSpot` or `market.MarketTypePerpetual` for these fields.
 There are no root-package aliases or new production dependencies.
 
 The implemented subscription identifiers are `jsonrpc.MethodTradeHubScalpingSubscribe`
@@ -74,7 +77,7 @@ units and are not trading recommendations or SDK defaults. The omitted
 }
 ```
 
-For a Perp request, set `marketType` to `perp`, provide native markets such as
+For a perpetual request, set `marketType` to `perpetual`, provide native markets such as
 `{"venue":"hyperliquid","network":"mainnet","venueSymbol":"SUI"}`,
 replace `open.spot` with `open.perp`, and omit `close.spot`:
 
@@ -93,6 +96,11 @@ quantity. It is not a USDC margin amount or the venue's native wire quantity.
 Perp mode supports the structural contract for linear underlying quantities;
 server-side instrument capabilities, lot sizes, leverage limits, collateral,
 and available margin must still be checked. The SDK supplies no leverage default.
+
+Scalping rejects the former `perp` value in requests and results. Saved settings
+containing `perp` also fail on resume or same-key retry; they are not automatically
+converted or rewritten. Create a new execution using `perpetual` and a new
+idempotency key. The `open.perp` field name is unchanged.
 
 ## References and units
 

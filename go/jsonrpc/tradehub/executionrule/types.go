@@ -6,8 +6,8 @@ type MarginMode string
 type TriggerType string
 
 const (
-	MarketTypeSpot MarketType = "spot"
-	MarketTypePerp MarketType = "perp"
+	MarketTypeSpot      MarketType = "spot"
+	MarketTypePerpetual MarketType = "perpetual"
 
 	PositionSideLong  PositionSide = "long"
 	PositionSideShort PositionSide = "short"

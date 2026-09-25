@@ -179,6 +179,7 @@ func (t Trigger) Validate() error {
 // Validate with the enclosing market type also rejects a mismatched open variant.
 //
 // Version:
+//   - 2026-09-25: Validate perpetual variants with the canonical market type.
 //   - 2026-09-23: Added.
 func (r *Rule) UnmarshalJSON(data []byte) error {
 	if r == nil {
@@ -192,7 +193,7 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 	value := Rule(decoded).Normalize()
 	marketType := MarketTypeSpot
 	if value.Open.Perp != nil {
-		marketType = MarketTypePerp
+		marketType = MarketTypePerpetual
 	}
 	if err := value.Validate(marketType); err != nil {
 		return fmt.Errorf("failed to decode execution rule: %w", err)

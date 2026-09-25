@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/apperror"
-	rule "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/executionrule"
+	market "github.com/k4k3ru-hub/k4k3ru-sdk/go/finance/market"
 )
 
 func matchedResult() Result {
@@ -106,6 +106,7 @@ func TestResultRejectsInvalidCandidates(t *testing.T) {
 // TestResultMatchesRequest verifies identity, required metrics, and evaluation freshness.
 //
 // Version:
+//   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
 //   - 2026-09-23: Added.
 func TestResultMatchesRequest(t *testing.T) {
 	normalized := matchedResult()
@@ -116,7 +117,7 @@ func TestResultMatchesRequest(t *testing.T) {
 		t.Fatal("equivalent references rejected:", err)
 	}
 	for name, mutate := range map[string]func(*Result){
-		"wrong market type":     func(r *Result) { r.MarketType = rule.MarketTypePerp },
+		"wrong market type":     func(r *Result) { r.MarketType = market.MarketTypePerpetual },
 		"wrong reference asset": func(r *Result) { r.BaseAsset.Reference.AssetID = "other-token" },
 		"wrong pool":            func(r *Result) { r.Markets[0].Market.PoolID = "other-pool" },
 		"missing requested metric": func(r *Result) {

@@ -10,10 +10,11 @@ import (
 // Validate validates a spot or perpetual market type.
 //
 // Version:
+//   - 2026-09-25: Require perpetual and reject the former perp value.
 //   - 2026-09-23: Added.
 func (m MarketType) Validate() error {
 	switch MarketType(strings.ToLower(strings.TrimSpace(string(m)))) {
-	case MarketTypeSpot, MarketTypePerp:
+	case MarketTypeSpot, MarketTypePerpetual:
 		return nil
 	default:
 		return v.Invalid("validate market type", "market_type", "invalid")

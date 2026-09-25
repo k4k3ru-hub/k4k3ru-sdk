@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	sdkMarket "github.com/k4k3ru-hub/k4k3ru-sdk/go/finance/market"
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc"
 	rule "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/executionrule"
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/scalping"
@@ -12,6 +13,7 @@ import (
 // ExampleSubscribeParams builds a Spot request without signing or placing an order.
 //
 // Version:
+//   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
 //   - 2026-09-24: Use the default observation window constant for Go requests.
 //   - 2026-09-24: Encode an idempotent subscription start.
 //   - 2026-09-23: Added.
@@ -20,7 +22,7 @@ func ExampleSubscribeParams() {
 	market := rule.MarketRef{Venue: "cetus", Network: "mainnet", Chain: "sui", PoolID: "POOL_ID"}
 	slippage, count := uint64(100), uint64(10)
 	p := scalping.Params{
-		MarketType: rule.MarketTypeSpot,
+		MarketType: sdkMarket.MarketTypeSpot,
 		BaseAsset:  rule.AssetRef{Chain: "sui", Network: "mainnet", AssetID: "0x2::sui::SUI"},
 		QuoteAsset: rule.AssetRef{Chain: "sui", Network: "mainnet", AssetID: "USDC_COIN_TYPE"},
 		Markets:    []rule.MarketRef{market},

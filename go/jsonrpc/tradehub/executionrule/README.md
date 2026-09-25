@@ -10,6 +10,12 @@ to enforce the enclosing type and the corresponding Open variant. A future
 single-swap request can omit the entire rule; it cannot supply an incomplete
 round trip. Existing Swap DTOs are unchanged.
 
+Use `MarketTypeSpot` or `MarketTypePerpetual` with Rule.Validate. The former
+`MarketTypePerp` constant has been renamed and the string `perp` is rejected.
+The rule's JSON variant name `open.perp` remains unchanged. TradeHub Scalping's
+enclosing MarketType field now belongs to `finance/market`; convert explicitly
+with `executionrule.MarketType(params.MarketType)` when validating a rule alone.
+
 `Normalize` returns an independent copy without adding trading defaults.
 JSON decoding rejects absent/null legs and unknown or duplicate fields.
 The structural validator does not verify asset equivalence, venue support,

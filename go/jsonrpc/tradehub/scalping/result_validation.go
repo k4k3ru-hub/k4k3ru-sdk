@@ -3,7 +3,6 @@ package scalping
 import (
 	"fmt"
 	"math/big"
-	"strings"
 
 	rule "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/executionrule"
 	v "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/internal/validation"
@@ -46,13 +45,14 @@ func (a *AssetMetadata) UnmarshalJSON(data []byte) error {
 // It does not establish inventory ownership, fillability, or current freshness.
 //
 // Version:
+//   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
 //   - 2026-09-23: Added.
 func (r Result) Validate() error {
 	const op = "validate scalping result"
 	if err := v.Text(op, "evaluation_id", r.EvaluationID, 128); err != nil {
 		return err
 	}
-	if err := r.MarketType.Validate(); err != nil {
+	if err := validateMarketType(r.MarketType.Normalize()); err != nil {
 		return fmt.Errorf("failed to validate scalping result: %w", err)
 	}
 	if err := r.BaseAsset.Validate(); err != nil {
@@ -173,6 +173,7 @@ func (m Metrics) Validate() error {
 // It does not recompute the server's signal or test the candidate against a clock.
 //
 // Version:
+//   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
 //   - 2026-09-23: Added.
 func (r Result) ValidateFor(params Params) error {
 	const op = "match scalping result"
@@ -183,7 +184,7 @@ func (r Result) ValidateFor(params Params) error {
 	if err := r.Validate(); err != nil {
 		return fmt.Errorf("failed to match scalping result: %w", err)
 	}
-	marketType := rule.MarketType(strings.ToLower(strings.TrimSpace(string(r.MarketType))))
+	marketType := r.MarketType.Normalize()
 	if marketType != params.MarketType || r.BaseAsset.Reference.Normalize() != params.BaseAsset || r.QuoteAsset.Reference.Normalize() != params.QuoteAsset {
 		return v.Invalid(op, "request", "invalid")
 	}
@@ -215,6 +216,7 @@ func (r Result) ValidateFor(params Params) error {
 // UnmarshalJSON decodes a validated complete evaluation snapshot.
 //
 // Version:
+//   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
 //   - 2026-09-23: Added.
 func (r *Result) UnmarshalJSON(data []byte) error {
 	if r == nil {
@@ -226,6 +228,7 @@ func (r *Result) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("failed to decode scalping result: %w", err)
 	}
 	value := Result(decoded)
+	value.MarketType = value.MarketType.Normalize()
 	if err := value.Validate(); err != nil {
 		return fmt.Errorf("failed to decode scalping result: %w", err)
 	}
