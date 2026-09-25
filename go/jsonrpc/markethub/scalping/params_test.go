@@ -10,6 +10,7 @@ import (
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/apperror"
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/finance/market"
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/scalping"
+	onchain "github.com/k4k3ru-hub/onchain/go/core"
 )
 
 const validRequest = `{"marketType":"spot","symbol":"SUI/USDC","markets":[{"venue":"cetus","network":"testnet","chain":"sui","poolId":"pool-1"}]}`
@@ -108,5 +109,26 @@ func TestScalpingMarketBounds(t *testing.T) {
 	p.Markets = make([]market.MarketRef, scalping.MaximumMarkets+1)
 	if p.Validate() == nil {
 		t.Fatal("market bound was lost")
+	}
+}
+
+// TestScalpingOnchainNetworkValidation verifies shared network rules at the request boundary.
+//
+// Version:
+//   - 2026-09-25: Added.
+func TestScalpingOnchainNetworkValidation(t *testing.T) {
+	var params scalping.Params
+	request := strings.Replace(validRequest, `"testnet"`, `"custom-testnet"`, 1)
+	if err := json.Unmarshal([]byte(request), &params); err != nil {
+		t.Fatalf("custom network request rejected: %v", err)
+	}
+	if params.Markets[0].Chain != onchain.ChainSui || params.Markets[0].Network != onchain.Network("custom-testnet") {
+		t.Fatalf("incorrect onchain reference: %+v", params.Markets[0])
+	}
+	for _, network := range []string{strings.Repeat("a", 17), "custom net"} {
+		request := strings.Replace(validRequest, `"testnet"`, `"`+network+`"`, 1)
+		if err := json.Unmarshal([]byte(request), &params); !errors.Is(err, apperror.InvalidParameter()) {
+			t.Fatalf("invalid network request accepted: %v", err)
+		}
 	}
 }

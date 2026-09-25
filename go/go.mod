@@ -4,7 +4,7 @@ go 1.25.7
 
 require (
 	github.com/ethereum/go-ethereum v1.17.3
-	github.com/k4k3ru-hub/onchain/go v0.0.0-20260909032831-71c1f064a184
+	github.com/k4k3ru-hub/onchain/go v0.0.0-20260925145352-0433f75d169b
 	github.com/k4k3ru-hub/websocket/go v0.0.0-20260829134945-92fcea32a275
 )
 

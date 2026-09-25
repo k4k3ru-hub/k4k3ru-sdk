@@ -14,11 +14,13 @@ import (
 )
 ```
 
-`market` owns Venue, Symbol, Chain, MarketType, AssetClass, EventType, market
-data models and MarketRef. Models use these SDK-owned types instead of the
-service's subscription types. `orderbook` provides the copied snapshot and
-store implementations. Market catalogs, adapters, subscriptions and billing
-remain service responsibilities.
+`market` owns Venue, Symbol, MarketType, AssetClass, EventType, market data
+models and MarketRef. `MarketRef.Chain` and `MarketRef.Network` directly use
+`github.com/k4k3ru-hub/onchain/go/core` types. The copied `market.Chain` and
+MarketSourceKey remain available for the older source-identity model, including
+its `none` sentinel; they are not aliases for onchain types. `orderbook` provides
+the copied snapshot and store implementations. Market catalogs, adapters,
+subscriptions and billing remain service responsibilities.
 
 The canonical perpetual market value is **`perpetual`**. Use
 `market.MarketTypePerpetual`; `market.MarketType.Validate` rejects `perp`.
@@ -50,6 +52,17 @@ VenueSymbol. Pools also require Chain. Identifier case is preserved; scope
 names are normalized. Recognizing a venue or chain does not establish adapter
 support or asset equivalence. New shared AssetRef and AssetMetadata types are
 not part of this step; existing TradeHub references remain in executionrule.
+
+Use `core.ChainSui` / `core.NetworkTestnet`, for example, when assigning typed
+constants to MarketRef. Its JSON shape is unchanged. Chain validation follows
+the onchain chain registry; omit Chain for native instruments without an explicit
+chain. The `none` sentinel is invalid in MarketRef.
+
+After scope normalization, Network uses `core.Network.Validate()`: nonempty,
+valid UTF-8, at most 16 bytes, and no whitespace or control characters. Custom
+names such as `custom-testnet` are accepted. This replaces MarketRef's former
+64-byte network text check. Chain/network compatibility and configured endpoints
+must still be checked by the consuming service.
 
 See [MarketHub Scalping Params](../jsonrpc/markethub/scalping/README.md) and
 [TradeHub Scalping](../jsonrpc/tradehub/scalping/README.md).

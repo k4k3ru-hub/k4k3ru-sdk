@@ -7,24 +7,25 @@ import (
 
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/apperror"
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/internal/jsonobject"
+	onchain "github.com/k4k3ru-hub/onchain/go/core"
 )
 
 type MarketRef struct {
-	Venue       Venue  `json:"venue"`
-	Network     string `json:"network"`
-	Chain       Chain  `json:"chain,omitempty"`
-	PoolID      string `json:"poolId,omitempty"`
-	VenueSymbol string `json:"venueSymbol,omitempty"`
+	Venue       Venue           `json:"venue"`
+	Network     onchain.Network `json:"network"`
+	Chain       onchain.Chain   `json:"chain,omitempty"`
+	PoolID      string          `json:"poolId,omitempty"`
+	VenueSymbol string          `json:"venueSymbol,omitempty"`
 }
 
 // Normalize normalizes scopes without changing case-sensitive instrument identifiers.
 //
 // Version:
-//   - 2026-09-25: Added.
+//   - 2026-09-25: Normalize scopes using onchain-owned Chain and Network types.
 func (r MarketRef) Normalize() MarketRef {
 	r.Venue = Venue(strings.ToLower(strings.TrimSpace(string(r.Venue))))
-	r.Chain = r.Chain.Normalize()
-	r.Network = strings.ToLower(strings.TrimSpace(r.Network))
+	r.Chain = onchain.Chain(strings.ToLower(strings.TrimSpace(string(r.Chain))))
+	r.Network = onchain.Network(strings.ToLower(strings.TrimSpace(string(r.Network))))
 	r.PoolID = strings.TrimSpace(r.PoolID)
 	r.VenueSymbol = strings.TrimSpace(r.VenueSymbol)
 	return r
@@ -33,24 +34,21 @@ func (r MarketRef) Normalize() MarketRef {
 // Validate validates a pool or venue instrument identity without resolving metadata.
 //
 // Version:
-//   - 2026-09-25: Added.
+//   - 2026-09-25: Delegate chain and network validation to onchain.
 func (r MarketRef) Validate() error {
 	r = r.Normalize()
 	if err := r.Venue.Validate(); err != nil {
 		return fmt.Errorf("failed to validate market reference: %w: %w", apperror.InvalidParameter(), err)
 	}
-	if err := referenceText("network", r.Network, 64); err != nil {
-		return fmt.Errorf("failed to validate market reference: %w", err)
+	if err := r.Network.Validate(); err != nil {
+		return fmt.Errorf("failed to validate market reference: %w: %w", apperror.InvalidParameter(), err)
 	}
 	if (r.PoolID == "") == (r.VenueSymbol == "") {
 		return fmt.Errorf("failed to validate market reference: %w: instrument=invalid", apperror.InvalidParameter())
 	}
 	if r.Chain != "" {
-		if r.Chain == ChainNone {
-			return fmt.Errorf("failed to validate market reference: %w: chain=invalid", apperror.InvalidParameter())
-		}
 		if err := r.Chain.Validate(); err != nil {
-			return fmt.Errorf("failed to validate market reference: %w", err)
+			return fmt.Errorf("failed to validate market reference: %w: %w", apperror.InvalidParameter(), err)
 		}
 	}
 	if r.PoolID != "" {

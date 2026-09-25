@@ -9,6 +9,7 @@ steps. Importing this package does not make those RPC operations available.
 import (
     "github.com/k4k3ru-hub/k4k3ru-sdk/go/finance/market"
     "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/scalping"
+    onchain "github.com/k4k3ru-hub/onchain/go/core"
 )
 
 params := scalping.Params{
@@ -16,7 +17,7 @@ params := scalping.Params{
     Symbol:     market.Symbol("SUI/USDC"),
     WindowMS:   scalping.DefaultWindowMS,
     Markets: []market.MarketRef{{
-        Venue: market.Hyperliquid, Network: "mainnet", VenueSymbol: "SUI",
+        Venue: market.Hyperliquid, Network: onchain.NetworkMainnet, VenueSymbol: "SUI",
     }},
 }
 params = params.Normalize()
@@ -38,7 +39,13 @@ normalizes parameters and leaves the receiver unchanged on failure. Go callers
 use Normalize explicitly before encoding; Validate does not mutate its receiver.
 
 MarketRef requires venue/network and exactly one of poolId or venueSymbol.
-Pools require chain. Normalized duplicate references are rejected. Asset IDs,
+Its Chain and Network fields directly use `onchain/go/core` types. Pools require
+chain; use constants such as `onchain.ChainSui` and `onchain.NetworkTestnet`.
+Network validation accepts custom names but requires valid UTF-8, 1–16 bytes,
+and no whitespace or control characters after scope normalization. Network is
+never defaulted. Chain support comes from the onchain registry, while actual
+venue/deployment support remains a service check.
+Normalized duplicate references are rejected. Asset IDs,
 decimals, symbol matching, data quality and venue capabilities must be resolved
 by the service; the SDK does not infer them from the symbol string. Request
 validation alone does not establish observation availability.
