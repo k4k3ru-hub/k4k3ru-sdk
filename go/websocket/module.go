@@ -22,23 +22,24 @@ type ModuleConfig struct {
 
 // Module owns the composed K4K3RU WebSocket client graph.
 type Module struct {
-	scalping        *ScalpingClient
-	execution       *ExecutionClient
-	client          *client
-	requests        *requestTracker
-	bboEvents       *bboEventRegistry
-	orderBookEvents *orderBookEventRegistry
-	spreadEvents    *spreadEventRegistry
-	carryEvents     *carryEventRegistry
-	ammPoolEvents   *ammPoolEventRegistry
-	router          *messageRouter
-	subscriptions   *subscriptionLifecycle
-	bbo             *BBOClient
-	orderBook       *OrderBookClient
-	spread          *SpreadClient
-	carry           *CarryClient
-	ammPool         *AMMPoolClient
-	ammPoolNewPair  *AMMPoolNewPairClient
+	marketHubScalping *MarketHubScalpingClient
+	scalping          *ScalpingClient
+	execution         *ExecutionClient
+	client            *client
+	requests          *requestTracker
+	bboEvents         *bboEventRegistry
+	orderBookEvents   *orderBookEventRegistry
+	spreadEvents      *spreadEventRegistry
+	carryEvents       *carryEventRegistry
+	ammPoolEvents     *ammPoolEventRegistry
+	router            *messageRouter
+	subscriptions     *subscriptionLifecycle
+	bbo               *BBOClient
+	orderBook         *OrderBookClient
+	spread            *SpreadClient
+	carry             *CarryClient
+	ammPool           *AMMPoolClient
+	ammPoolNewPair    *AMMPoolNewPairClient
 }
 
 // NewModule composes a K4K3RU WebSocket module.
@@ -52,6 +53,7 @@ type Module struct {
 //   - Configuration or composition error.
 //
 // Version:
+//   - 2026-09-26: Compose the MarketHub Scalping observation client.
 //   - 2026-09-24: Compose the Scalping subscription client.
 //   - 2026-09-16: Compose the execution observation client.
 //   - 2026-09-16: Compose NewPair without the retired Launch client.
@@ -113,12 +115,14 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 	ammPoolNewPairEvents := newAMMPoolNewPairEventRegistry()
 	executionEvents := newExecutionEventRegistry()
 	scalpingEvents := newScalpingEventRegistry()
+	marketHubScalpingEvents := newMarketHubScalpingEvents()
 	router, err := newMessageRouter(requests, bboEvents, orderBookEvents, spreadEvents, carryEvents, ammPoolEvents, ammPoolNewPairEvents)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
 	}
 	router.executionEvents = executionEvents
 	router.scalpingEvents = scalpingEvents
+	router.marketHubScalpingEvents = marketHubScalpingEvents
 	handler := &sessionHandler{receiver: router}
 	option := k4k3ruWebSocket.DefaultClientOption()
 	option.ConnectTimeout = config.ConnectTimeout
@@ -172,24 +176,29 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
 	}
+	marketHubScalpingClient, err := newMarketHubScalpingClient(sender, marketHubScalpingEvents, subscriptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create websocket module: %w", err)
+	}
 	return &Module{
-		scalping:        scalpingClient,
-		execution:       executionClient,
-		client:          transportClient,
-		requests:        requests,
-		bboEvents:       bboEvents,
-		orderBookEvents: orderBookEvents,
-		spreadEvents:    spreadEvents,
-		carryEvents:     carryEvents,
-		ammPoolEvents:   ammPoolEvents,
-		router:          router,
-		subscriptions:   subscriptions,
-		bbo:             bboClient,
-		orderBook:       orderBookClient,
-		spread:          spreadClient,
-		carry:           carryClient,
-		ammPool:         ammPoolClient,
-		ammPoolNewPair:  ammPoolNewPairClient,
+		marketHubScalping: marketHubScalpingClient,
+		scalping:          scalpingClient,
+		execution:         executionClient,
+		client:            transportClient,
+		requests:          requests,
+		bboEvents:         bboEvents,
+		orderBookEvents:   orderBookEvents,
+		spreadEvents:      spreadEvents,
+		carryEvents:       carryEvents,
+		ammPoolEvents:     ammPoolEvents,
+		router:            router,
+		subscriptions:     subscriptions,
+		bbo:               bboClient,
+		orderBook:         orderBookClient,
+		spread:            spreadClient,
+		carry:             carryClient,
+		ammPool:           ammPoolClient,
+		ammPoolNewPair:    ammPoolNewPairClient,
 	}, nil
 }
 
@@ -325,4 +334,15 @@ func (m *Module) Scalping() *ScalpingClient {
 		return nil
 	}
 	return m.scalping
+}
+
+// MarketHubScalping returns the composed MarketHub observation subscription client.
+//
+// Version:
+//   - 2026-09-26: Added.
+func (m *Module) MarketHubScalping() *MarketHubScalpingClient {
+	if m == nil {
+		return nil
+	}
+	return m.marketHubScalping
 }

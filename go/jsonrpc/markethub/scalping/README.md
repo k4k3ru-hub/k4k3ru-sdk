@@ -1,9 +1,10 @@
 # MarketHub Scalping parameters and observations
 
-This package implements request and snapshot DTOs for planned MarketHub
-Scalping Get and Subscribe operations. ACK/event DTOs, client
-composition, method registration and server routing remain separate migration
-steps. Importing this package does not make those RPC operations available.
+This package owns the request, snapshot and subscription DTOs for MarketHub
+Scalping. The SDK supports `MarketHub.Scalping.Subscribe` and
+`MarketHub.Scalping.Unsubscribe` through `websocket.Module.MarketHubScalping()`.
+Deploy the corresponding Gateway and MarketHub server changes together. Public
+`MarketHub.Scalping.Get` and the TradeHub internal-feed migration remain separate steps.
 
 ```go
 import (
@@ -68,7 +69,89 @@ The flat Result contains `evaluatedAt` (Unix milliseconds), optional consolidate
 `ohlc` and `metrics`, and `buy` / `sell` lists of concrete markets. It has no
 network groups or issues array. MarketPrice status is `reference`, `vwap`,
 `fallback_reference` or `unavailable`. These types define the contract; they do
-not implement local OrderBook/AMM pricing, ranking or spread calculation.
+not perform calculations themselves. MarketHub's internal snapshot service
+connects retained OrderBook/AMM pricing, ranking and spread calculation.
+
+Current prices, `quoteQuantity`, rankings and spread are gross: swap fees and
+gas are excluded, while quantity-dependent price impact is included. AMM gross
+amounts come from a separate zero-swap-fee simulation on the same retained
+inputs and Base quantity. Quantity-aware native OrderBook prices integrate
+the entire requested amount; insufficient depth falls back to a reference
+price without a partial `quoteQuantity`. Buy Quote quantities round up and
+Sell quantities round down to the market's minimum units, after summation.
+Prices round to 18 decimal places, ties to even.
+
+Reference and VWAP entries share the ranking: Buy ascending, Sell descending,
+unavailable entries last. With quantity specified, an uncomputable market
+remains `fallback_reference` when a reference price is available. Without
+quantity, prices are `reference` and no quantity-based calculations occur.
+Spread is `(bestBuy - bestSell) / ((bestBuy + bestSell) / 2) * 10000`, using
+published prices, and can be negative. Its status is `vwap` only if both
+winning prices are VWAP; otherwise it is `fallback_reference` for a quantity
+request, `reference` without quantity, or `unavailable` if either side is missing.
+
+No age cutoff is applied to current prices. `observedAt` records input receipt
+or verification time, not calculation time. Missing inputs, lost synchronization,
+identity mismatches and concurrent AMM invalidation can still prevent a price.
+`lastTradeAt` separately records the last observed, admitted, non-canceled
+Trade/Swap **event time**, in Unix milliseconds. Unknown times are omitted;
+receipt time never substitutes for event time. It can be older than the history
+window and can remain present for an unavailable price. Its bounded in-memory
+record survives raw-event expiry, but not a process restart or metadata
+replacement. A cancellation clears it if no retained predecessor can be found.
+
+Each Buy/Sell entry can contain a `fees` object keyed by fee kind:
+
+```go
+type Fees struct {
+    Swap  *Fee `json:"swap,omitempty"`
+    Taker *Fee `json:"taker,omitempty"`
+}
+
+type Fee struct {
+    Token    FeeToken        `json:"token"`
+    Quantity market.Quantity `json:"quantity"`
+}
+
+type FeeToken struct {
+    AssetID string `json:"assetId"`
+    Symbol  string `json:"symbol"`
+}
+```
+
+`token.assetId` identifies the charged asset in the enclosing market's
+chain/network (or venue/network) namespace. `token.symbol` is descriptive;
+it must not be used alone to establish asset identity. Token0/Token1 and
+Base/Quote mapping remain internal to the fee calculation. The existing
+request `baseQuantity` and gross result `quoteQuantity` retain their meanings.
+
+For example, this is a **fragment inside a Buy entry** for a Sui Testnet pool;
+the Token ID and amounts illustrate the shape, not a deployed pool or live quote:
+
+```json
+{
+  "fees": {
+    "swap": {
+      "token": {"assetId": "0x3::usdc::USDC", "symbol": "USDC"},
+      "quantity": {"amount": "3000", "decimals": 6}
+    }
+  }
+}
+```
+
+This estimates a 0.003 USDC swap fee. A Sell entry can instead identify SUI
+and its own decimal scale. `swap` includes both LP and protocol fee shares;
+it is not labeled as LP-only. It is estimated with normal fee settings on the
+same retained inputs used for gross pricing. Because the normal-fee and zero-fee
+simulations can follow different price paths, adding/subtracting a converted
+fee does not necessarily reconstruct a net quote.
+
+Only AMM `swap` fees are currently produced by MarketHub. `taker` represents
+immediate OrderBook execution fees when known; account-dependent fees are not
+inferred. Unknown fees are omitted rather than zero-filled. Known zero fees
+retain `amount: "0"` and explicit `decimals`. Quantity omission, reference
+fallback and unavailable prices omit `fees`; gas is excluded. No `issues`
+array or additional fee status is added.
 
 Historical analytics use event time in `[T-windowMs,T)`. For each UTC second
 (clipped at both window edges), the service computes market Quote/Base VWAP,
@@ -97,6 +180,60 @@ are excluded from volatility, while remaining part of OHLC. This sampling
 interval is independent of delivery frequency and the five-second trend ranges.
 The implementation uses guarded arbitrary-precision arithmetic and requires
 the same rounded output at successive precisions; unstable output is omitted.
-Current book/AMM rankings, spread calculation,
-public Get/Subscribe delivery and the TradeHub subscription migration remain
+Public Get/Subscribe delivery and the TradeHub subscription migration remain
 subsequent implementation steps.
+
+
+## Observation subscriptions
+
+Subscribe accepts the existing `Params` unchanged. ACK contains
+`{"subscriptionKey":"MarketHub.Scalping:<opaque-key>","intervalMs":1000}`.
+The first full Snapshot follows ACK; later full Snapshots target a one-second
+interval, even without trades. Arrival timing is not guaranteed. Observation
+windows retain millisecond precision; delivery does not alter the one-second
+volatility samples or five-second trend windows.
+
+Notifications use the existing outer event envelope:
+
+```json
+{
+  "e": "msc",
+  "data": {
+    "subscriptionKey": "MarketHub.Scalping:<opaque-key>",
+    "snapshot": {
+      "evaluatedAt": 1790380800000,
+      "metrics": { "spread": { "status": "unavailable" } },
+      "buy": [],
+      "sell": []
+    }
+  }
+}
+```
+
+This example is an unavailable observation, not a fabricated zero price.
+The SDK exposes `Events() <-chan scalping.Result`, `Errors() <-chan error` and
+`Reference() scalping.SubscribeResult` on `MarketHubScalpingSubscription`.
+Replace the previous Result entirely, including omitted fields. A slow reader
+receives only the latest unread Snapshot; intermediate evaluations are not an
+event history. Cached initial Snapshots keep their original `evaluatedAt`.
+A terminal error or connection close clears buffered observations and closes
+the handle. Discard the previous value and explicitly subscribe again to resume.
+
+Use `module.MarketHubScalping().Unsubscribe(ctx, handle)` to stop delivery.
+The wire request and ACK contain only `subscriptionKey`. The same active
+conditions on the same SDK client return the existing handle; unsubscribe that
+handle once. The key includes every request condition, ignores target order,
+and is not a credential. The existing `module.Scalping()` / `e="sc"` remain
+TradeHub execution-candidate APIs.
+
+Public Subscribe is signed and costs 100 ticks at creation, then 100 ticks per
+minute from the first successful ACK. Billing is per WebSocket connection and
+normalized conditions, independent of market count, optional quantity and event
+count. Same-connection duplicates do not incur another charge or reset the
+billing period; a different connection or different conditions do. Missing
+metrics do not pause billing. Initial debit occurs before upstream acceptance;
+upstream failure does not automatically refund it. Unsubscribe costs zero and
+stops new billing periods. Reconnection creates a new billable subscription.
+Internal service-to-service subscriptions are signed and are not separately
+charged these public ticks. Credit exhaustion terminates only the affected
+subscription and is reported through `Errors()`.

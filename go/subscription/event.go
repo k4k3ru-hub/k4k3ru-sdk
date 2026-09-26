@@ -12,17 +12,18 @@ import (
 type EventType string
 
 const (
-	EventTypeScalping        EventType = "sc"
-	EventTypeAMMPoolYield    EventType = "apyld"
-	EventTypeAMMPoolNewPair  EventType = "apnp"
-	EventTypeAMMPool         EventType = "ap"
-	EventTypeBBO             EventType = "bbo"
-	EventTypeArbitrage       EventType = "ar"
-	EventTypeOrderBook       EventType = "ob"
-	EventTypeSpread          EventType = "sp"
-	EventTypeCarry           EventType = "cy"
-	EventTypeExecution       EventType = "ex"
-	EventTypeExecutionStatus EventType = "exs"
+	EventTypeMarketHubScalping EventType = "msc"
+	EventTypeScalping          EventType = "sc"
+	EventTypeAMMPoolYield      EventType = "apyld"
+	EventTypeAMMPoolNewPair    EventType = "apnp"
+	EventTypeAMMPool           EventType = "ap"
+	EventTypeBBO               EventType = "bbo"
+	EventTypeArbitrage         EventType = "ar"
+	EventTypeOrderBook         EventType = "ob"
+	EventTypeSpread            EventType = "sp"
+	EventTypeCarry             EventType = "cy"
+	EventTypeExecution         EventType = "ex"
+	EventTypeExecutionStatus   EventType = "exs"
 )
 
 type Event struct {
@@ -65,6 +66,7 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 //   - Validation error.
 //
 // Version:
+//   - 2026-09-26: Accept MarketHub Scalping observations.
 //   - 2026-09-24: Accept Scalping candidate notifications.
 //   - 2026-09-19: Accept AMM pool yield events.
 //   - 2026-09-16: Accept execution observation events.
@@ -75,7 +77,7 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 //   - 2026-08-30: Added.
 func (e Event) Validate() error {
 	switch e.Type {
-	case EventTypeScalping, EventTypeAMMPoolYield, EventTypeAMMPoolNewPair, EventTypeAMMPool, EventTypeBBO, EventTypeArbitrage, EventTypeOrderBook, EventTypeSpread, EventTypeCarry, EventTypeExecution, EventTypeExecutionStatus:
+	case EventTypeMarketHubScalping, EventTypeScalping, EventTypeAMMPoolYield, EventTypeAMMPoolNewPair, EventTypeAMMPool, EventTypeBBO, EventTypeArbitrage, EventTypeOrderBook, EventTypeSpread, EventTypeCarry, EventTypeExecution, EventTypeExecutionStatus:
 	default:
 		if e.Type == "" {
 			return k4k3ruSDKAppError.Tracef("failed to validate subscription event: %w: event_type=empty", k4k3ruSDKAppError.InvalidParameter())

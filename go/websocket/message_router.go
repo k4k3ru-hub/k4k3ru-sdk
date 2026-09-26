@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/k4k3ru-hub/k4k3ru-sdk/go/apperror"
 	dtoAMMPool "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/ammpool"
 	dtoAMMPoolNewPair "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/ammpool/newpair"
+	marketScalping "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/scalping"
 	execution "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/execution"
 	scalping "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/scalping"
 
@@ -18,16 +20,17 @@ import (
 )
 
 type messageRouter struct {
-	scalpingEvents       *scalpingEventRegistry
-	executionEvents      *executionEventRegistry
-	requests             *requestTracker
-	bboEvents            *bboEventRegistry
-	orderBookEvents      *orderBookEventRegistry
-	spreadEvents         *spreadEventRegistry
-	carryEvents          *carryEventRegistry
-	ammPoolEvents        *ammPoolEventRegistry
-	ammPoolNewPairEvents *ammPoolNewPairEventRegistry
-	errors               chan error
+	marketHubScalpingEvents *marketHubScalpingEvents
+	scalpingEvents          *scalpingEventRegistry
+	executionEvents         *executionEventRegistry
+	requests                *requestTracker
+	bboEvents               *bboEventRegistry
+	orderBookEvents         *orderBookEventRegistry
+	spreadEvents            *spreadEventRegistry
+	carryEvents             *carryEventRegistry
+	ammPoolEvents           *ammPoolEventRegistry
+	ammPoolNewPairEvents    *ammPoolNewPairEventRegistry
+	errors                  chan error
 }
 
 func newMessageRouter(requests *requestTracker, bboEvents *bboEventRegistry, orderBookEvents *orderBookEventRegistry, spreadEvents *spreadEventRegistry, carryEvents *carryEventRegistry, ammPoolEvents *ammPoolEventRegistry, ammPoolNewPairEvents *ammPoolNewPairEventRegistry) (*messageRouter, error) {
@@ -58,6 +61,7 @@ func newMessageRouter(requests *requestTracker, bboEvents *bboEventRegistry, ord
 // HandleMessage routes responses and typed subscription events.
 //
 // Version:
+//   - 2026-09-26: Route MarketHub observations and keyed termination.
 //   - 2026-09-24: Route Scalping notifications.
 //   - 2026-09-16: Route execution observation and transport interruptions.
 //   - 2026-09-16: Remove retired Launch event routing.
@@ -74,6 +78,7 @@ func (r *messageRouter) HandleMessage(message []byte) {
 // HandleClose interrupts pending requests and active execution observers.
 //
 // Version:
+//   - 2026-09-26: Interrupt MarketHub observations.
 //   - 2026-09-24: Interrupt Scalping subscriptions on transport closure.
 //   - 2026-09-16: Notify execution observers of transport closure.
 func (r *messageRouter) HandleClose() {
@@ -83,6 +88,7 @@ func (r *messageRouter) HandleClose() {
 	r.requests.failAll(errWebSocketConnectionClosed)
 	r.executionEvents.interrupt()
 	r.scalpingEvents.interrupt()
+	r.marketHubScalpingEvents.interrupt()
 }
 
 func (r *messageRouter) route(message []byte) error {
@@ -90,7 +96,9 @@ func (r *messageRouter) route(message []byte) error {
 		return fmt.Errorf("failed to route websocket message: message=empty")
 	}
 	var envelope struct {
-		ID json.RawMessage `json:"id"`
+		ID              json.RawMessage    `json:"id"`
+		SubscriptionKey string             `json:"subscriptionKey"`
+		Error           *apperror.AppError `json:"error"`
 	}
 	if err := json.Unmarshal(message, &envelope); err != nil {
 		return fmt.Errorf("failed to route websocket message: failed to decode json: %w", err)
@@ -111,6 +119,10 @@ func (r *messageRouter) route(message []byte) error {
 		}
 		return nil
 	}
+	if envelope.Error != nil && marketScalping.ValidateSubscriptionKey(envelope.SubscriptionKey) == nil {
+		r.marketHubScalpingEvents.terminate(envelope.SubscriptionKey, envelope.Error)
+		return nil
+	}
 	var event k4k3ruSDKSubscription.Event
 	if err := json.Unmarshal(message, &event); err != nil {
 		return fmt.Errorf("failed to route websocket event: %w", err)
@@ -119,6 +131,14 @@ func (r *messageRouter) route(message []byte) error {
 		return fmt.Errorf("failed to route websocket event: %w", err)
 	}
 	switch event.Type {
+	case k4k3ruSDKSubscription.EventTypeMarketHubScalping:
+		var value marketScalping.SubscriptionEvent
+		if err := json.Unmarshal(event.Data, &value); err != nil {
+			err = fmt.Errorf("failed to decode market hub scalping event: %w", err)
+			r.marketHubScalpingEvents.terminate(value.SubscriptionKey, err)
+			return err
+		}
+		return r.marketHubScalpingEvents.route(value)
 	case k4k3ruSDKSubscription.EventTypeScalping:
 		var value scalping.SubscriptionEvent
 		if err := json.Unmarshal(event.Data, &value); err != nil {

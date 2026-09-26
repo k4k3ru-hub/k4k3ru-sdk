@@ -352,7 +352,10 @@ ScalpingのMarketTypeは `finance/market` の型を使い、公開値は `spot` 
 TradeHub Scalpingも旧値 `perp` はエラーとし、保存済み設定の再購読時にも自動変換しません。
 新しい単一シンボルのMarketHub Scalping
 [`Params`](go/jsonrpc/markethub/scalping/README.md) も追加しています。
-このMarketHub側の追加はrequest型までで、Get / Subscribeの公開・配信接続は後続作業です。
+MarketHub側はResultと購読型を持ち、`websocket.NewModule` が
+`module.MarketHubScalping()` を組み立てます。1秒間隔を目標に全量Snapshotを受信し、
+`Events()`で最新値、`Errors()`で切断・Credit不足による終了を確認できます。
+対応するGateway・MarketHubも更新してください。公開GetとTradeHubの内部購読移行は後続作業です。
 
 [`jsonrpc/tradehub/scalping`](go/jsonrpc/tradehub/scalping/README.md) の
 `SubscribeParams` で、新規開始（`idempotencyKey`＋設定）と再購読（`executionId`のみ）を指定します。
