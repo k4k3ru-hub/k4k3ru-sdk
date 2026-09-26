@@ -100,6 +100,8 @@ github.com/k4k3ru-hub/onchain/go v0.0.0-20260909032831-71c1f064a184 h1:W9BsVdeev
 github.com/k4k3ru-hub/onchain/go v0.0.0-20260909032831-71c1f064a184/go.mod h1:RzmPai4audkCD9Izhyc7ZBa+HsFD5rsaDCgTKWRQjcE=
 github.com/k4k3ru-hub/onchain/go v0.0.0-20260925145352-0433f75d169b h1:WDgsty92j6uMa26WqQBu3jdoguG6E2xjATLTxxXDlAM=
 github.com/k4k3ru-hub/onchain/go v0.0.0-20260925145352-0433f75d169b/go.mod h1:RzmPai4audkCD9Izhyc7ZBa+HsFD5rsaDCgTKWRQjcE=
+github.com/k4k3ru-hub/onchain/go v0.0.0-20260926052811-d42337ea7d66 h1:8yXSuP8B97qratHpbOwHPiU7KKHidq9A/oObP1/IoKs=
+github.com/k4k3ru-hub/onchain/go v0.0.0-20260926052811-d42337ea7d66/go.mod h1:RzmPai4audkCD9Izhyc7ZBa+HsFD5rsaDCgTKWRQjcE=
 github.com/k4k3ru-hub/websocket/go v0.0.0-20260829134945-92fcea32a275 h1:RIAgBJWAyjFmsn+3ZiWUOGU1wVUY2lShFpQ24OkU+1U=
 github.com/k4k3ru-hub/websocket/go v0.0.0-20260829134945-92fcea32a275/go.mod h1:FnwpaDVPEmDRF6Mer6W8GVQYfYgNftnJXA0HAAPGHSg=
 github.com/klauspost/compress v1.17.8 h1:YcnTYrq7MikUT7k0Yb5eceMmALQPYBW/Xltxn0NAMnU=

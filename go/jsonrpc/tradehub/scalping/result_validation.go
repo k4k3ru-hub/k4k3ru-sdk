@@ -2,7 +2,14 @@ package scalping
 
 import (
 	"fmt"
+	"github.com/k4k3ru-hub/onchain/go/sui"
+	"math"
 	"math/big"
+	"strings"
+	"unicode"
+
+	"github.com/k4k3ru-hub/k4k3ru-sdk/go/finance/market"
+	observations "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/scalping"
 
 	rule "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/executionrule"
 	v "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/internal/validation"
@@ -41,12 +48,11 @@ func (a *AssetMetadata) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Validate validates a complete evaluation snapshot and its candidate invariants.
-// It does not establish inventory ownership, fillability, or current freshness.
+// Validate validates consolidated metrics and concrete market candidates.
+// It does not establish execution asset equivalence, inventory, or fillability.
 //
 // Version:
-//   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
-//   - 2026-09-23: Added.
+//   - 2026-09-26: Separate consolidated observations from per-market candidates.
 func (r Result) Validate() error {
 	const op = "validate scalping result"
 	if err := v.Text(op, "evaluation_id", r.EvaluationID, 128); err != nil {
@@ -55,61 +61,126 @@ func (r Result) Validate() error {
 	if err := validateMarketType(r.MarketType.Normalize()); err != nil {
 		return fmt.Errorf("failed to validate scalping result: %w", err)
 	}
-	if err := r.BaseAsset.Validate(); err != nil {
-		return fmt.Errorf("failed to validate scalping result: %w: asset=%q", err, "base")
+	if err := r.Symbol.Validate(); err != nil {
+		return fmt.Errorf("failed to validate scalping result: %w", err)
 	}
-	if err := r.QuoteAsset.Validate(); err != nil {
-		return fmt.Errorf("failed to validate scalping result: %w: asset=%q", err, "quote")
+	parts := strings.Split(string(r.Symbol), "/")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" || strings.EqualFold(parts[0], parts[1]) || strings.ContainsAny(string(r.Symbol), ",;*?[]") || strings.IndexFunc(strings.TrimSpace(string(r.Symbol)), func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) }) >= 0 {
+		return v.Invalid(op, "symbol", "invalid")
 	}
-	if r.BaseAsset.Reference.Normalize() == r.QuoteAsset.Reference.Normalize() {
+	for _, a := range []rule.AssetRef{r.BaseAsset, r.QuoteAsset} {
+		if err := a.Validate(); err != nil {
+			return fmt.Errorf("failed to validate scalping result: %w", err)
+		}
+	}
+	if r.BaseAsset.Normalize() == r.QuoteAsset.Normalize() {
 		return v.Invalid(op, "asset_pair", "invalid")
 	}
 	if r.EvaluatedAt <= 0 {
 		return v.Invalid(op, "evaluated_at", "out_of_range")
 	}
-	markets := make([]rule.MarketRef, len(r.Markets))
-	ids := make(map[string]struct{})
-	for i, evaluation := range r.Markets {
-		markets[i] = evaluation.Market
-		if err := validateEvaluation(evaluation, r.EvaluatedAt); err != nil {
-			return fmt.Errorf("failed to validate scalping result: %w: market_index=%d", err, i)
+	if r.Markets == nil || len(r.Markets) > observations.MaximumMarkets {
+		return v.Invalid(op, "markets", "invalid")
+	}
+	if err := validateConsolidatedMetrics(r.Metrics); err != nil {
+		return err
+	}
+	seen := make(map[market.MarketRef]bool)
+	ids := make(map[string]bool)
+	for _, e := range r.Markets {
+		ref := e.Price.Market.Normalize()
+		if err := ref.Validate(); err != nil {
+			return fmt.Errorf("failed to validate scalping result: %w", err)
 		}
-		if evaluation.Candidate != nil {
-			id := evaluation.Candidate.CandidateID
-			if _, duplicate := ids[id]; duplicate {
+		if seen[ref] {
+			return v.Invalid(op, "duplicate_market", "invalid")
+		}
+		seen[ref] = true
+		if err := validateEvaluation(e, r.EvaluatedAt); err != nil {
+			return err
+		}
+		if e.Status != EvaluationStatusUnavailable && (r.Metrics == nil || r.Metrics.PriceChangeBPS == nil && r.Metrics.QuoteVolume == nil && r.Metrics.TradeCount == nil && r.Metrics.BuyVolumeRatioBPS == nil) {
+			return v.Invalid(op, "metrics", "empty")
+		}
+		if e.Candidate != nil {
+			if ids[e.Candidate.CandidateID] {
 				return v.Invalid(op, "duplicate_candidate", "invalid")
 			}
-			ids[id] = struct{}{}
+			ids[e.Candidate.CandidateID] = true
 		}
-	}
-	if err := rule.ValidateMarkets(markets); err != nil {
-		return fmt.Errorf("failed to validate scalping result: %w", err)
 	}
 	return nil
 }
 
-func validateEvaluation(e MarketEvaluation, evaluatedAt int64) error {
+func validateEvaluation(e MarketEvaluation, at int64) error {
 	const op = "validate market evaluation"
+	switch e.Price.Status {
+	case observations.PriceStatusReference, observations.PriceStatusVWAP, observations.PriceStatusFallbackReference:
+		if e.Price.ObservedAt == nil {
+			return v.Invalid(op, "observed_at", "null")
+		}
+		if e.Price.Price == nil {
+			return v.Invalid(op, "price", "null")
+		}
+		n, err := v.Number(op, "price", *e.Price.Price, false, false)
+		if err != nil {
+			return err
+		}
+		if n.Sign() <= 0 {
+			return v.Invalid(op, "price", "out_of_range")
+		}
+	case observations.PriceStatusUnavailable:
+		if e.Price.Price != nil || e.Price.QuoteQuantity != nil || e.Price.Fees != nil {
+			return v.Invalid(op, "unavailable_price", "invalid")
+		}
+	default:
+		return v.Invalid(op, "price_status", "invalid")
+	}
+	if e.Price.QuoteQuantity != nil {
+		if err := e.Price.QuoteQuantity.Validate(); err != nil {
+			return fmt.Errorf("failed to validate market evaluation: %w", err)
+		}
+	}
+	if e.Price.Status == observations.PriceStatusVWAP && e.Price.QuoteQuantity == nil {
+		return v.Invalid(op, "quote_quantity", "null")
+	}
+	if e.Price.Status != observations.PriceStatusVWAP && (e.Price.QuoteQuantity != nil || e.Price.Fees != nil) {
+		return v.Invalid(op, "reference_quantity", "invalid")
+	}
+	for _, timestamp := range []*int64{e.Price.ObservedAt, e.Price.LastTradeAt} {
+		if timestamp != nil && (*timestamp <= 0 || *timestamp > at) {
+			return v.Invalid(op, "timestamps", "out_of_range")
+		}
+	}
+	if e.Price.Fees != nil {
+		for _, fee := range []*observations.Fee{e.Price.Fees.Swap, e.Price.Fees.Taker} {
+			if fee != nil {
+				if err := fee.Quantity.Validate(); err != nil {
+					return fmt.Errorf("failed to validate market evaluation: %w", err)
+				}
+				if err := v.Text(op, "fee_asset_id", fee.Token.AssetID, 512); err != nil {
+					return err
+				}
+				if err := v.Text(op, "fee_symbol", fee.Token.Symbol, 64); err != nil {
+					return err
+				}
+			}
+		}
+	}
 	switch e.Status {
 	case EvaluationStatusMatched:
-		if e.Candidate == nil || e.Metrics == nil {
+		if e.Candidate == nil || e.Price.Status == observations.PriceStatusUnavailable || e.Price.LastTradeAt == nil || len(e.Reasons) != 0 {
 			return v.Invalid(op, "matched", "invalid")
-		}
-		if len(e.Reasons) != 0 {
-			return v.Invalid(op, "reasons", "invalid")
 		}
 		if err := v.Text(op, "candidate_id", e.Candidate.CandidateID, 128); err != nil {
 			return err
 		}
-		if e.Candidate.Revision == 0 {
-			return v.Invalid(op, "revision", "empty")
-		}
-		if e.Candidate.ExpiresAt <= evaluatedAt {
-			return v.Invalid(op, "expires_at", "out_of_range")
+		if e.Candidate.Revision == 0 || e.Candidate.ExpiresAt <= at {
+			return v.Invalid(op, "candidate", "invalid")
 		}
 	case EvaluationStatusNotMatched:
-		if e.Candidate != nil || e.Metrics == nil {
-			return v.Invalid(op, "not_matched", "invalid")
+		if e.Candidate != nil || e.Price.Status == observations.PriceStatusUnavailable {
+			return v.Invalid(op, "candidate", "invalid")
 		}
 	case EvaluationStatusUnavailable:
 		if e.Candidate != nil || len(e.Reasons) == 0 {
@@ -123,58 +194,79 @@ func validateEvaluation(e MarketEvaluation, evaluatedAt int64) error {
 			return err
 		}
 	}
-	if e.Metrics != nil {
-		if err := e.Metrics.Validate(); err != nil {
-			return fmt.Errorf("failed to validate market evaluation: %w", err)
-		}
-		if e.Metrics.WindowEnd > evaluatedAt || e.Metrics.LastObservedAt > evaluatedAt {
-			return v.Invalid(op, "timestamps", "out_of_range")
-		}
-		if e.Status != EvaluationStatusUnavailable && e.Metrics.PriceChangeBPS == nil && e.Metrics.QuoteVolume == nil && e.Metrics.TradeCount == nil && e.Metrics.BuyVolumeRatioBPS == nil {
-			return v.Invalid(op, "metrics", "empty")
-		}
-	}
 	return nil
 }
 
-// Validate validates timestamps and available metrics without inventing zero values.
-//
-// Version:
-//   - 2026-09-23: Added.
-func (m Metrics) Validate() error {
-	const op = "validate scalping metrics"
-	if m.WindowStart <= 0 || m.WindowEnd <= m.WindowStart || m.LastObservedAt <= 0 {
-		return v.Invalid(op, "timestamps", "out_of_range")
+func validateConsolidatedMetrics(m *observations.Metrics) error {
+	if m == nil {
+		return nil
 	}
+	const op = "validate scalping metrics"
 	if m.PriceChangeBPS != nil {
 		if _, err := v.Number(op, "price_change_bps", *m.PriceChangeBPS, false, true); err != nil {
 			return err
 		}
 	}
 	if m.QuoteVolume != nil {
-		if _, err := v.Number(op, "quote_volume", *m.QuoteVolume, true, false); err != nil {
-			return err
+		if err := m.QuoteVolume.Validate(); err != nil {
+			return fmt.Errorf("failed to validate scalping metrics: %w", err)
 		}
 	}
 	if m.BuyVolumeRatioBPS != nil {
-		number, err := v.Number(op, "buy_volume_ratio_bps", *m.BuyVolumeRatioBPS, false, false)
+		n, err := v.Number(op, "buy_volume_ratio_bps", *m.BuyVolumeRatioBPS, false, false)
 		if err != nil {
 			return err
 		}
-		if number.Cmp(big.NewRat(10000, 1)) > 0 {
+		if n.Cmp(big.NewRat(10000, 1)) > 0 {
 			return v.Invalid(op, "buy_volume_ratio_bps", "out_of_range")
 		}
 	}
+	for name, value := range map[string]*string{"trade_vwap": m.TradeVWAP, "realized_volatility_bps": m.RealizedVolatilityBPS} {
+		if value != nil {
+			n, err := v.Number(op, name, *value, false, false)
+			if err != nil {
+				return err
+			}
+			if name == "trade_vwap" && n.Sign() <= 0 {
+				return v.Invalid(op, name, "out_of_range")
+			}
+		}
+	}
+	if m.Trend != nil {
+		for name, value := range map[string]*string{"price_change_delta_bps": m.Trend.PriceChangeDeltaBPS, "quote_volume_change_bps": m.Trend.QuoteVolumeChangeBPS, "buy_volume_ratio_delta_bps": m.Trend.BuyVolumeRatioDeltaBPS} {
+			if value != nil {
+				if _, err := v.Number(op, name, *value, false, true); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	if m.Spread != nil {
+		switch m.Spread.Status {
+		case observations.PriceStatusReference, observations.PriceStatusVWAP, observations.PriceStatusFallbackReference:
+			if m.Spread.BPS == nil {
+				return v.Invalid(op, "spread_bps", "null")
+			}
+			if _, err := v.Number(op, "spread_bps", *m.Spread.BPS, false, true); err != nil {
+				return err
+			}
+		case observations.PriceStatusUnavailable:
+			if m.Spread.BPS != nil {
+				return v.Invalid(op, "spread_bps", "invalid")
+			}
+		default:
+			return v.Invalid(op, "spread_status", "invalid")
+		}
+	}
+
 	return nil
 }
 
-// ValidateFor checks that a snapshot belongs to the requested markets and assets.
-// Evaluated markets must include the requested indicators within the data age bound.
-// It does not recompute the server's signal or test the candidate against a clock.
+// ValidateFor binds consolidated observations and candidates to the requested scope.
+// Snapshot transport-age limits are enforced by the receiver's clock.
 //
 // Version:
-//   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
-//   - 2026-09-23: Added.
+//   - 2026-09-26: Validate expanded targets, scaled metrics and explicit observation quantities.
 func (r Result) ValidateFor(params Params) error {
 	const op = "match scalping result"
 	params = params.Normalize()
@@ -184,30 +276,42 @@ func (r Result) ValidateFor(params Params) error {
 	if err := r.Validate(); err != nil {
 		return fmt.Errorf("failed to match scalping result: %w", err)
 	}
-	marketType := r.MarketType.Normalize()
-	if marketType != params.MarketType || r.BaseAsset.Reference.Normalize() != params.BaseAsset || r.QuoteAsset.Reference.Normalize() != params.QuoteAsset {
+	if r.MarketType.Normalize() != params.MarketType || market.Symbol(strings.ToUpper(strings.TrimSpace(string(r.Symbol)))) != params.Symbol || r.BaseAsset.Normalize() != params.BaseAsset || r.QuoteAsset.Normalize() != params.QuoteAsset {
 		return v.Invalid(op, "request", "invalid")
 	}
-	if len(r.Markets) != len(params.Markets) {
-		return v.Invalid(op, "markets", "invalid")
-	}
-	expected := make(map[rule.MarketRef]struct{}, len(params.Markets))
-	for _, market := range params.Markets {
-		expected[market] = struct{}{}
-	}
-	for _, evaluation := range r.Markets {
-		if _, exists := expected[evaluation.Market.Normalize()]; !exists {
+	for _, e := range r.Markets {
+		found := false
+		for _, target := range params.Markets {
+			m := e.Price.Market.Normalize()
+			if m.Venue == target.Venue && m.Network == target.Network && (target.Chain == "" || m.Chain == target.Chain) && (target.PoolID == "" || matchingPool(m, target.PoolID)) && (target.VenueSymbol == "" || m.VenueSymbol == target.VenueSymbol) {
+				found = true
+				break
+			}
+		}
+		if !found {
 			return v.Invalid(op, "market", "invalid")
 		}
-		if evaluation.Status == EvaluationStatusUnavailable {
+		if params.BaseQuantity == nil && (e.Price.Status == observations.PriceStatusVWAP || e.Price.Status == observations.PriceStatusFallbackReference) || params.BaseQuantity != nil && e.Price.Status == observations.PriceStatusReference {
+			return v.Invalid(op, "price_status", "invalid")
+		}
+		if e.Status == EvaluationStatusUnavailable {
 			continue
 		}
-		m, c := evaluation.Metrics, params.Conditions
-		if (c.PriceChangeBPS != nil && m.PriceChangeBPS == nil) || (c.QuoteVolume != nil && m.QuoteVolume == nil) || (c.TradeCount != nil && m.TradeCount == nil) || (c.BuyVolumeRatioBPS != nil && m.BuyVolumeRatioBPS == nil) {
+		m, c := r.Metrics, params.Conditions
+		if m == nil || c.PriceChangeBPS != nil && m.PriceChangeBPS == nil || c.QuoteVolume != nil && m.QuoteVolume == nil || c.TradeCount != nil && m.TradeCount == nil || c.BuyVolumeRatioBPS != nil && m.BuyVolumeRatioBPS == nil {
 			return v.Invalid(op, "metrics", "null")
 		}
-		if uint64(r.EvaluatedAt-m.LastObservedAt) > c.MaximumDataAgeMS {
+		if e.Price.LastTradeAt == nil || uint64(r.EvaluatedAt-*e.Price.LastTradeAt) > c.MaximumDataAgeMS {
 			return v.Invalid(op, "data_age_ms", "out_of_range")
+		}
+		if e.Candidate != nil {
+			limit := expiryAfter(*e.Price.LastTradeAt, c.MaximumDataAgeMS)
+			if c.MaximumSnapshotAgeMS != nil {
+				limit = min(limit, expiryAfter(r.EvaluatedAt, *c.MaximumSnapshotAgeMS))
+			}
+			if e.Candidate.ExpiresAt > limit {
+				return v.Invalid(op, "expires_at", "out_of_range")
+			}
 		}
 	}
 	return nil
@@ -216,6 +320,7 @@ func (r Result) ValidateFor(params Params) error {
 // UnmarshalJSON decodes a validated complete evaluation snapshot.
 //
 // Version:
+//   - 2026-09-26: Decode consolidated metrics and ranked market observations.
 //   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
 //   - 2026-09-23: Added.
 func (r *Result) UnmarshalJSON(data []byte) error {
@@ -224,14 +329,37 @@ func (r *Result) UnmarshalJSON(data []byte) error {
 	}
 	type wire Result
 	var decoded wire
-	if err := v.Decode(data, &decoded, "evaluationId", "marketType", "baseAsset", "quoteAsset", "evaluatedAt", "markets"); err != nil {
+	if err := v.Decode(data, &decoded, "evaluationId", "marketType", "symbol", "baseAsset", "quoteAsset", "evaluatedAt", "markets"); err != nil {
 		return fmt.Errorf("failed to decode scalping result: %w", err)
 	}
 	value := Result(decoded)
 	value.MarketType = value.MarketType.Normalize()
+	value.Symbol = market.Symbol(strings.ToUpper(strings.TrimSpace(string(value.Symbol))))
 	if err := value.Validate(); err != nil {
 		return fmt.Errorf("failed to decode scalping result: %w", err)
 	}
 	*r = value
 	return nil
+}
+
+func matchingPool(m market.MarketRef, pool string) bool {
+	if m.PoolID == pool {
+		return true
+	}
+	if m.Chain != "sui" {
+		return false
+	}
+	left, err := sui.ParseAddress(m.PoolID)
+	if err != nil {
+		return false
+	}
+	right, err := sui.ParseAddress(pool)
+	return err == nil && left == right
+}
+
+func expiryAfter(at int64, age uint64) int64 {
+	if age >= uint64(math.MaxInt64-at) {
+		return math.MaxInt64
+	}
+	return at + int64(age) + 1
 }

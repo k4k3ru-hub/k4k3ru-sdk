@@ -26,7 +26,7 @@ retrieval; it is not a one-shot candidate evaluation operation.
 - Resume: `ExecutionID` only. Any additional JSON field, including null settings
   or an idempotency key, is rejected. Saved settings cannot be overwritten.
 
-`marketType`, `baseAsset`, `quoteAsset`, `markets`, `conditions`, and
+`marketType`, `symbol`, `baseAsset`, `quoteAsset`, `markets`, `conditions`, and
 `executionRule` are required for a new execution. `executionRule.open` and
 `executionRule.close` are both required, non-null objects. A future ordinary
 Swap wrapper can omit the entire rule for a single swap; an incomplete Rule is
@@ -41,6 +41,7 @@ units and are not trading recommendations or SDK defaults. The omitted
 {
   "idempotencyKey": "my-scalping-start-001",
   "marketType": "spot",
+  "symbol": "SUI/USDC",
   "baseAsset": {
     "chain": "sui", "network": "mainnet", "assetId": "0x2::sui::SUI"
   },
@@ -48,7 +49,7 @@ units and are not trading recommendations or SDK defaults. The omitted
     "chain": "sui", "network": "mainnet", "assetId": "USDC_COIN_TYPE"
   },
   "markets": [
-    {"venue": "cetus", "chain": "sui", "network": "mainnet", "poolId": "OPEN_POOL_ID"}
+    {"venue": "cetus", "chain": "sui", "network": "mainnet"}
   ],
   "conditions": {
     "maximumDataAgeMs": 2000,
@@ -107,6 +108,12 @@ idempotency key. The `open.perp` field name is unchanged.
 - `AssetRef`: exactly one of `chain` or `venue`, plus `network` and `assetId`.
   The server resolves decimals and verifies the reference. Do not use a ticker
   to assert cross-chain equivalence or treat a Perp instrument as a spot token.
+- Observation `markets` uses `finance/market.MarketTarget`: `venue` and `network`
+  are required; `chain`, `poolId` and `venueSymbol` are optional filters. One
+  top-level `symbol` identifies the pair. MarketHub resolves concrete instruments.
+- Optional `baseQuantity: {amount, decimals}` is forwarded to MarketHub unchanged.
+  Omission requests reference prices with no quantity calculation. Spot input
+  `open.spot.amount` is never converted into an observation base quantity.
 - `MarketRef`: `venue` and `network`, plus exactly one of `poolId` or
   `venueSymbol`. Pools require `chain`. Native symbols and asset/pool IDs retain
   their case; scope names are trimmed and lowercased. A native order book may
@@ -139,11 +146,12 @@ absent values; explicit zero bounds are preserved.
 | Field | Unit |
 | --- | --- |
 | `priceChangeBps` | signed decimal basis points |
-| `quoteVolume` | nonnegative integer reference QuoteAsset atomic units |
+| `quoteVolume` | each bound is `{amount, decimals}` in the observation symbol’s quote asset |
 | `tradeCount` | nonnegative count |
 | `buyVolumeRatioBps` | decimal basis points in 0..10000 |
 | `windowMs` | integer milliseconds in 1..60000; omitted JSON defaults to 60000 |
-| `maximumDataAgeMs` | required positive integer milliseconds |
+| `maximumDataAgeMs` | required positive maximum age of each market’s last Trade/Swap time |
+| `maximumSnapshotAgeMs` | optional positive age of `evaluatedAt`; omitted means no snapshot-age limit |
 
 An omitted JSON `windowMs` becomes `DefaultWindowMS` (60000) before validation
 and persistence. Explicit zero, null, and values above `MaximumWindowMS` (60000)
@@ -172,80 +180,54 @@ decoding validates parameters and rejects unknown fields at every level,
 duplicate field names (including case variants), and missing/null required
 objects. Decode failure leaves the receiver unchanged.
 
-## Result and subscription
+## Result and evaluation
 
-`Result` contains `evaluationId`, the common market type and reference asset
-metadata, `evaluatedAt`, and `markets`. Every requested market has one evaluation:
+`Result` contains `evaluationId`, `marketType`, `symbol`, execution `baseAsset` /
+`quoteAsset` references, `evaluatedAt`, optional consolidated `metrics`, and
+`markets[]`. Each entry contains MarketHub `price` (concrete market reference,
+status, price, quote quantity when available, observation/trade times and fees),
+TradeHub `status`, optional `candidate`, and optional `reasons`. There is no
+per-market copy of historical metrics. An unresolved basket is `markets: []`.
 
-| Status | Metrics | Candidate | Reasons |
-| --- | --- | --- | --- |
-| `matched` | required | required | absent |
-| `not_matched` | required | absent | optional |
-| `unavailable` | optional partial metrics | absent | required |
+Conditions compare the consolidated MarketHub metrics, with inclusive AND bounds.
+Quote volume uses exact decimal-scale comparisons: `{amount:"100",decimals:2}`
+and `{amount:"1000000",decimals:6}` both mean one quote token. Bps comparisons use
+the published rounded decimal values. Missing required metrics produce unavailable
+candidates; missing unused analytics do not block evaluation.
 
-Candidate contains `candidateId`, a positive `revision`, and `expiresAt` after
-the evaluation time. Its market is the parent evaluation's MarketRef. IDs stay
-stable during the same signal activation; new snapshots have new EvaluationIDs.
-The service must implement this lifecycle; the DTOs do not generate these IDs.
+The four condition metrics have MarketHub semantics: price change uses the first
+and last consolidated price points, quote volume sums actual quote quantities,
+trade count counts deduplicated non-canceled events, and buy ratio uses base
+quantities. See the [MarketHub analysis contract](../../markethub/scalping/README.md).
+Additional metrics (trade VWAP, volatility, trend and spread) pass through unchanged.
 
-Metrics include window boundaries, last observation time, and nullable observed
-indicators in the same units as Conditions. Unknown/unavailable observations
-are not filled with zero. All timestamps are UTC Unix milliseconds. Reasons
-are stable codes, for example `data_gap`, `insufficient_history`, `stale_data`,
-`unknown_trade_side`, `unsupported_execution`, or `asset_mapping_unavailable`.
-Observed statistics are not accounting quantities; the engine must establish
-window coverage, asset conversion, numeric precision, and rounding before
-evaluating thresholds.
+Spot and long Perp openings use the buy ranking; short Perp openings use sell.
+`reference`, `vwap`, and `fallback_reference` all remain eligible for condition
+assessment. `unavailable` prices do not produce candidates. These are observations;
+Prepare must verify assets, balances, inventory and executability independently.
 
-The agreed observation contract uses venue/chain transaction time within
-`[evaluatedAt - windowMs, evaluatedAt)`. The start is inclusive and the end is
-exclusive. `lastObservedAt` is the latest valid transaction time in that window;
-receive time and retransmissions do not refresh it. Unknown transaction time
-makes the market unavailable.
+TradeHub consumes signed `InternalApp.MarketHub.Scalping.Subscribe` events at the
+MarketHub stream cadence; it does not poll an HTTP Get API. Transport failures
+withdraw all previous candidates. Reconnection signs a fresh subscription and
+starts a new candidate generation. A single active execution owns its upstream
+connection; MarketHub shares normalized calculations across those connections.
 
-| Metric | Definition |
-| --- | --- |
-| `priceChangeBps` | `10000 * (last window price / first window price - 1)`; unavailable with fewer than two events |
-| `quoteVolume` | Sum of exact Quote quantities, converted to reference atomic units and floored once after summation |
-| `tradeCount` | Deduplicated normalized Trade/Swap event count after cancellations; not necessarily the venue's individual fill count |
-| `buyVolumeRatioBps` | `10000 * buy Base quantity / (buy + sell Base quantity)`; unavailable if any included event has unknown side |
+`maximumDataAgeMs` compares the last event time with the evaluator clock.
+`maximumSnapshotAgeMs`, when present, independently bounds snapshot age.
+An exclusive candidate expiry is the first millisecond outside either configured
+age bound, with saturating integer arithmetic. There is no additional fixed TTL.
+A timer revokes expired candidates even if no further snapshot arrives. MarketHub
+price observation times are preserved and receive no implicit age limit.
 
-Bps are rounded to 18 decimal places using nearest, ties-to-even rounding.
-Thresholds compare the same rounded values published in Metrics. Perp shorts
-retain the Base price direction and buy-side meaning. Unknown metrics are omitted,
-not replaced with zero; unavailable unrequested indicators alone do not prevent
-evaluation of the requested indicators. Missing window coverage, a data gap,
-or inability to compute any requested indicator makes the market unavailable.
+Candidate IDs survive consecutive matches and ranking reordering. Nonmatch,
+unavailability, disappearance from a replacement snapshot, expiry or an upstream
+connection generation change ends an identity. Revisions increase on accepted
+new snapshots. Notifications are complete replacements; consumers must discard
+fields and candidates omitted from a newer event.
 
-MarketHub's initial exact-input adapters are Hyperliquid Trade and Cetus Swap.
-MarketHub tracks subscription readiness, connection generations and observed losses.
-Cetus starts coverage on the first successful upstream notification; Hyperliquid
-Spot starts on the Trade subscription ACK. Neither backdates coverage to a trade time.
-A new or interrupted connection must collect the entire requested window before
-matching. TradeHub reads the signed internal window feed every second and emits
-replacement snapshots, including when no new trades arrive.
-
-The initial connected sources are configured Cetus Spot pools and enabled
-Hyperliquid Spot instruments. Cetus asset IDs/decimals come from its Token catalog;
-Hyperliquid Spot uses metadata `tokenId` and `weiDecimals`, not order size precision.
-Asset identity must match chain/venue, network and identifier. Equivalent Sui Move
-type addresses are normalized; ticker aliases do not establish cross-venue asset
-equivalence. Reversed pairs and unconfigured networks are unavailable. Hyperliquid
-Perp exact trades are retained, but its underlying/reference asset mapping remains
-unavailable until authoritative metadata is connected.
-
-Candidates use inclusive AND comparisons. Their exclusive `expiresAt` is capped
-by two polling intervals (currently 2 seconds), the first millisecond outside
-`maximumDataAgeMs`, and the first known event leaving the window. A matched
-candidate keeps its ID with increasing revisions; a source restart, observation
-interruption, nonmatch, unavailability or expired lease ends that identity.
-`open.executionTtlMs` does not determine candidate expiry.
-
-Use `Result.Validate()` for snapshot invariants and `Result.ValidateFor(params)`
-to additionally check market/asset identity, complete market coverage, requested
-metric presence, and observation age at evaluation. This does not re-evaluate
-the signal or compare expiry against the caller's current clock. Candidate
-selection and Prepare must do fresh execution checks.
+Use `Result.Validate()` for invariants and `ValidateFor(params)` for scope,
+requested metric presence, price mode and configured expiry limits. These checks
+do not establish asset equivalence, simulate execution or select a trade.
 
 The subscription ACK and every event include the Scalping `executionId` and
 `subscriptionKey`. The execution ID survives socket/process restarts; the key
@@ -297,20 +279,17 @@ handle and reports through Errors. Buffer overflow also reports an interruption;
 release that handle before resubscribing. No automatic trading or reconnect is
 performed.
 
-The service composes the MarketHub-backed evaluator. Unknown asset metadata
-initially produces `asset_metadata_unavailable` with `retryable: true`; it never
-invents symbols or decimal counts. Once verified metadata is available, warm-up,
-data gaps, stale observations and unavailable markets appear in replacement
-snapshots. An internal transport failure withdraws previous candidates and is
-retried. The stream stays open through these temporary failures.
+The service admits up to 64 resolved markets and 256 active evaluator subscriptions
+per TradeHub process. Missing catalog mappings produce no executable candidates.
+Cetus configured Spot pools have asset metadata; Hyperliquid Perp mappings remain
+unavailable. Hyperliquid Spot aliases must not be treated as token identity proof.
 
-The initial server admits up to 64 markets per subscription and 256 evaluator
-subscriptions per TradeHub process, with 16 concurrent internal reads. Polling
-is not a guarantee of detecting every intra-second threshold crossing. Agent
-selection, inventory reservation, Prepare, local signing, Submit and OMS recording
-remain separate execution work. This feed neither prepares nor submits orders.
-Deploy the MarketHub and TradeHub service changes together; no new public SDK
-request/result fields or database migrations are required by this connection.
+Saved settings use configuration version 2 in the existing database column.
+Version 1 rows remain intact but cannot resume: create a new execution with a new
+idempotency key. No migration converts legacy settings. Deploy the updated SDK,
+Gateway, CRM, MarketHub and TradeHub together. The former internal
+`ExecutionWindow.Get` operation has been removed; Aggregator window storage and
+aggregation remain shared by MarketHub analytics.
 
 ## Verification
 

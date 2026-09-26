@@ -13,6 +13,7 @@ import (
 // ExampleSubscribeParams builds a Spot request without signing or placing an order.
 //
 // Version:
+//   - 2026-09-26: Resolve observation markets from symbol and target scope.
 //   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
 //   - 2026-09-24: Use the default observation window constant for Go requests.
 //   - 2026-09-24: Encode an idempotent subscription start.
@@ -22,10 +23,10 @@ func ExampleSubscribeParams() {
 	market := rule.MarketRef{Venue: "cetus", Network: "mainnet", Chain: "sui", PoolID: "POOL_ID"}
 	slippage, count := uint64(100), uint64(10)
 	p := scalping.Params{
-		MarketType: sdkMarket.MarketTypeSpot,
+		MarketType: sdkMarket.MarketTypeSpot, Symbol: "SUI/USDC",
 		BaseAsset:  rule.AssetRef{Chain: "sui", Network: "mainnet", AssetID: "0x2::sui::SUI"},
 		QuoteAsset: rule.AssetRef{Chain: "sui", Network: "mainnet", AssetID: "USDC_COIN_TYPE"},
-		Markets:    []rule.MarketRef{market},
+		Markets:    []sdkMarket.MarketTarget{{Venue: "cetus", Network: "mainnet", Chain: "sui"}},
 		Conditions: scalping.Conditions{WindowMS: scalping.DefaultWindowMS, MaximumDataAgeMS: 2000, TradeCount: &scalping.CountRange{Minimum: &count}},
 		ExecutionRule: rule.Rule{
 			Open:  rule.OpenRule{Spot: &rule.SpotOpenRule{Amount: "1000000"}, MaximumSlippageBPS: &slippage, ExecutionTTLMS: 30000},

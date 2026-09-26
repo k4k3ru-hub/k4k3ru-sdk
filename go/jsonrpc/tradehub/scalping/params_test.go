@@ -16,10 +16,10 @@ func pointer[T any](value T) *T { return &value }
 
 func spotParams() Params {
 	return Params{
-		MarketType: market.MarketTypeSpot,
+		MarketType: market.MarketTypeSpot, Symbol: "SUI/USDC",
 		BaseAsset:  rule.AssetRef{Chain: "sui", Network: "mainnet", AssetID: "0x2::sui::SUI"},
 		QuoteAsset: rule.AssetRef{Chain: "sui", Network: "mainnet", AssetID: "usdc-asset-id"},
-		Markets:    []rule.MarketRef{{Venue: "cetus", Chain: "sui", Network: "mainnet", PoolID: "sui-usdc-pool"}},
+		Markets:    []market.MarketTarget{{Venue: "cetus", Chain: "sui", Network: "mainnet", PoolID: "sui-usdc-pool"}},
 		Conditions: Conditions{WindowMS: 30000, MaximumDataAgeMS: 2000, TradeCount: &CountRange{Minimum: pointer(uint64(3))}},
 		ExecutionRule: rule.Rule{
 			Open:  rule.OpenRule{Spot: &rule.SpotOpenRule{Amount: "1000000"}, LimitPrice: pointer("2"), MaximumSlippageBPS: pointer(uint64(0)), ExecutionTTLMS: 30000},
@@ -31,7 +31,7 @@ func spotParams() Params {
 func perpParams() Params {
 	p := spotParams()
 	p.MarketType = market.MarketTypePerpetual
-	p.Markets = []rule.MarketRef{{Venue: "hyperliquid", Network: "mainnet", VenueSymbol: "SUI"}}
+	p.Markets = []market.MarketTarget{{Venue: "hyperliquid", Network: "mainnet", VenueSymbol: "SUI"}}
 	p.ExecutionRule.Open.Spot = nil
 	p.ExecutionRule.Open.Perp = &rule.PerpOpenRule{Side: rule.PositionSideShort, Quantity: "1000000000", Leverage: 1, MarginMode: rule.MarginModeIsolated}
 	p.ExecutionRule.Close.Spot = nil
@@ -43,6 +43,7 @@ func perpParams() Params {
 // TestParamsRoundTrip verifies both market types and explicit zero slippage.
 //
 // Version:
+//   - 2026-09-26: Use symbol-scoped observations and scaled volume bounds.
 //   - 2026-09-23: Added.
 func TestParamsRoundTrip(t *testing.T) {
 	for _, p := range []Params{spotParams(), perpParams()} {
@@ -70,6 +71,7 @@ func TestParamsRoundTrip(t *testing.T) {
 //
 // Version:
 //   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
+//   - 2026-09-26: Use symbol-scoped observations and scaled volume bounds.
 //   - 2026-09-23: Added.
 func TestParamsValidation(t *testing.T) {
 	tests := map[string]func(*Params){
@@ -93,7 +95,9 @@ func TestParamsValidation(t *testing.T) {
 		"invalid price":     func(p *Params) { p.ExecutionRule.Close.TakeProfit.Value = "NaN" },
 		"no threshold":      func(p *Params) { p.Conditions.TradeCount = nil },
 		"empty range":       func(p *Params) { p.Conditions.PriceChangeBPS = &DecimalRange{} },
-		"fractional volume": func(p *Params) { p.Conditions.QuoteVolume = &IntegerRange{Minimum: pointer("0.5")} },
+		"fractional volume": func(p *Params) {
+			p.Conditions.QuoteVolume = &QuantityRange{Minimum: &market.Quantity{Amount: "0.5", Decimals: 6}}
+		},
 		"reversed exact range": func(p *Params) {
 			p.Conditions.PriceChangeBPS = &DecimalRange{Minimum: pointer("9007199254740993"), Maximum: pointer("9007199254740992")}
 		},
@@ -136,6 +140,7 @@ func TestParamsValidation(t *testing.T) {
 // TestParamsJSONRejectsOverrides verifies required objects and immutable failures.
 //
 // Version:
+//   - 2026-09-26: Use symbol-scoped observations and scaled volume bounds.
 //   - 2026-09-23: Added.
 func TestParamsJSONRejectsOverrides(t *testing.T) {
 	data, err := json.Marshal(spotParams())
@@ -187,6 +192,7 @@ func TestParamsJSONRejectsOverrides(t *testing.T) {
 //
 // Version:
 //   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
+//   - 2026-09-26: Use symbol-scoped observations and scaled volume bounds.
 //   - 2026-09-23: Added.
 func TestNormalizeDoesNotAlias(t *testing.T) {
 	p := spotParams()

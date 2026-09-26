@@ -2,6 +2,7 @@ package scalping
 
 import (
 	market "github.com/k4k3ru-hub/k4k3ru-sdk/go/finance/market"
+	observations "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/scalping"
 	rule "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/executionrule"
 )
 
@@ -20,34 +21,25 @@ type AssetMetadata struct {
 }
 
 type Result struct {
-	EvaluationID string             `json:"evaluationId"`
-	MarketType   market.MarketType  `json:"marketType"`
-	BaseAsset    AssetMetadata      `json:"baseAsset"`
-	QuoteAsset   AssetMetadata      `json:"quoteAsset"`
-	EvaluatedAt  int64              `json:"evaluatedAt"`
-	Markets      []MarketEvaluation `json:"markets"`
+	EvaluationID string                `json:"evaluationId"`
+	MarketType   market.MarketType     `json:"marketType"`
+	Symbol       market.Symbol         `json:"symbol"`
+	BaseAsset    rule.AssetRef         `json:"baseAsset"`
+	QuoteAsset   rule.AssetRef         `json:"quoteAsset"`
+	EvaluatedAt  int64                 `json:"evaluatedAt"`
+	Metrics      *observations.Metrics `json:"metrics,omitempty"`
+	Markets      []MarketEvaluation    `json:"markets"`
 }
 
 type MarketEvaluation struct {
-	Market    rule.MarketRef   `json:"market"`
-	Status    EvaluationStatus `json:"status"`
-	Metrics   *Metrics         `json:"metrics,omitempty"`
-	Candidate *Candidate       `json:"candidate,omitempty"`
-	Reasons   []string         `json:"reasons,omitempty"`
+	Price     observations.MarketPrice `json:"price"`
+	Status    EvaluationStatus         `json:"status"`
+	Candidate *Candidate               `json:"candidate,omitempty"`
+	Reasons   []string                 `json:"reasons,omitempty"`
 }
 
 type Candidate struct {
 	CandidateID string `json:"candidateId"`
 	Revision    uint64 `json:"revision"`
 	ExpiresAt   int64  `json:"expiresAt"`
-}
-
-type Metrics struct {
-	WindowStart       int64   `json:"windowStart"`
-	WindowEnd         int64   `json:"windowEnd"`
-	LastObservedAt    int64   `json:"lastObservedAt"`
-	PriceChangeBPS    *string `json:"priceChangeBps,omitempty"`
-	QuoteVolume       *string `json:"quoteVolume,omitempty"`
-	TradeCount        *uint64 `json:"tradeCount,omitempty"`
-	BuyVolumeRatioBPS *string `json:"buyVolumeRatioBps,omitempty"`
 }

@@ -8,18 +8,18 @@ import (
 
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/apperror"
 	market "github.com/k4k3ru-hub/k4k3ru-sdk/go/finance/market"
+	observations "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/scalping"
 )
 
 func matchedResult() Result {
 	p := spotParams()
 	const now int64 = 1700000030000
 	return Result{
-		EvaluationID: "evaluation-1", MarketType: p.MarketType, EvaluatedAt: now,
-		BaseAsset:  AssetMetadata{Reference: p.BaseAsset, Symbol: "SUI", Decimals: 9},
-		QuoteAsset: AssetMetadata{Reference: p.QuoteAsset, Symbol: "USDC", Decimals: 6},
-		Markets: []MarketEvaluation{{Market: p.Markets[0], Status: EvaluationStatusMatched,
-			Metrics:   &Metrics{WindowStart: now - 30000, WindowEnd: now, LastObservedAt: now - 100, TradeCount: pointer(uint64(10))},
-			Candidate: &Candidate{CandidateID: "candidate-1", Revision: 1, ExpiresAt: now + 2000},
+		EvaluationID: "evaluation-1", MarketType: p.MarketType, Symbol: p.Symbol, EvaluatedAt: now,
+		BaseAsset: p.BaseAsset, QuoteAsset: p.QuoteAsset,
+		Metrics: &observations.Metrics{TradeCount: pointer(uint64(10))},
+		Markets: []MarketEvaluation{{Price: observations.MarketPrice{Market: market.MarketRef(p.Markets[0]), Status: observations.PriceStatusReference, Price: pointer("2"), ObservedAt: pointer(now - 100), LastTradeAt: pointer(now - 100)}, Status: EvaluationStatusMatched,
+			Candidate: &Candidate{CandidateID: "candidate-1", Revision: 1, ExpiresAt: now + 1901},
 		}},
 	}
 }
@@ -27,6 +27,7 @@ func matchedResult() Result {
 // TestResultStates verifies eligible, unmatched, and unavailable snapshots.
 //
 // Version:
+//   - 2026-09-26: Validate consolidated metrics and concrete price candidates.
 //   - 2026-09-23: Added.
 func TestResultStates(t *testing.T) {
 	for _, status := range []EvaluationStatus{EvaluationStatusMatched, EvaluationStatusNotMatched, EvaluationStatusUnavailable} {
@@ -37,7 +38,7 @@ func TestResultStates(t *testing.T) {
 			e.Candidate = nil
 		}
 		if status == EvaluationStatusUnavailable {
-			e.Metrics = nil
+			r.Metrics = nil
 			e.Reasons = []string{"data_gap"}
 		}
 		if err := r.ValidateFor(spotParams()); err != nil {
@@ -60,6 +61,7 @@ func TestResultStates(t *testing.T) {
 // TestResultRejectsInvalidCandidates verifies candidate identity and availability.
 //
 // Version:
+//   - 2026-09-26: Validate consolidated metrics and concrete price candidates.
 //   - 2026-09-23: Added.
 func TestResultRejectsInvalidCandidates(t *testing.T) {
 	tests := map[string]func(*Result){
@@ -72,15 +74,15 @@ func TestResultRejectsInvalidCandidates(t *testing.T) {
 		},
 		"unmatched candidate":        func(r *Result) { r.Markets[0].Status = EvaluationStatusNotMatched },
 		"unavailable without reason": func(r *Result) { r.Markets[0].Status = EvaluationStatusUnavailable; r.Markets[0].Candidate = nil },
-		"future observation":         func(r *Result) { r.Markets[0].Metrics.LastObservedAt = r.EvaluatedAt + 1 },
-		"invalid window":             func(r *Result) { r.Markets[0].Metrics.WindowStart = r.Markets[0].Metrics.WindowEnd },
-		"missing metrics":            func(r *Result) { r.Markets[0].Metrics = nil },
-		"empty metrics":              func(r *Result) { r.Markets[0].Metrics.TradeCount = nil },
-		"fractional raw volume":      func(r *Result) { r.Markets[0].Metrics.QuoteVolume = pointer("0.1") },
-		"invalid ratio":              func(r *Result) { r.Markets[0].Metrics.BuyVolumeRatioBPS = pointer("10001") },
+		"future observation":         func(r *Result) { r.Markets[0].Price.LastTradeAt = pointer(r.EvaluatedAt + 1) },
+		"invalid price":              func(r *Result) { r.Markets[0].Price.Price = pointer("0") },
+		"missing metrics":            func(r *Result) { r.Metrics = nil },
+		"empty metrics":              func(r *Result) { r.Metrics.TradeCount = nil },
+		"fractional raw volume":      func(r *Result) { r.Metrics.QuoteVolume = &market.Quantity{Amount: "0.1", Decimals: 6} },
+		"invalid ratio":              func(r *Result) { r.Metrics.BuyVolumeRatioBPS = pointer("10001") },
 		"duplicate candidate": func(r *Result) {
 			other := r.Markets[0]
-			other.Market.PoolID = "another-pool"
+			other.Price.Market.PoolID = "another-pool"
 			r.Markets = append(r.Markets, other)
 		},
 		"empty markets": func(r *Result) { r.Markets = nil },
@@ -95,7 +97,7 @@ func TestResultRejectsInvalidCandidates(t *testing.T) {
 		})
 	}
 	r := matchedResult()
-	r.Markets[0].Metrics.TradeCount = pointer(uint64(0))
+	r.Metrics.TradeCount = pointer(uint64(0))
 	r.Markets[0].Status = EvaluationStatusNotMatched
 	r.Markets[0].Candidate = nil
 	if err := r.Validate(); err != nil {
@@ -107,24 +109,25 @@ func TestResultRejectsInvalidCandidates(t *testing.T) {
 //
 // Version:
 //   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
+//   - 2026-09-26: Validate consolidated metrics and concrete price candidates.
 //   - 2026-09-23: Added.
 func TestResultMatchesRequest(t *testing.T) {
 	normalized := matchedResult()
 	normalized.MarketType = " SPOT "
-	normalized.BaseAsset.Reference.Chain = " SUI "
-	normalized.Markets[0].Market.Venue = " CETUS "
+	normalized.BaseAsset.Chain = " SUI "
+	normalized.Markets[0].Price.Market.Venue = " CETUS "
 	if err := normalized.ValidateFor(spotParams()); err != nil {
 		t.Fatal("equivalent references rejected:", err)
 	}
 	for name, mutate := range map[string]func(*Result){
 		"wrong market type":     func(r *Result) { r.MarketType = market.MarketTypePerpetual },
-		"wrong reference asset": func(r *Result) { r.BaseAsset.Reference.AssetID = "other-token" },
-		"wrong pool":            func(r *Result) { r.Markets[0].Market.PoolID = "other-pool" },
+		"wrong reference asset": func(r *Result) { r.BaseAsset.AssetID = "other-token" },
+		"wrong pool":            func(r *Result) { r.Markets[0].Price.Market.PoolID = "other-pool" },
 		"missing requested metric": func(r *Result) {
-			r.Markets[0].Metrics.TradeCount = nil
-			r.Markets[0].Metrics.PriceChangeBPS = pointer("1")
+			r.Metrics.TradeCount = nil
+			r.Metrics.PriceChangeBPS = pointer("1")
 		},
-		"stale data": func(r *Result) { r.Markets[0].Metrics.LastObservedAt = r.EvaluatedAt - 2001 },
+		"stale data": func(r *Result) { r.Markets[0].Price.LastTradeAt = pointer(r.EvaluatedAt - 2001) },
 	} {
 		t.Run(name, func(t *testing.T) {
 			r := matchedResult()
@@ -139,6 +142,7 @@ func TestResultMatchesRequest(t *testing.T) {
 // TestMetadataRequiresDecimalCount distinguishes missing metadata from zero decimals.
 //
 // Version:
+//   - 2026-09-26: Validate consolidated metrics and concrete price candidates.
 //   - 2026-09-23: Added.
 func TestMetadataRequiresDecimalCount(t *testing.T) {
 	for _, value := range []string{``, `,"decimals":null`, `,"decimals":256`} {
@@ -158,6 +162,7 @@ func TestMetadataRequiresDecimalCount(t *testing.T) {
 //
 // Version:
 //   - 2026-09-24: Include the durable execution reference.
+//   - 2026-09-26: Validate consolidated metrics and concrete price candidates.
 //   - 2026-09-23: Added.
 func TestSubscriptionEvents(t *testing.T) {
 	r := matchedResult()

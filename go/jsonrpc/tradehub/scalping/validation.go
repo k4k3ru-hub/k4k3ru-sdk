@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/k4k3ru-hub/k4k3ru-sdk/go/finance/market"
+	observations "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/scalping"
+
 	rule "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/executionrule"
 	v "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/internal/validation"
 )
@@ -11,13 +14,15 @@ import (
 // Normalize returns independent canonical parameters without adding defaults.
 //
 // Version:
+//   - 2026-09-26: Normalize shared observation targets and explicit scaled quantities.
 //   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
 //   - 2026-09-23: Added.
 func (p Params) Normalize() Params {
 	p.MarketType = p.MarketType.Normalize()
 	p.BaseAsset = p.BaseAsset.Normalize()
 	p.QuoteAsset = p.QuoteAsset.Normalize()
-	p.Markets = rule.NormalizeMarkets(p.Markets)
+	observation := p.ObservationParams().Normalize()
+	p.Symbol, p.Markets, p.BaseQuantity = observation.Symbol, observation.Markets, observation.BaseQuantity
 	p.Conditions = p.Conditions.Normalize()
 	p.ExecutionRule = p.ExecutionRule.Normalize()
 	return p
@@ -27,6 +32,7 @@ func (p Params) Normalize() Params {
 // Asset equivalence, market metadata, and executable inventory need server checks.
 //
 // Version:
+//   - 2026-09-26: Validate single-symbol observations and shared market targets.
 //   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
 //   - 2026-09-24: Enforce the maximum observation window through Conditions validation.
 //   - 2026-09-23: Added.
@@ -44,7 +50,7 @@ func (p Params) Validate() error {
 	if p.BaseAsset == p.QuoteAsset {
 		return v.Invalid("validate scalping parameters", "asset_pair", "invalid")
 	}
-	if err := rule.ValidateMarkets(p.Markets); err != nil {
+	if err := p.ObservationParams().Validate(); err != nil {
 		return fmt.Errorf("failed to validate scalping parameters: %w", err)
 	}
 	if err := p.Conditions.Validate(); err != nil {
@@ -59,6 +65,7 @@ func (p Params) Validate() error {
 // UnmarshalJSON decodes and validates parameters, rejecting unknown fields.
 //
 // Version:
+//   - 2026-09-26: Require an explicit observation symbol.
 //   - 2026-09-24: Resolve omitted observation windows while rejecting explicit invalid values.
 //   - 2026-09-23: Added.
 func (p *Params) UnmarshalJSON(data []byte) error {
@@ -67,7 +74,7 @@ func (p *Params) UnmarshalJSON(data []byte) error {
 	}
 	type wire Params
 	var decoded wire
-	if err := v.Decode(data, &decoded, "marketType", "baseAsset", "quoteAsset", "markets", "conditions", "executionRule"); err != nil {
+	if err := v.Decode(data, &decoded, "marketType", "symbol", "baseAsset", "quoteAsset", "markets", "conditions", "executionRule"); err != nil {
 		return fmt.Errorf("failed to decode scalping parameters: %w", err)
 	}
 	value := Params(decoded).Normalize()
@@ -82,6 +89,7 @@ func (p *Params) UnmarshalJSON(data []byte) error {
 // Null and zero windows are rejected. Decode failure leaves the receiver unchanged.
 //
 // Version:
+//   - 2026-09-26: Accept optional snapshot age and scaled volume conditions.
 //   - 2026-09-24: Added.
 func (c *Conditions) UnmarshalJSON(data []byte) error {
 	const op = "decode scalping conditions"
@@ -114,12 +122,14 @@ func (c *Conditions) UnmarshalJSON(data []byte) error {
 // Normalize copies all optional condition bounds without supplying thresholds.
 //
 // Version:
+//   - 2026-09-26: Preserve explicit quantity scales and optional snapshot age.
 //   - 2026-09-23: Added.
 func (c Conditions) Normalize() Conditions {
 	c.PriceChangeBPS = normalizeDecimalRange(c.PriceChangeBPS)
 	c.BuyVolumeRatioBPS = normalizeDecimalRange(c.BuyVolumeRatioBPS)
+	c.MaximumSnapshotAgeMS = v.Pointer(c.MaximumSnapshotAgeMS)
 	if c.QuoteVolume != nil {
-		c.QuoteVolume = &IntegerRange{Minimum: v.StringPointer(c.QuoteVolume.Minimum), Maximum: v.StringPointer(c.QuoteVolume.Maximum)}
+		c.QuoteVolume = &QuantityRange{Minimum: v.Pointer(c.QuoteVolume.Minimum), Maximum: v.Pointer(c.QuoteVolume.Maximum)}
 	}
 	if c.TradeCount != nil {
 		c.TradeCount = &CountRange{Minimum: v.Pointer(c.TradeCount.Minimum), Maximum: v.Pointer(c.TradeCount.Maximum)}
@@ -137,6 +147,7 @@ func normalizeDecimalRange(r *DecimalRange) *DecimalRange {
 // Validate validates the observation window and explicit AND condition bounds.
 //
 // Version:
+//   - 2026-09-26: Compare quantity bounds across scales and default to no snapshot age limit.
 //   - 2026-09-24: Limit explicit windows to 1 through MaximumWindowMS milliseconds.
 //   - 2026-09-23: Added.
 func (c Conditions) Validate() error {
@@ -151,6 +162,9 @@ func (c Conditions) Validate() error {
 	if c.MaximumDataAgeMS == 0 {
 		return v.Invalid(op, "maximum_data_age_ms", "empty")
 	}
+	if c.MaximumSnapshotAgeMS != nil && *c.MaximumSnapshotAgeMS == 0 {
+		return v.Invalid(op, "maximum_snapshot_age_ms", "empty")
+	}
 	if c.PriceChangeBPS == nil && c.QuoteVolume == nil && c.TradeCount == nil && c.BuyVolumeRatioBPS == nil {
 		return v.Invalid(op, "conditions", "empty")
 	}
@@ -160,7 +174,7 @@ func (c Conditions) Validate() error {
 		}
 	}
 	if r := c.QuoteVolume; r != nil {
-		if err := validateRange(op, "quote_volume", r.Minimum, r.Maximum, true, false, nil); err != nil {
+		if err := r.Validate(); err != nil {
 			return err
 		}
 	}
@@ -178,6 +192,41 @@ func (c Conditions) Validate() error {
 		}
 	}
 	return nil
+}
+
+// ObservationParams returns market-data inputs without converting an execution's input amount.
+//
+// Version:
+//   - 2026-09-26: Added.
+func (p Params) ObservationParams() observations.Params {
+	return observations.Params{MarketType: p.MarketType, Symbol: p.Symbol, Markets: p.Markets, WindowMS: p.Conditions.WindowMS, BaseQuantity: p.BaseQuantity}
+}
+
+// Validate compares nonnegative volume bounds exactly across their decimal scales.
+//
+// Version:
+//   - 2026-09-26: Added.
+func (r QuantityRange) Validate() error {
+	const op = "validate scalping quantity range"
+	if r.Minimum == nil && r.Maximum == nil {
+		return v.Invalid(op, "quantity_range", "empty")
+	}
+	for _, bound := range []*market.Quantity{r.Minimum, r.Maximum} {
+		if bound != nil {
+			if err := bound.Validate(); err != nil {
+				return fmt.Errorf("failed to validate scalping quantity range: %w", err)
+			}
+		}
+	}
+	if r.Minimum != nil && r.Maximum != nil && scaledQuantity(*r.Minimum).Cmp(scaledQuantity(*r.Maximum)) > 0 {
+		return v.Invalid(op, "quantity_range", "out_of_range")
+	}
+	return nil
+}
+
+func scaledQuantity(q market.Quantity) *big.Rat {
+	n, _ := new(big.Int).SetString(q.Amount, 10)
+	return new(big.Rat).SetFrac(n, new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(q.Decimals)), nil))
 }
 
 func validateRange(op, field string, minimum, maximum *string, integer, signed bool, upper *big.Rat) error {
