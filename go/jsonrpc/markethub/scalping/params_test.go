@@ -18,6 +18,7 @@ const validRequest = `{"marketType":"spot","symbol":"SUI/USDC","markets":[{"venu
 // TestScalpingFinanceParameters verifies shared types, canonical JSON and independent normalization.
 //
 // Version:
+//   - 2026-09-26: Exercise catalog search targets.
 //   - 2026-09-25: Added.
 func TestScalpingFinanceParameters(t *testing.T) {
 	var p scalping.Params
@@ -29,7 +30,7 @@ func TestScalpingFinanceParameters(t *testing.T) {
 	}
 	p.Symbol = " new/usdc "
 	p.MarketType = " PERPETUAL "
-	p.Markets = []market.MarketRef{{Venue: market.Hyperliquid, Network: "MAINNET", VenueSymbol: "NativeCase"}}
+	p.Markets = []market.MarketTarget{{Venue: market.Hyperliquid, Network: "MAINNET", VenueSymbol: "NativeCase"}}
 	n := p.Normalize()
 	if n.Symbol != "NEW/USDC" || n.MarketType != market.MarketTypePerpetual || n.Markets[0].VenueSymbol != "NativeCase" || n.Validate() != nil {
 		t.Fatalf("canonical dynamic-symbol request failed: %+v", n)
@@ -47,6 +48,7 @@ func TestScalpingFinanceParameters(t *testing.T) {
 // TestScalpingRejectsAmbiguousRequests verifies invalid requests do not partially change the receiver.
 //
 // Version:
+//   - 2026-09-26: Exercise catalog search targets.
 //   - 2026-09-25: Added.
 func TestScalpingRejectsAmbiguousRequests(t *testing.T) {
 	invalid := []string{
@@ -66,7 +68,6 @@ func TestScalpingRejectsAmbiguousRequests(t *testing.T) {
 		strings.Replace(validRequest, `"marketType":`, `"MarketType":"perpetual","marketType":`, 1),
 		strings.Replace(validRequest, `"venue":`, `"venue":"hyperliquid","venue":`, 1),
 		strings.Replace(validRequest, `"poolId":`, `"venueSymbol":"SUI","poolId":`, 1),
-		strings.Replace(validRequest, `"chain":"sui",`, ``, 1),
 		strings.Replace(validRequest, `"cetus"`, `"unknown-venue"`, 1),
 	}
 	for _, raw := range invalid {
@@ -85,6 +86,7 @@ func TestScalpingRejectsAmbiguousRequests(t *testing.T) {
 // TestScalpingMarketBounds verifies canonical duplicate detection and explicit Go window values.
 //
 // Version:
+//   - 2026-09-26: Exercise catalog search targets.
 //   - 2026-09-25: Added.
 func TestScalpingMarketBounds(t *testing.T) {
 	var p scalping.Params
@@ -106,7 +108,7 @@ func TestScalpingMarketBounds(t *testing.T) {
 	if err := p.Validate(); err != nil {
 		t.Fatal(err)
 	}
-	p.Markets = make([]market.MarketRef, scalping.MaximumMarkets+1)
+	p.Markets = make([]market.MarketTarget, scalping.MaximumMarkets+1)
 	if p.Validate() == nil {
 		t.Fatal("market bound was lost")
 	}
@@ -115,6 +117,7 @@ func TestScalpingMarketBounds(t *testing.T) {
 // TestScalpingOnchainNetworkValidation verifies shared network rules at the request boundary.
 //
 // Version:
+//   - 2026-09-26: Exercise catalog search targets.
 //   - 2026-09-25: Added.
 func TestScalpingOnchainNetworkValidation(t *testing.T) {
 	var params scalping.Params

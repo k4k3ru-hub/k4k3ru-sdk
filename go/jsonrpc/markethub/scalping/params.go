@@ -18,21 +18,27 @@ const (
 )
 
 type Params struct {
-	MarketType market.MarketType  `json:"marketType"`
-	Symbol     market.Symbol      `json:"symbol"`
-	WindowMS   uint64             `json:"windowMs"`
-	Markets    []market.MarketRef `json:"markets"`
+	MarketType   market.MarketType     `json:"marketType"`
+	Symbol       market.Symbol         `json:"symbol"`
+	WindowMS     uint64                `json:"windowMs"`
+	Markets      []market.MarketTarget `json:"markets"`
+	BaseQuantity *market.Quantity      `json:"baseQuantity,omitempty"`
 }
 
 // Normalize returns independent canonical parameters without defaulting explicit zeros.
 //
 // Version:
+//   - 2026-09-26: Support catalog targets and optional scaled base quantity.
 //   - 2026-09-25: Added.
 func (p Params) Normalize() Params {
 	p.MarketType = p.MarketType.Normalize()
 	p.Symbol = market.Symbol(strings.ToUpper(strings.TrimSpace(string(p.Symbol))))
+	if p.BaseQuantity != nil {
+		quantity := *p.BaseQuantity
+		p.BaseQuantity = &quantity
+	}
 	if p.Markets != nil {
-		p.Markets = append([]market.MarketRef{}, p.Markets...)
+		p.Markets = append([]market.MarketTarget{}, p.Markets...)
 		for i := range p.Markets {
 			p.Markets[i] = p.Markets[i].Normalize()
 		}
@@ -44,6 +50,7 @@ func (p Params) Normalize() Params {
 // The server must verify each market's symbol, assets, metadata and data quality.
 //
 // Version:
+//   - 2026-09-26: Support catalog targets and optional scaled base quantity.
 //   - 2026-09-25: Added.
 func (p Params) Validate() error {
 	p = p.Normalize()
@@ -69,7 +76,15 @@ func (p Params) Validate() error {
 	if len(p.Markets) > MaximumMarkets {
 		return invalid("markets", "too_long")
 	}
-	seen := make(map[market.MarketRef]bool, len(p.Markets))
+	if p.BaseQuantity != nil {
+		if err := p.BaseQuantity.Validate(); err != nil {
+			return fmt.Errorf("failed to validate scalping observations: %w", err)
+		}
+		if strings.Trim(p.BaseQuantity.Amount, "0") == "" {
+			return invalid("base_quantity", "out_of_range")
+		}
+	}
+	seen := make(map[market.MarketTarget]bool, len(p.Markets))
 	for i, reference := range p.Markets {
 		if err := reference.Validate(); err != nil {
 			return fmt.Errorf("failed to validate scalping observations: %w: market_index=%d", err, i)
@@ -86,6 +101,7 @@ func (p Params) Validate() error {
 // Decode failure leaves the receiver unchanged.
 //
 // Version:
+//   - 2026-09-26: Support catalog targets and optional scaled base quantity.
 //   - 2026-09-25: Added.
 func (p *Params) UnmarshalJSON(data []byte) error {
 	if p == nil {
