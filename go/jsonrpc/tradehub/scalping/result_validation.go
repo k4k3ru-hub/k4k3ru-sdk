@@ -130,21 +130,24 @@ func validateEvaluation(e MarketEvaluation, at int64) error {
 			return v.Invalid(op, "price", "out_of_range")
 		}
 	case observations.PriceStatusUnavailable:
-		if e.Price.Price != nil || e.Price.QuoteQuantity != nil || e.Price.Fees != nil {
+		if e.Price.Price != nil || e.Price.ReceiveQuantity != nil || e.Price.Fees != nil {
 			return v.Invalid(op, "unavailable_price", "invalid")
 		}
 	default:
 		return v.Invalid(op, "price_status", "invalid")
 	}
-	if e.Price.QuoteQuantity != nil {
-		if err := e.Price.QuoteQuantity.Validate(); err != nil {
+	if e.Price.ReceiveQuantity != nil {
+		if err := e.Price.ReceiveQuantity.Validate(); err != nil {
 			return fmt.Errorf("failed to validate market evaluation: %w", err)
 		}
 	}
-	if e.Price.Status == observations.PriceStatusVWAP && e.Price.QuoteQuantity == nil {
-		return v.Invalid(op, "quote_quantity", "null")
+	if e.Price.ReceiveQuantity != nil && strings.Trim(e.Price.ReceiveQuantity.Amount, "0") == "" {
+		return v.Invalid(op, "receive_quantity", "out_of_range")
 	}
-	if e.Price.Status != observations.PriceStatusVWAP && (e.Price.QuoteQuantity != nil || e.Price.Fees != nil) {
+	if e.Price.Status == observations.PriceStatusVWAP && e.Price.ReceiveQuantity == nil {
+		return v.Invalid(op, "receive_quantity", "null")
+	}
+	if e.Price.Status != observations.PriceStatusVWAP && (e.Price.ReceiveQuantity != nil || e.Price.Fees != nil) {
 		return v.Invalid(op, "reference_quantity", "invalid")
 	}
 	for _, timestamp := range []*int64{e.Price.ObservedAt, e.Price.LastTradeAt} {
@@ -291,7 +294,12 @@ func (r Result) ValidateFor(params Params) error {
 		if !found {
 			return v.Invalid(op, "market", "invalid")
 		}
-		if params.BaseQuantity == nil && (e.Price.Status == observations.PriceStatusVWAP || e.Price.Status == observations.PriceStatusFallbackReference) || params.BaseQuantity != nil && e.Price.Status == observations.PriceStatusReference {
+		side := params.Buy
+		if params.ExecutionRule.Open.Perp != nil && params.ExecutionRule.Open.Perp.Side == rule.PositionSideShort {
+			side = params.Sell
+		}
+		hasQuantity := side != nil && side.Quantity != nil
+		if !hasQuantity && (e.Price.Status == observations.PriceStatusVWAP || e.Price.Status == observations.PriceStatusFallbackReference) || hasQuantity && e.Price.Status == observations.PriceStatusReference {
 			return v.Invalid(op, "price_status", "invalid")
 		}
 		if e.Status == EvaluationStatusUnavailable {

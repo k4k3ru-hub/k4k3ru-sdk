@@ -36,7 +36,7 @@ type UnsubscribeResult struct {
 // The opaque key is not an authorization token or a durable execution identifier.
 //
 // Version:
-//   - 2026-09-26: Added.
+//   - 2026-09-26: Identify independent directional inputs and canonical empty sides.
 func (p Params) SubscriptionKey() (string, error) {
 	p = p.Normalize()
 	if err := p.Validate(); err != nil {
@@ -51,8 +51,10 @@ func (p Params) SubscriptionKey() (string, error) {
 		}
 		return false
 	})
-	if p.BaseQuantity != nil {
-		p.BaseQuantity.Amount = strings.TrimLeft(p.BaseQuantity.Amount, "0")
+	for _, side := range []*SideParams{p.Buy, p.Sell} {
+		if side != nil && side.Quantity != nil {
+			side.Quantity.Amount = strings.TrimLeft(side.Quantity.Amount, "0")
+		}
 	}
 	b, err := json.Marshal(p)
 	if err != nil {

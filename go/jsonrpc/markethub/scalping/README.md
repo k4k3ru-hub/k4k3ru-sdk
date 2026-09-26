@@ -4,7 +4,8 @@ This package owns the request, snapshot and subscription DTOs for MarketHub
 Scalping. The SDK supports `MarketHub.Scalping.Subscribe` and
 `MarketHub.Scalping.Unsubscribe` through `websocket.Module.MarketHubScalping()`.
 Deploy the corresponding Gateway and MarketHub server changes together. Public
-`MarketHub.Scalping.Get` and the TradeHub internal-feed migration remain separate steps.
+`MarketHub.Scalping.Get` remains a separate step. TradeHub uses the internal
+MarketHub Subscribe feed.
 
 ```go
 import (
@@ -56,14 +57,23 @@ decimals, symbol matching, data quality and venue capabilities must be resolved
 by the service; the SDK does not infer them from the symbol string. Request
 validation alone does not establish observation availability.
 
-`baseQuantity` optionally requests local quantity-aware current pricing:
-`{"amount":"1000000000","decimals":9}` means one Base token. Both fields
-must be present when an object is supplied. Amount is a positive unsigned
-integer string, at most 384 characters; decimals is an integer from 0 to 255.
-Omitted/null quantity disables quantity-based calculations. Historical metrics
-do not depend on this input. Quantity values in results may be zero.
-There are no execution rules, trading thresholds or order IDs in these
-observation parameters. Existing TradeHub settings remain separate.
+Optional `buy.quantity` and `sell.quantity` specify independent exact inputs:
+
+```json
+{
+  "buy": {"quantity": {"amount": "100000000", "decimals": 6}},
+  "sell": {"quantity": {"amount": "1000000000", "decimals": 9}}
+}
+```
+
+For SUI/USDC, this evaluates spending 100 USDC to buy SUI and selling 1 SUI
+for USDC. Buy input is Quote; Sell input is Base. Each quantity requires both
+`amount` and `decimals`: a positive unsigned integer string up to 384 digits,
+and a decimal scale from 0 to 255. An omitted/null side or quantity disables
+quantity calculations for that side. Empty sides normalize to omission. The
+legacy top-level `baseQuantity` is rejected, with no compatibility conversion.
+Historical metrics do not depend on these inputs. No trading thresholds,
+execution rules or order IDs are added to MarketHub observations.
 
 The flat Result contains `evaluatedAt` (Unix milliseconds), optional consolidated
 `ohlc` and `metrics`, and `buy` / `sell` lists of concrete markets. It has no
@@ -72,14 +82,17 @@ network groups or issues array. MarketPrice status is `reference`, `vwap`,
 not perform calculations themselves. MarketHub's internal snapshot service
 connects retained OrderBook/AMM pricing, ranking and spread calculation.
 
-Current prices, `quoteQuantity`, rankings and spread are gross: swap fees and
-gas are excluded, while quantity-dependent price impact is included. AMM gross
-amounts come from a separate zero-swap-fee simulation on the same retained
-inputs and Base quantity. Quantity-aware native OrderBook prices integrate
-the entire requested amount; insufficient depth falls back to a reference
-price without a partial `quoteQuantity`. Buy Quote quantities round up and
-Sell quantities round down to the market's minimum units, after summation.
-Prices round to 18 decimal places, ties to even.
+Current prices, `receiveQuantity`, rankings and spread are gross: swap fees
+and gas are excluded, while quantity-dependent price impact is included.
+`receiveQuantity` is Base for Buy and Quote for Sell. AMM output comes from a
+zero-swap-fee simulation spending the exact input against retained state.
+OrderBook Buy consumes Quote across asks; Sell consumes Base across bids.
+Both require full input coverage. Missing coverage selects a reference fallback
+without partial quantities or fees. Output is floored to the receiving asset's
+atomic units; zero output is not VWAP. Published price is Quote input / Base
+output for Buy, and Quote output / Base input for Sell, using published amounts
+and 18 decimal places, ties to even. Inputs cannot be silently rounded to fit
+an asset's precision. Different Buy/Sell sizes mean spread is not roundtrip PnL.
 
 Reference and VWAP entries share the ranking: Buy ascending, Sell descending,
 unavailable entries last. With quantity specified, an uncomputable market
@@ -122,8 +135,8 @@ type FeeToken struct {
 `token.assetId` identifies the charged asset in the enclosing market's
 chain/network (or venue/network) namespace. `token.symbol` is descriptive;
 it must not be used alone to establish asset identity. Token0/Token1 and
-Base/Quote mapping remain internal to the fee calculation. The existing
-request `baseQuantity` and gross result `quoteQuantity` retain their meanings.
+Base/Quote mapping remain internal to the fee calculation. Input quantities
+remain in the Request; market results do not repeat them.
 
 For example, this is a **fragment inside a Buy entry** for a Sui Testnet pool;
 the Token ID and amounts illustrate the shape, not a deployed pool or live quote:
@@ -180,8 +193,7 @@ are excluded from volatility, while remaining part of OHLC. This sampling
 interval is independent of delivery frequency and the five-second trend ranges.
 The implementation uses guarded arbitrary-precision arithmetic and requires
 the same rounded output at successive precisions; unstable output is omitted.
-Public Get/Subscribe delivery and the TradeHub subscription migration remain
-subsequent implementation steps.
+Public Get remains a subsequent implementation step.
 
 
 ## Observation subscriptions

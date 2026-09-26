@@ -25,7 +25,7 @@ func TestSubscriptionIdentity(t *testing.T) {
 		t.Fatalf("unstable key or mutated targets: %s %v", got, err)
 	}
 	for _, modify := range []func(*dto.Params){
-		func(p *dto.Params) { p.WindowMS = 5000 }, func(p *dto.Params) { p.Symbol = "BTC/USDC" }, func(p *dto.Params) { p.MarketType = "perpetual" }, func(p *dto.Params) { p.Markets[0].Network = "mainnet" }, func(p *dto.Params) { p.BaseQuantity = &market.Quantity{Amount: "1", Decimals: 9} },
+		func(p *dto.Params) { p.WindowMS = 5000 }, func(p *dto.Params) { p.Symbol = "BTC/USDC" }, func(p *dto.Params) { p.MarketType = "perpetual" }, func(p *dto.Params) { p.Markets[0].Network = "mainnet" }, func(p *dto.Params) { p.Buy = &dto.SideParams{Quantity: &market.Quantity{Amount: "1", Decimals: 9}} },
 	} {
 		other := p.Normalize()
 		modify(&other)
@@ -34,12 +34,12 @@ func TestSubscriptionIdentity(t *testing.T) {
 			t.Fatalf("conditions conflated: %s %v", k, e)
 		}
 	}
-	p.BaseQuantity = &market.Quantity{Amount: "001", Decimals: 9}
+	p.Buy = &dto.SideParams{Quantity: &market.Quantity{Amount: "001", Decimals: 9}}
 	a, err := p.SubscriptionKey()
 	if err != nil {
 		t.Fatal(err)
 	}
-	p.BaseQuantity.Amount = "1"
+	p.Buy.Quantity.Amount = "1"
 	b, err := p.SubscriptionKey()
 	if err != nil || a != b {
 		t.Fatal("leading zeros changed identity", err)

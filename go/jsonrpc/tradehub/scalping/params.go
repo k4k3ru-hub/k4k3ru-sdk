@@ -2,6 +2,7 @@ package scalping
 
 import (
 	market "github.com/k4k3ru-hub/k4k3ru-sdk/go/finance/market"
+	observations "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/scalping"
 	rule "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/executionrule"
 )
 
@@ -11,14 +12,15 @@ const (
 )
 
 type Params struct {
-	MarketType    market.MarketType     `json:"marketType"`
-	Symbol        market.Symbol         `json:"symbol"`
-	BaseAsset     rule.AssetRef         `json:"baseAsset"`
-	QuoteAsset    rule.AssetRef         `json:"quoteAsset"`
-	Markets       []market.MarketTarget `json:"markets"`
-	BaseQuantity  *market.Quantity      `json:"baseQuantity,omitempty"`
-	Conditions    Conditions            `json:"conditions"`
-	ExecutionRule rule.Rule             `json:"executionRule"`
+	MarketType    market.MarketType        `json:"marketType"`
+	Symbol        market.Symbol            `json:"symbol"`
+	BaseAsset     rule.AssetRef            `json:"baseAsset"`
+	QuoteAsset    rule.AssetRef            `json:"quoteAsset"`
+	Markets       []market.MarketTarget    `json:"markets"`
+	Buy           *observations.SideParams `json:"buy,omitempty"`
+	Sell          *observations.SideParams `json:"sell,omitempty"`
+	Conditions    Conditions               `json:"conditions"`
+	ExecutionRule rule.Rule                `json:"executionRule"`
 }
 
 type Conditions struct {

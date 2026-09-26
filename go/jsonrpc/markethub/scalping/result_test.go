@@ -53,10 +53,10 @@ func TestScalpingResultWireContract(t *testing.T) {
 func TestScalpingFeeWireContract(t *testing.T) {
 	const raw = `{
 		"evaluatedAt":1790380800000,
-		"buy":[{"market":{"venue":"cetus","chain":"sui","network":"testnet","poolId":"0x1"},"status":"vwap",
+		"buy":[{"market":{"venue":"cetus","chain":"sui","network":"testnet","poolId":"0x1"},"status":"vwap","price":"2.5","receiveQuantity":{"amount":"40000000000","decimals":9},
 			"observedAt":1790380799000,"lastTradeAt":1790380620000,
 			"fees":{"swap":{"token":{"assetId":"0x3::usdc::USDC","symbol":"USDC"},"quantity":{"amount":"3000","decimals":6}}}}],
-		"sell":[{"market":{"venue":"hyperliquid","network":"mainnet","venueSymbol":"@1"},"status":"vwap",
+		"sell":[{"market":{"venue":"hyperliquid","network":"mainnet","venueSymbol":"@1"},"status":"vwap","price":"2.4","receiveQuantity":{"amount":"2400000","decimals":6},
 			"fees":{"taker":{"token":{"assetId":"USDC","symbol":"USDC"},"quantity":{"amount":"0","decimals":0}}}}]
 	}`
 	var value scalping.Result
@@ -64,6 +64,9 @@ func TestScalpingFeeWireContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	buy, sell := value.Buy[0], value.Sell[0]
+	if buy.ReceiveQuantity == nil || buy.ReceiveQuantity.Decimals != 9 || buy.ReceiveQuantity.Amount != "40000000000" || sell.ReceiveQuantity == nil || sell.ReceiveQuantity.Decimals != 6 || sell.ReceiveQuantity.Amount != "2400000" {
+		t.Fatal("directional receive quantities lost")
+	}
 	if buy.Fees.Swap.Token.AssetID != "0x3::usdc::USDC" || buy.Fees.Swap.Token.Symbol != "USDC" || buy.Fees.Swap.Quantity.Amount != "3000" || buy.Fees.Swap.Quantity.Decimals != 6 {
 		t.Fatal("charged asset or units lost")
 	}

@@ -111,9 +111,14 @@ idempotency key. The `open.perp` field name is unchanged.
 - Observation `markets` uses `finance/market.MarketTarget`: `venue` and `network`
   are required; `chain`, `poolId` and `venueSymbol` are optional filters. One
   top-level `symbol` identifies the pair. MarketHub resolves concrete instruments.
-- Optional `baseQuantity: {amount, decimals}` is forwarded to MarketHub unchanged.
-  Omission requests reference prices with no quantity calculation. Spot input
-  `open.spot.amount` is never converted into an observation base quantity.
+- Optional `buy.quantity` (Quote input) and `sell.quantity` (Base input) use
+  `{amount, decimals}` and are forwarded to MarketHub unchanged. Omission selects
+  reference prices independently per direction. `open.spot.amount` is never
+  inferred as an observation quantity. Results carry `receiveQuantity`: Buy
+  receives Base; Sell receives Quote. Spot/long candidates use Buy, short
+  candidates use Sell. New saved configurations use version 3; older versions
+  remain stored but fail resume with `unsupported`. Start with a new idempotency
+  key; old `baseQuantity` requests are rejected.
 - `MarketRef`: `venue` and `network`, plus exactly one of `poolId` or
   `venueSymbol`. Pools require `chain`. Native symbols and asset/pool IDs retain
   their case; scope names are trimmed and lowercased. A native order book may

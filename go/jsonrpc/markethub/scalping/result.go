@@ -44,11 +44,12 @@ const (
 )
 
 type MarketPrice struct {
-	Market        market.MarketRef `json:"market"`
-	Status        PriceStatus      `json:"status"`
-	Price         *string          `json:"price,omitempty"`
-	QuoteQuantity *market.Quantity `json:"quoteQuantity,omitempty"`
-	ObservedAt    *int64           `json:"observedAt,omitempty"`
+	Market market.MarketRef `json:"market"`
+	Status PriceStatus      `json:"status"`
+	Price  *string          `json:"price,omitempty"`
+	// ReceiveQuantity is gross output: Base for Buy and Quote for Sell.
+	ReceiveQuantity *market.Quantity `json:"receiveQuantity,omitempty"`
+	ObservedAt      *int64           `json:"observedAt,omitempty"`
 	// LastTradeAt is the last observed, non-canceled Trade/Swap event time in Unix ms.
 	// It is independent of price observation time and omitted when unknown.
 	LastTradeAt *int64 `json:"lastTradeAt,omitempty"`

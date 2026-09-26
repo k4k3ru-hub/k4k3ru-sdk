@@ -22,20 +22,20 @@ func TestObservationContract(t *testing.T) {
 	if err := p.Validate(); err != nil {
 		t.Fatal(err)
 	}
-	if p.ObservationParams().BaseQuantity != nil || p.Normalize().Conditions.MaximumSnapshotAgeMS != nil {
+	if p.ObservationParams().Buy != nil || p.Normalize().Conditions.MaximumSnapshotAgeMS != nil {
 		t.Fatal("execution amount or TTL was inferred")
 	}
-	p.BaseQuantity = &market.Quantity{Amount: "1", Decimals: 9}
+	p.Buy = &observation.SideParams{Quantity: &market.Quantity{Amount: "1", Decimals: 9}}
 	p.Conditions.MaximumSnapshotAgeMS = pointer(uint64(math.MaxUint64))
 	p.Conditions.QuoteVolume = &QuantityRange{Minimum: &market.Quantity{Amount: "100", Decimals: 2}, Maximum: &market.Quantity{Amount: "1000000", Decimals: 6}}
 	if err := p.Validate(); err != nil {
 		t.Fatal(err)
 	}
 	n := p.Normalize()
-	n.BaseQuantity.Amount = "2"
+	n.Buy.Quantity.Amount = "2"
 	n.Conditions.QuoteVolume.Minimum.Amount = "0"
 	*n.Conditions.MaximumSnapshotAgeMS = 1
-	if p.BaseQuantity.Amount != "1" || p.Conditions.QuoteVolume.Minimum.Amount != "100" || *p.Conditions.MaximumSnapshotAgeMS != math.MaxUint64 {
+	if p.Buy.Quantity.Amount != "1" || p.Conditions.QuoteVolume.Minimum.Amount != "100" || *p.Conditions.MaximumSnapshotAgeMS != math.MaxUint64 {
 		t.Fatal("normalization aliased parameters")
 	}
 	wire, err := json.Marshal(SubscribeParams{IdempotencyKey: "one", Params: &p})
@@ -49,7 +49,7 @@ func TestObservationContract(t *testing.T) {
 	if !reflect.DeepEqual(*decoded.Params, p) {
 		t.Fatal("flattened params lost observation fields")
 	}
-	for _, mutate := range []func(*Params){func(p *Params) { p.Symbol = "" }, func(p *Params) { p.Conditions.MaximumSnapshotAgeMS = pointer(uint64(0)) }, func(p *Params) { p.Conditions.QuoteVolume.Minimum.Amount = "101" }, func(p *Params) { p.BaseQuantity.Amount = "0" }} {
+	for _, mutate := range []func(*Params){func(p *Params) { p.Symbol = "" }, func(p *Params) { p.Conditions.MaximumSnapshotAgeMS = pointer(uint64(0)) }, func(p *Params) { p.Conditions.QuoteVolume.Minimum.Amount = "101" }, func(p *Params) { p.Buy.Quantity.Amount = "0" }} {
 		q := p.Normalize()
 		mutate(&q)
 		if err := q.Validate(); !errors.Is(err, apperror.InvalidParameter()) {
@@ -65,7 +65,7 @@ func TestObservationContract(t *testing.T) {
 func TestResultExpandedMarkets(t *testing.T) {
 	p := spotParams()
 	p.Markets[0].PoolID = ""
-	p.BaseQuantity = &market.Quantity{Amount: "1", Decimals: 0}
+	p.Buy = &observation.SideParams{Quantity: &market.Quantity{Amount: "1", Decimals: 0}}
 	r := matchedResult()
 	r.Markets[0].Price.Status = observation.PriceStatusFallbackReference
 	second := r.Markets[0]
@@ -90,5 +90,41 @@ func TestResultExpandedMarkets(t *testing.T) {
 	r.Markets[0].Candidate.ExpiresAt++
 	if err := r.ValidateFor(p); !errors.Is(err, apperror.InvalidParameter()) {
 		t.Fatal("candidate exceeds configured data age")
+	}
+}
+
+// TestDirectionalCandidateValidation matches the selected Open direction and rejects zero outputs.
+//
+// Version:
+//   - 2026-09-26: Added.
+func TestDirectionalCandidateValidation(t *testing.T) {
+	for _, p := range []Params{spotParams(), perpParams()} {
+		side := &observation.SideParams{Quantity: &market.Quantity{Amount: "1", Decimals: 0}}
+		if p.ExecutionRule.Open.Perp != nil {
+			p.Sell = side
+		} else {
+			p.Buy = side
+		}
+		observed := p.ObservationParams().Normalize()
+		if (observed.Buy == nil) != (p.Buy == nil) || (observed.Sell == nil) != (p.Sell == nil) {
+			t.Fatal("direction not forwarded")
+		}
+		r := matchedResult()
+		r.MarketType, r.BaseAsset, r.QuoteAsset = p.MarketType, p.BaseAsset, p.QuoteAsset
+		r.Markets[0].Price.Market = market.MarketRef(p.Markets[0])
+		r.Markets[0].Price.Status = observation.PriceStatusVWAP
+		r.Markets[0].Price.ReceiveQuantity = &market.Quantity{Amount: "1", Decimals: 0}
+		if err := r.ValidateFor(p); err != nil {
+			t.Fatal(err)
+		}
+		p.Buy, p.Sell = p.Sell, p.Buy
+		if err := r.ValidateFor(p); !errors.Is(err, apperror.InvalidParameter()) {
+			t.Fatal("opposite direction incorrectly enabled vwap", err)
+		}
+		p.Buy, p.Sell = p.Sell, p.Buy
+		r.Markets[0].Price.ReceiveQuantity.Amount = "0"
+		if err := r.ValidateFor(p); !errors.Is(err, apperror.InvalidParameter()) {
+			t.Fatal("zero output accepted", err)
+		}
 	}
 }

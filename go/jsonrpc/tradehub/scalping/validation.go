@@ -22,7 +22,7 @@ func (p Params) Normalize() Params {
 	p.BaseAsset = p.BaseAsset.Normalize()
 	p.QuoteAsset = p.QuoteAsset.Normalize()
 	observation := p.ObservationParams().Normalize()
-	p.Symbol, p.Markets, p.BaseQuantity = observation.Symbol, observation.Markets, observation.BaseQuantity
+	p.Symbol, p.Markets, p.Buy, p.Sell = observation.Symbol, observation.Markets, observation.Buy, observation.Sell
 	p.Conditions = p.Conditions.Normalize()
 	p.ExecutionRule = p.ExecutionRule.Normalize()
 	return p
@@ -197,9 +197,9 @@ func (c Conditions) Validate() error {
 // ObservationParams returns market-data inputs without converting an execution's input amount.
 //
 // Version:
-//   - 2026-09-26: Added.
+//   - 2026-09-26: Forward Buy and Sell inputs without inferring execution amounts.
 func (p Params) ObservationParams() observations.Params {
-	return observations.Params{MarketType: p.MarketType, Symbol: p.Symbol, Markets: p.Markets, WindowMS: p.Conditions.WindowMS, BaseQuantity: p.BaseQuantity}
+	return observations.Params{MarketType: p.MarketType, Symbol: p.Symbol, Markets: p.Markets, WindowMS: p.Conditions.WindowMS, Buy: p.Buy, Sell: p.Sell}
 }
 
 // Validate compares nonnegative volume bounds exactly across their decimal scales.
