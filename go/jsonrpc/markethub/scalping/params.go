@@ -18,22 +18,32 @@ const (
 )
 
 type Params struct {
-	MarketType market.MarketType     `json:"marketType"`
-	Symbol     market.Symbol         `json:"symbol"`
-	WindowMS   uint64                `json:"windowMs"`
-	Markets    []market.MarketTarget `json:"markets"`
-	Buy        *SideParams           `json:"buy,omitempty"`
-	Sell       *SideParams           `json:"sell,omitempty"`
+	FeeAccounts []FeeAccount          `json:"feeAccounts,omitempty"`
+	MarketType  market.MarketType     `json:"marketType"`
+	Symbol      market.Symbol         `json:"symbol"`
+	WindowMS    uint64                `json:"windowMs"`
+	Markets     []market.MarketTarget `json:"markets"`
+	Buy         *SideParams           `json:"buy,omitempty"`
+	Sell        *SideParams           `json:"sell,omitempty"`
 }
 
 // Normalize returns independent canonical parameters without defaulting explicit zeros.
 //
 // Version:
+//   - 2026-09-28: Include optional trading accounts for fee-aware observations.
 //   - 2026-09-26: Use independent Buy Quote and Sell Base input quantities.
 //   - 2026-09-25: Added.
 func (p Params) Normalize() Params {
 	p.MarketType = p.MarketType.Normalize()
 	p.Symbol = market.Symbol(strings.ToUpper(strings.TrimSpace(string(p.Symbol))))
+	if len(p.FeeAccounts) == 0 {
+		p.FeeAccounts = nil
+	} else {
+		p.FeeAccounts = append([]FeeAccount(nil), p.FeeAccounts...)
+		for i := range p.FeeAccounts {
+			p.FeeAccounts[i] = p.FeeAccounts[i].Normalize()
+		}
+	}
 	p.Buy = normalizeSide(p.Buy)
 	p.Sell = normalizeSide(p.Sell)
 	if p.Markets != nil {
@@ -49,6 +59,7 @@ func (p Params) Normalize() Params {
 // The server must verify each market's symbol, assets, metadata and data quality.
 //
 // Version:
+//   - 2026-09-28: Include optional trading accounts for fee-aware observations.
 //   - 2026-09-26: Use independent Buy Quote and Sell Base input quantities.
 //   - 2026-09-25: Added.
 func (p Params) Validate() error {
@@ -82,6 +93,9 @@ func (p Params) Validate() error {
 			}
 		}
 	}
+	if err := validateFeeAccounts(p); err != nil {
+		return err
+	}
 	seen := make(map[market.MarketTarget]bool, len(p.Markets))
 	for i, reference := range p.Markets {
 		if err := reference.Validate(); err != nil {
@@ -99,6 +113,7 @@ func (p Params) Validate() error {
 // Decode failure leaves the receiver unchanged.
 //
 // Version:
+//   - 2026-09-28: Include optional trading accounts for fee-aware observations.
 //   - 2026-09-26: Use independent Buy Quote and Sell Base input quantities.
 //   - 2026-09-25: Added.
 func (p *Params) UnmarshalJSON(data []byte) error {

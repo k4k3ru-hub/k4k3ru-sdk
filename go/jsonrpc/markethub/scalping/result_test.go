@@ -12,6 +12,7 @@ import (
 // TestScalpingResultWireContract verifies flat snapshots, omission and stable status names.
 //
 // Version:
+//   - 2026-09-28: Verify fee-inclusive result fields.
 //   - 2026-09-26: Omit unknown fees and last trade time.
 //   - 2026-09-26: Added.
 func TestScalpingResultWireContract(t *testing.T) {
@@ -32,7 +33,7 @@ func TestScalpingResultWireContract(t *testing.T) {
 			t.Fatalf("missing contract field: %s", part)
 		}
 	}
-	for _, part := range []string{`"ohlc"`, `"price"`, `"issues"`, `"groups"`, `"trend"`, `"fees"`, `"lastTradeAt"`} {
+	for _, part := range []string{`"ohlc"`, `"netPrice"`, `"issues"`, `"groups"`, `"trend"`, `"fees"`, `"lastTradeAt"`} {
 		if strings.Contains(string(raw), part) {
 			t.Fatalf("unexpected field: %s", part)
 		}
@@ -49,14 +50,15 @@ func TestScalpingResultWireContract(t *testing.T) {
 // TestScalpingFeeWireContract preserves charged-token identity, units and known zero fees.
 //
 // Version:
+//   - 2026-09-28: Verify fee-inclusive result fields.
 //   - 2026-09-26: Added.
 func TestScalpingFeeWireContract(t *testing.T) {
 	const raw = `{
 		"evaluatedAt":1790380800000,
-		"buy":[{"market":{"venue":"cetus","chain":"sui","network":"testnet","poolId":"0x1"},"status":"vwap","price":"2.5","receiveQuantity":{"amount":"40000000000","decimals":9},
+		"buy":[{"market":{"venue":"cetus","chain":"sui","network":"testnet","poolId":"0x1"},"status":"vwap","netPrice":"2.5","netReceiveQuantity":{"amount":"40000000000","decimals":9},
 			"observedAt":1790380799000,"lastTradeAt":1790380620000,
 			"fees":{"swap":{"token":{"assetId":"0x3::usdc::USDC","symbol":"USDC"},"quantity":{"amount":"3000","decimals":6}}}}],
-		"sell":[{"market":{"venue":"hyperliquid","network":"mainnet","venueSymbol":"@1"},"status":"vwap","price":"2.4","receiveQuantity":{"amount":"2400000","decimals":6},
+		"sell":[{"market":{"venue":"hyperliquid","network":"mainnet","venueSymbol":"@1"},"status":"vwap","netPrice":"2.4","netReceiveQuantity":{"amount":"2400000","decimals":6},
 			"fees":{"taker":{"token":{"assetId":"USDC","symbol":"USDC"},"quantity":{"amount":"0","decimals":0}}}}]
 	}`
 	var value scalping.Result
@@ -64,7 +66,7 @@ func TestScalpingFeeWireContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	buy, sell := value.Buy[0], value.Sell[0]
-	if buy.ReceiveQuantity == nil || buy.ReceiveQuantity.Decimals != 9 || buy.ReceiveQuantity.Amount != "40000000000" || sell.ReceiveQuantity == nil || sell.ReceiveQuantity.Decimals != 6 || sell.ReceiveQuantity.Amount != "2400000" {
+	if buy.NetReceiveQuantity == nil || buy.NetReceiveQuantity.Decimals != 9 || buy.NetReceiveQuantity.Amount != "40000000000" || sell.NetReceiveQuantity == nil || sell.NetReceiveQuantity.Decimals != 6 || sell.NetReceiveQuantity.Amount != "2400000" {
 		t.Fatal("directional receive quantities lost")
 	}
 	if buy.Fees.Swap.Token.AssetID != "0x3::usdc::USDC" || buy.Fees.Swap.Token.Symbol != "USDC" || buy.Fees.Swap.Quantity.Amount != "3000" || buy.Fees.Swap.Quantity.Decimals != 6 {

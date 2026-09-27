@@ -93,9 +93,10 @@ func TestResultExpandedMarkets(t *testing.T) {
 	}
 }
 
-// TestDirectionalCandidateValidation matches the selected Open direction and rejects zero outputs.
+// TestDirectionalCandidateValidation matches Open direction and rejects zero Spot or fabricated Perpetual outputs.
 //
 // Version:
+//   - 2026-09-28: Restrict delivered quantities to Spot.
 //   - 2026-09-26: Added.
 func TestDirectionalCandidateValidation(t *testing.T) {
 	for _, p := range []Params{spotParams(), perpParams()} {
@@ -113,7 +114,9 @@ func TestDirectionalCandidateValidation(t *testing.T) {
 		r.MarketType, r.BaseAsset, r.QuoteAsset = p.MarketType, p.BaseAsset, p.QuoteAsset
 		r.Markets[0].Price.Market = market.MarketRef(p.Markets[0])
 		r.Markets[0].Price.Status = observation.PriceStatusVWAP
-		r.Markets[0].Price.ReceiveQuantity = &market.Quantity{Amount: "1", Decimals: 0}
+		if p.MarketType == market.MarketTypeSpot {
+			r.Markets[0].Price.NetReceiveQuantity = &market.Quantity{Amount: "1", Decimals: 0}
+		}
 		if err := r.ValidateFor(p); err != nil {
 			t.Fatal(err)
 		}
@@ -122,7 +125,7 @@ func TestDirectionalCandidateValidation(t *testing.T) {
 			t.Fatal("opposite direction incorrectly enabled vwap", err)
 		}
 		p.Buy, p.Sell = p.Sell, p.Buy
-		r.Markets[0].Price.ReceiveQuantity.Amount = "0"
+		r.Markets[0].Price.NetReceiveQuantity = &market.Quantity{Amount: "0", Decimals: 0}
 		if err := r.ValidateFor(p); !errors.Is(err, apperror.InvalidParameter()) {
 			t.Fatal("zero output accepted", err)
 		}

@@ -14,6 +14,7 @@ import (
 // Normalize returns independent canonical parameters with default shared slippage.
 //
 // Version:
+//   - 2026-09-28: Preserve fee-account scopes in shared observations.
 //   - 2026-09-27: Default omitted executionRule.maximumSlippageBps to 50.
 //   - 2026-09-26: Normalize shared observation targets and explicit scaled quantities.
 //   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
@@ -24,6 +25,7 @@ func (p Params) Normalize() Params {
 	p.QuoteAsset = p.QuoteAsset.Normalize()
 	observation := p.ObservationParams().Normalize()
 	p.Symbol, p.Markets, p.Buy, p.Sell = observation.Symbol, observation.Markets, observation.Buy, observation.Sell
+	p.FeeAccounts = observation.FeeAccounts
 	p.Conditions = p.Conditions.Normalize()
 	p.ExecutionRule = p.ExecutionRule.Normalize()
 	return p
@@ -33,6 +35,7 @@ func (p Params) Normalize() Params {
 // Asset equivalence, market metadata, and executable inventory need server checks.
 //
 // Version:
+//   - 2026-09-28: Preserve fee-account scopes in shared observations.
 //   - 2026-09-26: Validate single-symbol observations and shared market targets.
 //   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
 //   - 2026-09-24: Enforce the maximum observation window through Conditions validation.
@@ -66,6 +69,7 @@ func (p Params) Validate() error {
 // UnmarshalJSON decodes and validates parameters, rejecting unknown fields.
 //
 // Version:
+//   - 2026-09-28: Preserve fee-account scopes in shared observations.
 //   - 2026-09-26: Require an explicit observation symbol.
 //   - 2026-09-24: Resolve omitted observation windows while rejecting explicit invalid values.
 //   - 2026-09-23: Added.
@@ -198,9 +202,10 @@ func (c Conditions) Validate() error {
 // ObservationParams returns market-data inputs without converting an execution's input amount.
 //
 // Version:
+//   - 2026-09-28: Preserve fee-account scopes in shared observations.
 //   - 2026-09-26: Forward Buy and Sell inputs without inferring execution amounts.
 func (p Params) ObservationParams() observations.Params {
-	return observations.Params{MarketType: p.MarketType, Symbol: p.Symbol, Markets: p.Markets, WindowMS: p.Conditions.WindowMS, Buy: p.Buy, Sell: p.Sell}
+	return observations.Params{MarketType: p.MarketType, Symbol: p.Symbol, Markets: p.Markets, FeeAccounts: p.FeeAccounts, WindowMS: p.Conditions.WindowMS, Buy: p.Buy, Sell: p.Sell}
 }
 
 // Validate compares nonnegative volume bounds exactly across their decimal scales.

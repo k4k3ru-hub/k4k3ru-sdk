@@ -52,6 +52,7 @@ func (a *AssetMetadata) UnmarshalJSON(data []byte) error {
 // It does not establish execution asset equivalence, inventory, or fillability.
 //
 // Version:
+//   - 2026-09-28: Validate net prices and Spot-only net receive quantities.
 //   - 2026-09-26: Separate consolidated observations from per-market candidates.
 func (r Result) Validate() error {
 	const op = "validate scalping result"
@@ -96,7 +97,7 @@ func (r Result) Validate() error {
 			return v.Invalid(op, "duplicate_market", "invalid")
 		}
 		seen[ref] = true
-		if err := validateEvaluation(e, r.EvaluatedAt); err != nil {
+		if err := validateEvaluation(e, r.EvaluatedAt, r.MarketType.Normalize()); err != nil {
 			return err
 		}
 		if e.Status != EvaluationStatusUnavailable && (r.Metrics == nil || r.Metrics.PriceChangeBPS == nil && r.Metrics.QuoteVolume == nil && r.Metrics.TradeCount == nil && r.Metrics.BuyVolumeRatioBPS == nil) {
@@ -112,42 +113,45 @@ func (r Result) Validate() error {
 	return nil
 }
 
-func validateEvaluation(e MarketEvaluation, at int64) error {
+func validateEvaluation(e MarketEvaluation, at int64, marketType market.MarketType) error {
 	const op = "validate market evaluation"
 	switch e.Price.Status {
 	case observations.PriceStatusReference, observations.PriceStatusVWAP, observations.PriceStatusFallbackReference:
 		if e.Price.ObservedAt == nil {
 			return v.Invalid(op, "observed_at", "null")
 		}
-		if e.Price.Price == nil {
-			return v.Invalid(op, "price", "null")
+		if e.Price.NetPrice == nil {
+			return v.Invalid(op, "net_price", "null")
 		}
-		n, err := v.Number(op, "price", *e.Price.Price, false, false)
+		n, err := v.Number(op, "net_price", *e.Price.NetPrice, false, false)
 		if err != nil {
 			return err
 		}
 		if n.Sign() <= 0 {
-			return v.Invalid(op, "price", "out_of_range")
+			return v.Invalid(op, "net_price", "out_of_range")
 		}
 	case observations.PriceStatusUnavailable:
-		if e.Price.Price != nil || e.Price.ReceiveQuantity != nil || e.Price.Fees != nil {
+		if e.Price.NetPrice != nil || e.Price.NetReceiveQuantity != nil || e.Price.Fees != nil {
 			return v.Invalid(op, "unavailable_price", "invalid")
 		}
 	default:
 		return v.Invalid(op, "price_status", "invalid")
 	}
-	if e.Price.ReceiveQuantity != nil {
-		if err := e.Price.ReceiveQuantity.Validate(); err != nil {
+	if marketType == market.MarketTypePerpetual && e.Price.NetReceiveQuantity != nil {
+		return v.Invalid(op, "net_receive_quantity", "invalid")
+	}
+	if e.Price.NetReceiveQuantity != nil {
+		if err := e.Price.NetReceiveQuantity.Validate(); err != nil {
 			return fmt.Errorf("failed to validate market evaluation: %w", err)
 		}
 	}
-	if e.Price.ReceiveQuantity != nil && strings.Trim(e.Price.ReceiveQuantity.Amount, "0") == "" {
-		return v.Invalid(op, "receive_quantity", "out_of_range")
+	if e.Price.NetReceiveQuantity != nil && strings.Trim(e.Price.NetReceiveQuantity.Amount, "0") == "" {
+		return v.Invalid(op, "net_receive_quantity", "out_of_range")
 	}
-	if e.Price.Status == observations.PriceStatusVWAP && e.Price.ReceiveQuantity == nil {
-		return v.Invalid(op, "receive_quantity", "null")
+	if marketType == market.MarketTypeSpot && e.Price.Status == observations.PriceStatusVWAP && e.Price.NetReceiveQuantity == nil {
+		return v.Invalid(op, "net_receive_quantity", "null")
 	}
-	if e.Price.Status != observations.PriceStatusVWAP && (e.Price.ReceiveQuantity != nil || e.Price.Fees != nil) {
+	if e.Price.Status != observations.PriceStatusVWAP && (e.Price.NetReceiveQuantity != nil || e.Price.Fees != nil) {
 		return v.Invalid(op, "reference_quantity", "invalid")
 	}
 	for _, timestamp := range []*int64{e.Price.ObservedAt, e.Price.LastTradeAt} {

@@ -4,8 +4,9 @@ import "github.com/k4k3ru-hub/k4k3ru-sdk/go/finance/market"
 
 // Fees groups estimated charges for the enclosing buy or sell price.
 // Unknown charges are omitted. Swap includes both LP and protocol shares;
-// Taker describes immediate OrderBook execution when account fees are known.
-// These amounts are excluded from gross price, receiveQuantity, ranking and spread.
+// Taker describes immediate OrderBook execution using account or standard rates.
+// Charges are already included in netPrice and netReceiveQuantity; do not subtract
+// them again. Gas is excluded. Reference prices do not calculate fee quantities.
 type Fees struct {
 	Swap  *Fee `json:"swap,omitempty"`
 	Taker *Fee `json:"taker,omitempty"`

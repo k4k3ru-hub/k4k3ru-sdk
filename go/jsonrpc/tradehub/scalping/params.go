@@ -12,15 +12,16 @@ const (
 )
 
 type Params struct {
-	MarketType    market.MarketType        `json:"marketType"`
-	Symbol        market.Symbol            `json:"symbol"`
-	BaseAsset     rule.AssetRef            `json:"baseAsset"`
-	QuoteAsset    rule.AssetRef            `json:"quoteAsset"`
-	Markets       []market.MarketTarget    `json:"markets"`
-	Buy           *observations.SideParams `json:"buy,omitempty"`
-	Sell          *observations.SideParams `json:"sell,omitempty"`
-	Conditions    Conditions               `json:"conditions"`
-	ExecutionRule rule.Rule                `json:"executionRule"`
+	FeeAccounts   []observations.FeeAccount `json:"feeAccounts,omitempty"`
+	MarketType    market.MarketType         `json:"marketType"`
+	Symbol        market.Symbol             `json:"symbol"`
+	BaseAsset     rule.AssetRef             `json:"baseAsset"`
+	QuoteAsset    rule.AssetRef             `json:"quoteAsset"`
+	Markets       []market.MarketTarget     `json:"markets"`
+	Buy           *observations.SideParams  `json:"buy,omitempty"`
+	Sell          *observations.SideParams  `json:"sell,omitempty"`
+	Conditions    Conditions                `json:"conditions"`
+	ExecutionRule rule.Rule                 `json:"executionRule"`
 }
 
 type Conditions struct {

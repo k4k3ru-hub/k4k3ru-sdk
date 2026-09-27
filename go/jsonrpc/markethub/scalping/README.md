@@ -82,28 +82,65 @@ network groups or issues array. MarketPrice status is `reference`, `vwap`,
 not perform calculations themselves. MarketHub's internal snapshot service
 connects retained OrderBook/AMM pricing, ranking and spread calculation.
 
-Current prices, `receiveQuantity`, rankings and spread are gross: swap fees
-and gas are excluded, while quantity-dependent price impact is included.
-`receiveQuantity` is Base for Buy and Quote for Sell. AMM output comes from a
-zero-swap-fee simulation spending the exact input against retained state.
-OrderBook Buy consumes Quote across asks; Sell consumes Base across bids.
-Both require full input coverage. Missing coverage selects a reference fallback
-without partial quantities or fees. Output is floored to the receiving asset's
-atomic units; zero output is not VWAP. Published price is Quote input / Base
-output for Buy, and Quote output / Base input for Sell, using published amounts
-and 18 decimal places, ties to even. Inputs cannot be silently rounded to fit
-an asset's precision. Different Buy/Sell sizes mean spread is not roundtrip PnL.
+Current prices use `netPrice`, including trading fees and quantity-dependent
+price impact, excluding gas. The former `price` and `receiveQuantity` fields are
+removed. Spot VWAP entries return `netReceiveQuantity`: Base received for Buy,
+Quote received for Sell. AMMs calculate the normal-fee output against the same
+retained state. OrderBook Buy consumes Quote across asks; Sell consumes Base
+across bids. Spot taker fees reduce the received asset; fee amounts are rounded
+up and outputs down to that asset's atomic units. Inputs must be exactly
+representable at the input asset's precision. Full input coverage and positive
+output are required; otherwise a known fee-adjusted reference can be returned.
+
+Spot `netPrice` is Quote input / published Net Base output for Buy and published
+Net Quote output / Base input for Sell. Perpetual entries have `netPrice` and
+`fees`, but never `netReceiveQuantity`: they do not deliver spot tokens. Their
+Buy price is (Quote notional + Quote fee) / Base size; Sell price is
+(Quote notional - Quote fee) / Base size. Request quantities remain notional or
+Base size, independent of margin and leverage. Prices are published to 18
+decimal places, ties to even. Different Buy/Sell sizes mean spread is not
+roundtrip PnL.
+
+Optional `feeAccounts` selects the actual Hyperliquid trading account for both
+directions (not an API signing wallet):
+
+```json
+{
+  "feeAccounts": [{
+    "venue": "hyperliquid",
+    "network": "mainnet",
+    "address": "0x1111111111111111111111111111111111111111"
+  }]
+}
+```
+
+Each scope must match a requested market target, with at most one account per
+venue/network. Omission uses the published standard Tier 0 taker schedule
+without account discounts. Account identities are included in subscription
+keys. A specified account's unavailable rate never falls back to standard fees.
+Rates and supported market fee modifiers are refreshed in the background every
+60 seconds by default and remain usable for five minutes after successful
+retrieval. Server settings `MARKET_HUB_FEE_REFRESH_INTERVAL` and
+`MARKET_HUB_FEE_MAXIMUM_AGE` accept Go duration strings (defaults `1m`, `5m`).
+Unknown/expired fees make the price unavailable. Snapshot calculations perform
+no fee-fetch RPC and do not wait for refresh; the initial snapshot may therefore
+be unavailable while the cache warms.
 
 Reference and VWAP entries share the ranking: Buy ascending, Sell descending,
 unavailable entries last. With quantity specified, an uncomputable market
 remains `fallback_reference` when a reference price is available. Without
 quantity, prices are `reference` and no quantity-based calculations occur.
+Spot Buy references are ask / (1 - fee); Sell references are bid * (1 - fee).
+Perpetual Buy references are ask * (1 + fee), Sell bid * (1 - fee).
+AMMs use the retained marginal price and direction-specific input fee.
+Quantity fallback uses the same reference definition, never partial output.
 Spread is `(bestBuy - bestSell) / ((bestBuy + bestSell) / 2) * 10000`, using
-published prices, and can be negative. Its status is `vwap` only if both
+published `netPrice` values, and can be negative. Its status is `vwap` only if both
 winning prices are VWAP; otherwise it is `fallback_reference` for a quantity
 request, `reference` without quantity, or `unavailable` if either side is missing.
 
-No age cutoff is applied to current prices. `observedAt` records input receipt
+No age cutoff is applied to current price inputs; the fee-cache validity limit
+is separate. `observedAt` records input receipt
 or verification time, not calculation time. Missing inputs, lost synchronization,
 identity mismatches and concurrent AMM invalidation can still prevent a price.
 `lastTradeAt` separately records the last observed, admitted, non-canceled
@@ -154,19 +191,27 @@ the Token ID and amounts illustrate the shape, not a deployed pool or live quote
 
 This estimates a 0.003 USDC swap fee. A Sell entry can instead identify SUI
 and its own decimal scale. `swap` includes both LP and protocol fee shares;
-it is not labeled as LP-only. It is estimated with normal fee settings on the
-same retained inputs used for gross pricing. Because the normal-fee and zero-fee
-simulations can follow different price paths, adding/subtracting a converted
-fee does not necessarily reconstruct a net quote.
+it is not labeled as LP-only. Fees are already reflected in `netPrice` and
+`netReceiveQuantity`; do not subtract them again. AMM fees are calculated with
+normal fee settings on the same frozen state as Net output. Input-asset fees
+cannot be subtracted directly from an output-asset quantity.
 
-Only AMM `swap` fees are currently produced by MarketHub. `taker` represents
-immediate OrderBook execution fees when known; account-dependent fees are not
-inferred. Unknown fees are omitted rather than zero-filled. Known zero fees
-retain `amount: "0"` and explicit `decimals`. Quantity omission, reference
-fallback and unavailable prices omit `fees`; gas is excluded. No `issues`
-array or additional fee status is added.
+`taker` represents immediate OrderBook execution fees, using the retained
+standard/account rate and supported market modifiers. Known zero fees retain
+`amount: "0"` and explicit `decimals`. Quantity omission, reference fallback and
+unavailable prices omit `fees` and `netReceiveQuantity`; gas is excluded. No
+`issues` array or additional fee status is added.
 
-Historical analytics use event time in `[T-windowMs,T)`. For each UTC second
+Service coverage depends on configured adapters: directional Net AMM output is
+implemented for Cetus, Bluefin Spot, Momentum, Turbos, Uniswap V3/V4 and
+Aerodrome Slipstream. Hyperliquid fee metadata currently covers ordinary
+USDC-quoted Spot and native USDC Perpetual markets. Other quote assets/HIP-3
+markets need additional fee-modifier metadata and are unavailable. Perpetual
+market observation also requires its execution-market metadata to be registered;
+the DTO alone does not enable a new adapter.
+
+Historical analytics remain based on recorded trades, without applying account
+fees to OHLC or historical VWAP. They use event time in `[T-windowMs,T)`. For each UTC second
 (clipped at both window edges), the service computes market Quote/Base VWAP,
 the median within each venue, then the median across venues. OHLC describes
 that representative series, not raw trade extrema or an executable quote.

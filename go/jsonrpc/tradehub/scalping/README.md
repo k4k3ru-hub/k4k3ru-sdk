@@ -114,11 +114,16 @@ idempotency key. The `open.perp` field name is unchanged.
 - Optional `buy.quantity` (Quote input) and `sell.quantity` (Base input) use
   `{amount, decimals}` and are forwarded to MarketHub unchanged. Omission selects
   reference prices independently per direction. `open.spot.maximumAmount` is never
-  inferred as an observation quantity. Results carry `receiveQuantity`: Buy
-  receives Base; Sell receives Quote. Spot/long candidates use Buy, short
+  inferred as an observation quantity. Spot VWAP results carry `netReceiveQuantity`: Buy
+  receives Base; Sell receives Quote, after trading fees. Perpetual results omit
+  this field. Both use fee-adjusted `netPrice`. Spot/long candidates use Buy, short
   candidates use Sell. New saved configurations use version 5 for maximum input amounts; older versions
   remain stored but fail resume with `unsupported`. Start with a new idempotency
   key; old `baseQuantity` requests are rejected.
+- Optional `feeAccounts` is forwarded to MarketHub and persisted with the execution
+  settings. It selects actual Hyperliquid trading accounts by venue/network.
+  Omission uses standard fees; an expired account rate does not fall back.
+  See the [MarketHub fee contract](../../markethub/scalping/README.md).
 - `MarketRef`: `venue` and `network`, plus exactly one of `poolId` or
   `venueSymbol`. Pools require `chain`. Native symbols and asset/pool IDs retain
   their case; scope names are trimmed and lowercased. A native order book may
@@ -215,7 +220,8 @@ objects. Decode failure leaves the receiver unchanged.
 `Result` contains `evaluationId`, `marketType`, `symbol`, execution `baseAsset` /
 `quoteAsset` references, `evaluatedAt`, optional consolidated `metrics`, and
 `markets[]`. Each entry contains MarketHub `price` (concrete market reference,
-status, price, quote quantity when available, observation/trade times and fees),
+status, `netPrice`, Spot `netReceiveQuantity` when available, observation/trade
+times and fees already included in Net values),
 TradeHub `status`, optional `candidate`, and optional `reasons`. There is no
 per-market copy of historical metrics. An unresolved basket is `markets: []`.
 

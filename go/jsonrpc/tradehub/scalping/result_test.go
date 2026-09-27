@@ -18,7 +18,7 @@ func matchedResult() Result {
 		EvaluationID: "evaluation-1", MarketType: p.MarketType, Symbol: p.Symbol, EvaluatedAt: now,
 		BaseAsset: p.BaseAsset, QuoteAsset: p.QuoteAsset,
 		Metrics: &observations.Metrics{TradeCount: pointer(uint64(10))},
-		Markets: []MarketEvaluation{{Price: observations.MarketPrice{Market: market.MarketRef(p.Markets[0]), Status: observations.PriceStatusReference, Price: pointer("2"), ObservedAt: pointer(now - 100), LastTradeAt: pointer(now - 100)}, Status: EvaluationStatusMatched,
+		Markets: []MarketEvaluation{{Price: observations.MarketPrice{Market: market.MarketRef(p.Markets[0]), Status: observations.PriceStatusReference, NetPrice: pointer("2"), ObservedAt: pointer(now - 100), LastTradeAt: pointer(now - 100)}, Status: EvaluationStatusMatched,
 			Candidate: &Candidate{CandidateID: "candidate-1", Revision: 1, ExpiresAt: now + 1901},
 		}},
 	}
@@ -75,7 +75,7 @@ func TestResultRejectsInvalidCandidates(t *testing.T) {
 		"unmatched candidate":        func(r *Result) { r.Markets[0].Status = EvaluationStatusNotMatched },
 		"unavailable without reason": func(r *Result) { r.Markets[0].Status = EvaluationStatusUnavailable; r.Markets[0].Candidate = nil },
 		"future observation":         func(r *Result) { r.Markets[0].Price.LastTradeAt = pointer(r.EvaluatedAt + 1) },
-		"invalid price":              func(r *Result) { r.Markets[0].Price.Price = pointer("0") },
+		"invalid price":              func(r *Result) { r.Markets[0].Price.NetPrice = pointer("0") },
 		"missing metrics":            func(r *Result) { r.Metrics = nil },
 		"empty metrics":              func(r *Result) { r.Metrics.TradeCount = nil },
 		"fractional raw volume":      func(r *Result) { r.Metrics.QuoteVolume = &market.Quantity{Amount: "0.1", Decimals: 6} },

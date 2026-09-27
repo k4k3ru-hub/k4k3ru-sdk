@@ -46,10 +46,12 @@ const (
 type MarketPrice struct {
 	Market market.MarketRef `json:"market"`
 	Status PriceStatus      `json:"status"`
-	Price  *string          `json:"price,omitempty"`
-	// ReceiveQuantity is gross output: Base for Buy and Quote for Sell.
-	ReceiveQuantity *market.Quantity `json:"receiveQuantity,omitempty"`
-	ObservedAt      *int64           `json:"observedAt,omitempty"`
+	// NetPrice is the effective Quote/Base price including trading fees, excluding gas.
+	NetPrice *string `json:"netPrice,omitempty"`
+	// NetReceiveQuantity is fee-inclusive Spot output: Base for Buy and Quote for Sell.
+	// Perpetual prices do not represent delivery of the underlying asset.
+	NetReceiveQuantity *market.Quantity `json:"netReceiveQuantity,omitempty"`
+	ObservedAt         *int64           `json:"observedAt,omitempty"`
 	// LastTradeAt is the last observed, non-canceled Trade/Swap event time in Unix ms.
 	// It is independent of price observation time and omitted when unknown.
 	LastTradeAt *int64 `json:"lastTradeAt,omitempty"`

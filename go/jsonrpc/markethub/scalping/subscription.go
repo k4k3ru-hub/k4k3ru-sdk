@@ -36,6 +36,7 @@ type UnsubscribeResult struct {
 // The opaque key is not an authorization token or a durable execution identifier.
 //
 // Version:
+//   - 2026-09-28: Separate account fee conditions from standard fee subscriptions.
 //   - 2026-09-26: Identify independent directional inputs and canonical empty sides.
 func (p Params) SubscriptionKey() (string, error) {
 	p = p.Normalize()
@@ -50,6 +51,16 @@ func (p Params) SubscriptionKey() (string, error) {
 			}
 		}
 		return false
+	})
+	sort.Slice(p.FeeAccounts, func(i, j int) bool {
+		a, b := p.FeeAccounts[i], p.FeeAccounts[j]
+		if a.Venue != b.Venue {
+			return a.Venue < b.Venue
+		}
+		if a.Network != b.Network {
+			return a.Network < b.Network
+		}
+		return a.Address < b.Address
 	})
 	for _, side := range []*SideParams{p.Buy, p.Sell} {
 		if side != nil && side.Quantity != nil {
