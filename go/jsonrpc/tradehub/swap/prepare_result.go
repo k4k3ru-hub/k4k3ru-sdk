@@ -19,6 +19,8 @@ type ApprovalRequirement struct {
 }
 
 type PrepareResult struct {
+	Simulated      bool                                       `json:"simulated"`
+	AmountLimit    string                                     `json:"amountLimit,omitempty"`
 	ExecutionID    string                                     `json:"executionId"`
 	Status         PrepareStatus                              `json:"status"`
 	Chain          k4k3ruOnchainCore.Chain                    `json:"chain"`
@@ -39,6 +41,7 @@ type PrepareResult struct {
 //
 // Version:
 //   - 2026-09-10: Added.
+//   - 2026-09-27: Distinguish constructed transactions from simulated amounts.
 func (r PrepareResult) Validate() error {
 	if strings.TrimSpace(r.ExecutionID) == "" {
 		return invalidPrepareResult("execution_id=empty")
@@ -74,7 +77,16 @@ func (r PrepareResult) Validate() error {
 		if r.Approval != nil {
 			return invalidPrepareResult("approval=invalid")
 		}
-		if !positiveUint256(r.AmountIn) || !positiveUint256(r.AmountOut) {
+		if !positiveUint256(r.AmountLimit) {
+			return invalidPrepareResult("amount_limit=invalid")
+		}
+		if r.Simulated && (!positiveUint256(r.AmountIn) || !positiveUint256(r.AmountOut)) {
+			return invalidPrepareResult("swap_amounts=invalid")
+		}
+		if !r.Simulated && ((r.AmountIn == "") == (r.AmountOut == "")) {
+			return invalidPrepareResult("swap_amounts=invalid")
+		}
+		if (r.AmountIn != "" && !positiveUint256(r.AmountIn)) || (r.AmountOut != "" && !positiveUint256(r.AmountOut)) {
 			return invalidPrepareResult("swap_amounts=invalid")
 		}
 		return nil
@@ -82,7 +94,7 @@ func (r PrepareResult) Validate() error {
 	if r.Approval == nil {
 		return invalidPrepareResult("approval=null")
 	}
-	if r.AmountIn != "" || r.AmountOut != "" {
+	if r.AmountIn != "" || r.AmountOut != "" || r.AmountLimit != "" {
 		return invalidPrepareResult("swap_amounts=invalid")
 	}
 	if strings.TrimSpace(r.Approval.Token) == "" || strings.TrimSpace(r.Approval.Owner) == "" || strings.TrimSpace(r.Approval.Spender) == "" {

@@ -20,6 +20,9 @@ type SignedPayload struct {
 }
 
 type SubmitParams struct {
+	// PreparedToken is returned by Prepare and must be forwarded unchanged when submitting or retrying.
+	// The server verifies it without persisting the preparation response.
+	PreparedToken   string         `json:"preparedToken,omitempty"`
 	OpenExecutionID string         `json:"openExecutionId,omitempty"`
 	ExecutionID     string         `json:"executionId"`
 	PayloadDigest   string         `json:"payloadDigest"`
@@ -32,9 +35,11 @@ type SubmitParams struct {
 //   - Normalized parameters.
 //
 // Version:
+//   - 2026-09-26: Carry the authenticated stateless preparation token.
 //   - 2026-09-25: Normalize the optional full-close reference.
 //   - 2026-09-10: Added.
 func (p SubmitParams) Normalize() SubmitParams {
+	p.PreparedToken = strings.TrimSpace(p.PreparedToken)
 	p.OpenExecutionID = strings.TrimSpace(p.OpenExecutionID)
 	p.ExecutionID = strings.TrimSpace(p.ExecutionID)
 	p.PayloadDigest = strings.TrimSpace(p.PayloadDigest)
@@ -60,10 +65,14 @@ func (p SubmitParams) Normalize() SubmitParams {
 //   - Validation error.
 //
 // Version:
+//   - 2026-09-26: Bound the preparation token without requiring it in legacy decoded data.
 //   - 2026-09-25: Validate the optional full-close reference.
 //   - 2026-09-10: Added.
 func (p SubmitParams) ValidateReference() error {
 	p = p.Normalize()
+	if len(p.PreparedToken) > 256<<10 {
+		return invalidSubmitParameterError("prepared_token=too_long")
+	}
 	if p.OpenExecutionID != "" {
 		if err := validateObservationID(p.OpenExecutionID, "open_execution_id"); err != nil {
 			return k4k3ruSDKAppError.Tracef("failed to validate trade hub execution submission parameters: %w", err)

@@ -1,9 +1,39 @@
 # TradeHub Swap JSON-RPC
 
 `TradeHub.AMMPool.Swap.Quote` returns a current AMM quote without preparing a
-transaction. `TradeHub.AMMPool.Swap.Prepare` validates wallet funding, simulates,
-and prepares one unsigned transaction for client signing. EVM funding uses ERC-20
+transaction. `TradeHub.AMMPool.Swap.Prepare` validates wallet funding and prepares
+one unsigned transaction for client signing, with optional simulation. EVM funding uses ERC-20
 allowance; Sui uses explicit owned Coin references.
+
+`simulate` defaults to **false**. This deliberately changes the previous always-simulated
+Prepare behavior. Set `simulate: true` explicitly to retain quoting and simulation.
+
+| Parameter | `simulate: false` (default) | `simulate: true` |
+| --- | --- | --- |
+| `amountLimit` | Required positive atomic-unit integer string | Optional additional constraint |
+| `maximumSlippageBps` | Omit; without a quote there is no slippage baseline | Required |
+| `evm.gasLimit` | Required positive integer for EVM | Optional; estimated when omitted |
+| `sui.gasBudget` | Required for Sui | Required for Sui |
+| `stateReference` | Omit | Existing EVM quote-state comparison; unsupported on Sui |
+
+For exact input, `amountLimit` is the minimum received **output** quantity. For
+exact output, it is the maximum paid **input** quantity. With simulation enabled,
+the stricter of this explicit limit and the quote-derived slippage limit is used.
+With simulation disabled, the supplied limit and gas limit are used unchanged;
+missing values are errors. Gross MarketHub values are never implicitly substituted.
+
+No Quote, swap execution simulation, or gas estimation runs when `simulate` is false.
+Metadata, allowance, Coin, epoch, nonce, and fee reads may still run. For EVM,
+read-only contract calls used to fetch pool metadata or allowance still use `eth_call`.
+The gas limit applies to the transaction returned, including an approval prerequisite.
+Simulation-enabled preparation fails on a simulation error; it does not silently
+fall back to an unsimulated transaction. No independent Simulate RPC is added.
+
+The Result includes `simulated` and, for a ready swap, the enforced `amountLimit`.
+For unsimulated exact input only `amountIn` is known; `amountOut` is omitted.
+For unsimulated exact output only `amountOut` is known; `amountIn` is omitted.
+When `simulated` is true both swap quantities are available. `ready` means the
+signing payload is constructed; it does not by itself assert simulation success.
 
 Prepare returns one of two statuses:
 
@@ -29,6 +59,7 @@ chain's submission protocol requires them.
 
 ```json
 {
+  "preparedToken": "<unchanged token returned by Prepare>",
   "executionId": "execution-1",
   "payloadDigest": "0xdigest",
   "signedPayload": {
@@ -48,6 +79,7 @@ reject `sui`. Exact-output Sui preparation and checkpoint pinning are unsupporte
 
 ```json
 {
+  "simulate": true,
   "chain": "sui",
   "network": "testnet",
   "venue": "cetus",
@@ -83,16 +115,18 @@ funding parameters.
   sponsorship, or funding reservation is performed.
 - The result uses `ready`, `chainFamily="sui"`, `encoding="base64"`, complete
   unsigned BCS `TransactionData`, and a `0x`-prefixed hex intent signing digest.
-  `amountOut` is the full-transaction simulation output, excluding gas even when
-  the recipient receives SUI. There is no approval transaction.
+  When `simulated` is true, `amountOut` is the full-transaction simulation output,
+  excluding gas even when the recipient receives SUI. Otherwise it is omitted.
+  There is no approval transaction.
 - The transaction enforces minimum output and full input consumption. Gas price
   uses the network reference price; expiration is the current epoch. `expiresAt`
   is an application admission deadline, not a millisecond chain expiration.
-- The request and signing result are persisted as Execution snapshots. Prepare
-  creates no OMS order. Identical idempotent retries return the original payload;
-  changed coin versions require a new key. Callers must coordinate wallet funds
-  and recheck references before signing.
+- Prepare does not persist its request, signing result, or an OMS order. Forward
+  its `preparedToken` unchanged with the signed submission. First Submit records
+  the OMS order before broadcast. Callers coordinate wallet funds, recheck
+  references before signing, and retain the same signed submission for retries.
 
-This change implements Prepare only. The server's Sui `Execution.Submit`, receipt
-observation, OMS integration, and Agent signing workflow are separate steps;
-the returned submit reference does not imply Sui submission is already enabled.
+To prepare the same Sui request without simulation, omit `simulate` or set it to
+false, remove `maximumSlippageBps`, and supply `amountLimit` in output-token atomic
+units. Keep `sui.gasBudget` and owned Coin references. The resulting unsigned
+transaction still enforces that explicit minimum output.

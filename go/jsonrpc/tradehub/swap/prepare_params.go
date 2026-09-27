@@ -17,6 +17,9 @@ import (
 )
 
 type PrepareParams struct {
+	Simulate           bool                                        `json:"simulate,omitempty"`
+	AmountLimit        string                                      `json:"amountLimit,omitempty"`
+	EVM                *EVMPrepareParams                           `json:"evm,omitempty"`
 	Chain              k4k3ruOnchainCore.Chain                     `json:"chain"`
 	Network            k4k3ruOnchainCore.Network                   `json:"network"`
 	Venue              k4k3ruSDKMarketHubArbitrage.Venue           `json:"venue"`
@@ -25,7 +28,7 @@ type PrepareParams struct {
 	TokenOutAssetID    string                                      `json:"tokenOutAssetId"`
 	Amount             string                                      `json:"amount"`
 	Kind               Kind                                        `json:"kind"`
-	MaximumSlippageBPS *uint64                                     `json:"maximumSlippageBps"`
+	MaximumSlippageBPS *uint64                                     `json:"maximumSlippageBps,omitempty"`
 	Signer             string                                      `json:"signer"`
 	Recipient          string                                      `json:"recipient"`
 	ApprovalAmount     string                                      `json:"approvalAmount,omitempty"`
@@ -43,6 +46,7 @@ type PrepareParams struct {
 // Version:
 //   - 2026-09-10: Added.
 //   - 2026-09-24: Support explicit Sui coin and gas selections.
+//   - 2026-09-27: Normalize explicit preparation limits.
 func (p PrepareParams) Normalize() PrepareParams {
 	quote := Params{
 		Chain: p.Chain, Network: p.Network, Venue: p.Venue, PoolID: p.PoolID,
@@ -54,6 +58,10 @@ func (p PrepareParams) Normalize() PrepareParams {
 	p.Signer = strings.TrimSpace(p.Signer)
 	p.Recipient = strings.TrimSpace(p.Recipient)
 	p.ApprovalAmount = strings.TrimSpace(p.ApprovalAmount)
+	p.AmountLimit = strings.TrimSpace(p.AmountLimit)
+	if limit, ok := new(big.Int).SetString(p.AmountLimit, 10); ok {
+		p.AmountLimit = limit.String()
+	}
 	p.IdempotencyKey = strings.TrimSpace(p.IdempotencyKey)
 	if p.Sui != nil {
 		normalized := p.Sui.Normalize()
@@ -83,12 +91,32 @@ func (p PrepareParams) Normalize() PrepareParams {
 // Version:
 //   - 2026-09-10: Added.
 //   - 2026-09-24: Support explicit Sui coin and gas selections.
+//   - 2026-09-27: Require explicit limits when simulation is disabled by default.
 func (p PrepareParams) Validate() error {
 	p = p.Normalize()
 	quote := Params{
 		Chain: p.Chain, Network: p.Network, Venue: p.Venue, PoolID: p.PoolID,
 		TokenInAssetID: p.TokenInAssetID, TokenOutAssetID: p.TokenOutAssetID,
 		Amount: p.Amount, Kind: p.Kind, MaximumSlippageBPS: p.MaximumSlippageBPS,
+	}
+	if !p.Simulate {
+		if p.MaximumSlippageBPS != nil {
+			return invalidPrepareParameter("maximum_slippage_bps=unsupported")
+		}
+		if p.StateReference != nil {
+			return invalidPrepareParameter("state_reference=unsupported")
+		}
+		if p.AmountLimit == "" {
+			return invalidPrepareParameter("amount_limit=empty")
+		}
+		zero := uint64(0)
+		quote.MaximumSlippageBPS = &zero // Only validate the shared market and amount fields.
+	}
+	if p.AmountLimit != "" {
+		limit, ok := new(big.Int).SetString(p.AmountLimit, 10)
+		if !ok || limit.Sign() <= 0 || limit.BitLen() > 256 || (p.Chain == k4k3ruOnchainCore.ChainSui && !limit.IsUint64()) {
+			return invalidPrepareParameter("amount_limit=out_of_range")
+		}
 	}
 	if err := quote.Validate(); err != nil {
 		return k4k3ruSDKAppError.Tracef("failed to validate trade hub swap preparation parameters: %w", err)
@@ -100,10 +128,19 @@ func (p PrepareParams) Validate() error {
 		return invalidPrepareParameter("recipient=empty")
 	}
 	if p.Chain == k4k3ruOnchainCore.ChainSui {
+		if p.EVM != nil {
+			return invalidPrepareParameter("evm=unsupported")
+		}
 		if err := validateSuiPrepare(p); err != nil {
 			return err
 		}
 	} else {
+		if !p.Simulate && p.EVM == nil {
+			return invalidPrepareParameter("evm=null")
+		}
+		if p.EVM != nil && p.EVM.GasLimit == 0 {
+			return invalidPrepareParameter("gas_limit=empty")
+		}
 		if p.Sui != nil {
 			return invalidPrepareParameter("sui=invalid")
 		}

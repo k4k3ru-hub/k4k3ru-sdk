@@ -125,6 +125,7 @@ func (s ObservationStatus) Terminal() bool {
 // Validate validates a single-transaction EVM or checkpointed Sui observation.
 //
 // Version:
+//   - 2026-09-26: Support OMS execution history without persisted preparation.
 //   - 2026-09-25: Include Sui OMS fills, gas, and explicit round-trip PnL.
 //   - 2026-09-16: Added.
 func (e SubscriptionEvent) Validate() error {
@@ -151,7 +152,10 @@ func (e SubscriptionEvent) Validate() error {
 	if o.ChainFamily == ChainFamilySui {
 		return validateSuiSnapshot(s)
 	}
-	if o.Checkpoint != nil || s.OMS != nil {
+	if err := validateEVMOMS(s); err != nil {
+		return err
+	}
+	if o.Checkpoint != nil {
 		return observationInvalid("evm_snapshot=invalid")
 	}
 	if o.ChainFamily != ChainFamilyEVM || o.Chain != "base" || (o.Network != "mainnet" && o.Network != "sepolia") || !observationHash(o.TransactionID) {

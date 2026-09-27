@@ -1,6 +1,7 @@
 package execution
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"strconv"
 
@@ -108,4 +109,36 @@ func atomicInteger(s string, positive bool) bool {
 	}
 	n, ok := new(big.Int).SetString(s, 10)
 	return ok && n.String() == s && (!positive || n.Sign() > 0 && n.IsUint64())
+}
+
+func validateEVMOMS(s *ExecutionSnapshot) error {
+	m := s.OMS
+	if m == nil {
+		return nil
+	}
+	id, err := strconv.ParseUint(m.OrderID, 10, 64)
+	if err != nil || id == 0 || strconv.FormatUint(id, 10) != m.OrderID {
+		return observationInvalid("order_id=invalid")
+	}
+	if m.OpenExecutionID != "" || m.PnL.Status != "unavailable" || m.PnL.Amount != "" || m.PnL.AssetID != "" || m.PnL.Decimals != 0 {
+		return observationInvalid("pnl=invalid")
+	}
+	if s.Status == ObservationStatusPending && (m.Fill != nil || m.Fee != nil) {
+		return observationInvalid("pending=invalid")
+	}
+	if m.Fee != nil {
+		n, ok := new(big.Int).SetString(m.Fee.Amount, 10)
+		if !ok || n.Sign() < 0 || n.String() != m.Fee.Amount || m.Fee.AssetID != "native" || m.Fee.Decimals != 18 {
+			return observationInvalid("fee=invalid")
+		}
+	}
+	if m.Fill != nil {
+		f := m.Fill
+		in, okIn := new(big.Int).SetString(f.AmountIn, 10)
+		out, okOut := new(big.Int).SetString(f.AmountOut, 10)
+		if s.Status != ObservationStatusSuccess || !okIn || !okOut || in.Sign() <= 0 || out.Sign() <= 0 || !common.IsHexAddress(f.TokenInAssetID) || !common.IsHexAddress(f.TokenOutAssetID) || common.HexToAddress(f.TokenInAssetID) == common.HexToAddress(f.TokenOutAssetID) {
+			return observationInvalid("fill=invalid")
+		}
+	}
+	return nil
 }

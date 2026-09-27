@@ -57,7 +57,7 @@ func TestPrepareParamsUnmarshalJSONRejectsUnknownField(t *testing.T) {
 
 func validPrepareParams() PrepareParams {
 	slippage, ttl := uint64(50), uint64(60_000)
-	return PrepareParams{
+	return PrepareParams{Simulate: true,
 		Chain: "base", Network: "sepolia", Venue: "uniswap-v3", PoolID: "0xpool",
 		TokenInAssetID: "0xtoken-in", TokenOutAssetID: "0xtoken-out", Amount: "1000000",
 		Kind: KindExactInput, MaximumSlippageBPS: &slippage, Signer: "0xowner", Recipient: "0xrecipient",

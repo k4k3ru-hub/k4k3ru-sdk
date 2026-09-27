@@ -10,7 +10,7 @@ import (
 
 func suiPrepareParams() PrepareParams {
 	bps, ttl := uint64(100), uint64(30000)
-	return PrepareParams{Chain: "sui", Network: "testnet", Venue: "cetus", PoolID: "0x99", TokenInAssetID: "0x2::sui::SUI", TokenOutAssetID: "0x3::usdc::USDC", Amount: "1000", Kind: KindExactInput, Signer: "0x11", Recipient: "0x12", MaximumSlippageBPS: &bps, ExecutionTTLMS: &ttl, IdempotencyKey: "sui-test", Sui: &SuiPrepareParams{GasBudget: "50000000", GasPayment: []execution.SuiObjectRef{{ObjectID: "0x81", Version: "9007199254740993", Digest: (sui.ObjectDigest{1}).String()}}}}
+	return PrepareParams{Simulate: true, Chain: "sui", Network: "testnet", Venue: "cetus", PoolID: "0x99", TokenInAssetID: "0x2::sui::SUI", TokenOutAssetID: "0x3::usdc::USDC", Amount: "1000", Kind: KindExactInput, Signer: "0x11", Recipient: "0x12", MaximumSlippageBPS: &bps, ExecutionTTLMS: &ttl, IdempotencyKey: "sui-test", Sui: &SuiPrepareParams{GasBudget: "50000000", GasPayment: []execution.SuiObjectRef{{ObjectID: "0x81", Version: "9007199254740993", Digest: (sui.ObjectDigest{1}).String()}}}}
 }
 
 // TestSuiPrepareParams verifies lossless JSON, validation and immutable normalization.

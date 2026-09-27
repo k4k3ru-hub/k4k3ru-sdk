@@ -8,10 +8,15 @@ import (
 	k4k3ruSDKTradeHubExecution "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/execution"
 )
 
+// TestPrepareResultValidateReady verifies the preparation simulation contract.
+//
+// Version:
+//   - 2026-09-27: Updated for explicit simulation.
 func TestPrepareResultValidateReady(t *testing.T) {
 	t.Parallel()
 	result := validPrepareResult(PrepareStatusReady)
 	result.AmountIn, result.AmountOut = "1000000", "999000000000000"
+	result.AmountLimit = "990000000000000"
 	if err := result.Validate(); err != nil {
 		t.Fatalf("Validate() error = %v", err)
 	}
@@ -61,7 +66,7 @@ func TestPrepareResultValidateRejectsInconsistentResults(t *testing.T) {
 
 func validPrepareResult(status PrepareStatus) PrepareResult {
 	return PrepareResult{
-		ExecutionID: "execution-1", Status: status, Chain: "base", Network: "sepolia",
+		Simulated: true, ExecutionID: "execution-1", Status: status, Chain: "base", Network: "sepolia",
 		SigningPayload: &k4k3ruSDKTradeHubExecution.SigningPayload{ChainFamily: k4k3ruSDKTradeHubExecution.ChainFamilyEVM, Digest: "0xdigest", UnsignedTransaction: &k4k3ruSDKTradeHubExecution.EVMUnsignedTransaction{ChainID: "84532"}},
 		SubmitParams:   &k4k3ruSDKTradeHubExecution.SubmitParams{ExecutionID: "execution-1", PayloadDigest: "0xdigest"},
 		PreparedAt:     1_000, ExpiresAt: 2_000,
