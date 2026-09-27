@@ -12,6 +12,7 @@ import (
 // TestSubscribeStartAndResume verifies flat start encoding and reference-only recovery.
 //
 // Version:
+//   - 2026-09-27: Preserve the maximum input amount without aliasing.
 //   - 2026-09-24: Added.
 func TestSubscribeStartAndResume(t *testing.T) {
 	p := spotParams()
@@ -42,8 +43,8 @@ func TestSubscribeStartAndResume(t *testing.T) {
 		}
 	}
 	copy := (SubscribeParams{Params: &p, IdempotencyKey: " start-one "}).Normalize()
-	copy.Params.ExecutionRule.Open.Spot.Amount = "2"
-	if p.ExecutionRule.Open.Spot.Amount == "2" || copy.IdempotencyKey != "start-one" {
+	copy.Params.ExecutionRule.Open.Spot.MaximumAmount = "2"
+	if p.ExecutionRule.Open.Spot.MaximumAmount == "2" || copy.IdempotencyKey != "start-one" {
 		t.Fatal("normalization aliases parameters")
 	}
 }

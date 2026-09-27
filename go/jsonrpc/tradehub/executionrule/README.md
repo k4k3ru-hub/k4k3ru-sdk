@@ -27,5 +27,21 @@ JSON decoding rejects absent/null legs and unknown or duplicate fields.
 The structural validator does not verify asset equivalence, venue support,
 inventory, lot sizes, leverage limits, trigger accounting, or executable prices.
 
+`SpotOpenRule.MaximumAmount` is required and encoded as `open.spot.maximumAmount`.
+It caps the QuoteAsset input of each Open, rather than prescribing an exact input
+or a lifetime spending allowance. Its unit is the reference QuoteAsset's atomic
+unit, expressed as a positive base-ten integer string. Omission, null, zero and
+the former `open.spot.amount` field are rejected; fixed amounts are not migrated.
+The executor must resolve a positive actual input no greater than this maximum
+after accounting for existing reservations and the current transaction's gas.
+Close uses the remaining opened position, without applying this Open cap.
+
+Gas settings belong to the Agent's execution configuration. Each transaction
+requires its own gas funding when attempted; Open does not reserve a future
+Close budget. No wallet-wide gas reserve or minimum balance is introduced.
+An underfunded Close must remain unexecuted without reducing its intended
+quantity or treating the position as closed. These are execution responsibilities,
+not balance checks performed by this structural validator.
+
 See the [Scalping contract and examples](../scalping/README.md) for reference
 asset units, required per-market fields, and the service responsibilities.

@@ -60,7 +60,7 @@ to 50 (0.5%) when omitted; the example explicitly uses that value.
   "executionRule": {
     "maximumSlippageBps": 50,
     "open": {
-      "spot": {"amount": "1000000"},
+      "spot": {"maximumAmount": "1000000"},
       "limitPrice": "2",
       "executionTtlMs": 30000
     },
@@ -113,20 +113,23 @@ idempotency key. The `open.perp` field name is unchanged.
   top-level `symbol` identifies the pair. MarketHub resolves concrete instruments.
 - Optional `buy.quantity` (Quote input) and `sell.quantity` (Base input) use
   `{amount, decimals}` and are forwarded to MarketHub unchanged. Omission selects
-  reference prices independently per direction. `open.spot.amount` is never
+  reference prices independently per direction. `open.spot.maximumAmount` is never
   inferred as an observation quantity. Results carry `receiveQuantity`: Buy
   receives Base; Sell receives Quote. Spot/long candidates use Buy, short
-  candidates use Sell. New saved configurations use version 4 for shared slippage; older versions
+  candidates use Sell. New saved configurations use version 5 for maximum input amounts; older versions
   remain stored but fail resume with `unsupported`. Start with a new idempotency
   key; old `baseQuantity` requests are rejected.
 - `MarketRef`: `venue` and `network`, plus exactly one of `poolId` or
   `venueSymbol`. Pools require `chain`. Native symbols and asset/pool IDs retain
   their case; scope names are trimmed and lowercased. A native order book may
   also carry its explicit chain. Network is never defaulted.
-- Spot `amount` uses reference QuoteAsset atomic units; Perp `quantity` uses
+- Spot `maximumAmount` caps each Open in reference QuoteAsset atomic units; Perp `quantity` uses
   reference BaseAsset atomic units. Both are positive base-ten integer strings.
   Conversion to each destination requires verified asset mapping and exact
   decimal/lot conversion. Equal symbols or equal raw integers are insufficient.
+  `maximumAmount` is required, has no default, and is not a cumulative spending
+  limit. The former `open.spot.amount` is rejected, including when both fields
+  are present. No fixed-amount settings are converted into spend maxima.
 - Prices use decimal strings in QuoteAsset per BaseAsset token units. A buy
   Open limit is an upper bound; a short Perp Open limit is a lower bound.
 - Triggers are `price` (positive decimal) or `return_bps` (signed decimal).
@@ -143,6 +146,17 @@ idempotency key. The `open.perp` field name is unchanged.
   is preserved. JSON null and the former per-leg fields are rejected.
   TTL and maximum holding time, when set, must be positive.
   TTL concerns preparation validity, not venue order time-in-force.
+
+The Agent resolves each Spot Open input as the smaller of `maximumAmount` and
+the spendable input balance after existing reservations and current transaction
+gas. Gas is subtracted from the input only when they are the same asset; otherwise
+the native gas balance is checked separately. No additional future Close gas
+budget or wallet-wide minimum balance is required at Open. Close checks its own
+gas when attempted and keeps the full intended position quantity on a funding
+failure; it must not silently shrink the Close or mark the position closed.
+Actual sizing, shared wallet reservations, and Scalping execution orchestration
+are subsequent Agent/TradeHub integration work, not behavior supplied by these
+subscription DTOs. Standalone Swap.Prepare still takes an exact `amount`.
 
 ## Conditions and normalization
 

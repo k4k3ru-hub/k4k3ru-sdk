@@ -13,6 +13,7 @@ import (
 // ExampleSubscribeParams builds a Spot request without signing or placing an order.
 //
 // Version:
+//   - 2026-09-27: Specify a per-Open maximum input amount.
 //   - 2026-09-27: Set slippage once for the complete round trip.
 //   - 2026-09-26: Resolve observation markets from symbol and target scope.
 //   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
@@ -31,7 +32,7 @@ func ExampleSubscribeParams() {
 		Conditions: scalping.Conditions{WindowMS: scalping.DefaultWindowMS, MaximumDataAgeMS: 2000, TradeCount: &scalping.CountRange{Minimum: &count}},
 		ExecutionRule: rule.Rule{
 			MaximumSlippageBPS: &slippage,
-			Open:               rule.OpenRule{Spot: &rule.SpotOpenRule{Amount: "1000000"}, ExecutionTTLMS: 30000},
+			Open:               rule.OpenRule{Spot: &rule.SpotOpenRule{MaximumAmount: "1000000"}, ExecutionTTLMS: 30000},
 			Close:              rule.CloseRule{TakeProfit: &rule.Trigger{Type: rule.TriggerTypePrice, Value: "2.1"}, Spot: &rule.SpotCloseRule{Markets: []rule.MarketRef{market}}, ExecutionTTLMS: 30000},
 		},
 	}.Normalize()
@@ -50,7 +51,7 @@ func ExampleSubscribeParams() {
 		return
 	}
 	fmt.Println(jsonrpc.MethodTradeHubScalpingSubscribe)
-	fmt.Println(decoded.Params.MarketType, decoded.Params.ExecutionRule.Open.Spot.Amount)
+	fmt.Println(decoded.Params.MarketType, decoded.Params.ExecutionRule.Open.Spot.MaximumAmount)
 	fmt.Println(decoded.Params.Conditions.WindowMS)
 	// Output:
 	// TradeHub.Scalping.Subscribe

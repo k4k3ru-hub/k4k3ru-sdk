@@ -11,6 +11,7 @@ import (
 // Omitted shared slippage defaults to 50 bps; explicit zero is preserved.
 //
 // Version:
+//   - 2026-09-27: Normalize the per-Open maximum input amount.
 //   - 2026-09-27: Default one shared slippage bound for Open and Close.
 //   - 2026-09-23: Added.
 func (r Rule) Normalize() Rule {
@@ -21,7 +22,7 @@ func (r Rule) Normalize() Rule {
 	}
 	r.Open.Spot = v.Pointer(r.Open.Spot)
 	if r.Open.Spot != nil {
-		r.Open.Spot.Amount = strings.TrimSpace(r.Open.Spot.Amount)
+		r.Open.Spot.MaximumAmount = strings.TrimSpace(r.Open.Spot.MaximumAmount)
 	}
 	r.Open.Perp = v.Pointer(r.Open.Perp)
 	if p := r.Open.Perp; p != nil {
@@ -54,6 +55,7 @@ func normalizeTrigger(trigger *Trigger) *Trigger {
 // Metadata, inventory, margin availability, and actual prices require server checks.
 //
 // Version:
+//   - 2026-09-27: Require a positive Spot Open maximum input amount.
 //   - 2026-09-27: Validate shared optional slippage independently of leg TTLs.
 //   - 2026-09-23: Added.
 func (r Rule) Validate(marketType MarketType) error {
@@ -80,7 +82,7 @@ func validateOpen(open OpenRule, marketType MarketType) error {
 		if open.Spot == nil || open.Perp != nil {
 			return v.Invalid(op, "spot", "invalid")
 		}
-		if err := positive(op, "amount", open.Spot.Amount, true); err != nil {
+		if err := positive(op, "maximum_amount", open.Spot.MaximumAmount, true); err != nil {
 			return err
 		}
 	} else {
@@ -181,6 +183,7 @@ func (t Trigger) Validate() error {
 // Validate with the enclosing market type also rejects a mismatched open variant.
 //
 // Version:
+//   - 2026-09-27: Require Spot maximumAmount and reject the former amount field.
 //   - 2026-09-27: Default omitted shared slippage and reject null or per-leg fields.
 //   - 2026-09-25: Validate perpetual variants with the canonical market type.
 //   - 2026-09-23: Added.

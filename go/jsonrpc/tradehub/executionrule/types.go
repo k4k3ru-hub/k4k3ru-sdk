@@ -52,7 +52,9 @@ type OpenRule struct {
 }
 
 type SpotOpenRule struct {
-	Amount string `json:"amount"`
+	// MaximumAmount caps each Open's QuoteAsset input in atomic units.
+	// The executor resolves the actual amount after current gas and reservations.
+	MaximumAmount string `json:"maximumAmount"`
 }
 
 type PerpOpenRule struct {

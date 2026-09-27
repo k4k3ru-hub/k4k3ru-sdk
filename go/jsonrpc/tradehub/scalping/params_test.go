@@ -23,7 +23,7 @@ func spotParams() Params {
 		Conditions: Conditions{WindowMS: 30000, MaximumDataAgeMS: 2000, TradeCount: &CountRange{Minimum: pointer(uint64(3))}},
 		ExecutionRule: rule.Rule{
 			MaximumSlippageBPS: pointer(uint64(0)),
-			Open:               rule.OpenRule{Spot: &rule.SpotOpenRule{Amount: "1000000"}, LimitPrice: pointer("2"), ExecutionTTLMS: 30000},
+			Open:               rule.OpenRule{Spot: &rule.SpotOpenRule{MaximumAmount: "1000000"}, LimitPrice: pointer("2"), ExecutionTTLMS: 30000},
 			Close:              rule.CloseRule{TakeProfit: &rule.Trigger{Type: rule.TriggerTypePrice, Value: "2.1"}, StopLoss: &rule.Trigger{Type: rule.TriggerTypePrice, Value: "1.9"}, ExecutionTTLMS: 30000, Spot: &rule.SpotCloseRule{Markets: []rule.MarketRef{{Venue: "uniswap-v3", Chain: "base", Network: "mainnet", PoolID: "other-chain-pool"}}}},
 		},
 	}
@@ -71,6 +71,7 @@ func TestParamsRoundTrip(t *testing.T) {
 // TestParamsValidation verifies conflicting rules and exact numeric bounds.
 //
 // Version:
+//   - 2026-09-27: Verify the required Spot Open maximum input amount.
 //   - 2026-09-27: Validate the shared slippage bound while accepting omission.
 //   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
 //   - 2026-09-26: Use symbol-scoped observations and scaled volume bounds.
@@ -88,10 +89,10 @@ func TestParamsValidation(t *testing.T) {
 		"invalid slippage":  func(p *Params) { p.ExecutionRule.MaximumSlippageBPS = pointer(uint64(10001)) },
 		"no ttl":            func(p *Params) { p.ExecutionRule.Open.ExecutionTTLMS = 0 },
 		"zero holding":      func(p *Params) { p.ExecutionRule.Close.MaximumHoldingMS = pointer(uint64(0)) },
-		"exponent amount":   func(p *Params) { p.ExecutionRule.Open.Spot.Amount = "1e6" },
-		"fractional amount": func(p *Params) { p.ExecutionRule.Open.Spot.Amount = "1.1" },
-		"zero amount":       func(p *Params) { p.ExecutionRule.Open.Spot.Amount = "0" },
-		"negative amount":   func(p *Params) { p.ExecutionRule.Open.Spot.Amount = "-1" },
+		"exponent amount":   func(p *Params) { p.ExecutionRule.Open.Spot.MaximumAmount = "1e6" },
+		"fractional amount": func(p *Params) { p.ExecutionRule.Open.Spot.MaximumAmount = "1.1" },
+		"zero amount":       func(p *Params) { p.ExecutionRule.Open.Spot.MaximumAmount = "0" },
+		"negative amount":   func(p *Params) { p.ExecutionRule.Open.Spot.MaximumAmount = "-1" },
 		"no limit":          func(p *Params) { p.ExecutionRule.Open.LimitPrice = pointer("") },
 		"invalid price":     func(p *Params) { p.ExecutionRule.Close.TakeProfit.Value = "NaN" },
 		"no threshold":      func(p *Params) { p.Conditions.TradeCount = nil },
@@ -119,7 +120,7 @@ func TestParamsValidation(t *testing.T) {
 		})
 	}
 	p := spotParams()
-	p.ExecutionRule.Open.Spot.Amount = "9007199254740993"
+	p.ExecutionRule.Open.Spot.MaximumAmount = "9007199254740993"
 	p.Conditions.PriceChangeBPS = &DecimalRange{Maximum: pointer("-0.25")}
 	p.Conditions.BuyVolumeRatioBPS = &DecimalRange{Minimum: pointer("0"), Maximum: pointer("10000")}
 	if err := p.Validate(); err != nil {
