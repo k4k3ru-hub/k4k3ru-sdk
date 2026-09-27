@@ -13,6 +13,7 @@ import (
 // ExampleSubscribeParams builds a Spot request without signing or placing an order.
 //
 // Version:
+//   - 2026-09-27: Set slippage once for the complete round trip.
 //   - 2026-09-26: Resolve observation markets from symbol and target scope.
 //   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
 //   - 2026-09-24: Use the default observation window constant for Go requests.
@@ -29,8 +30,9 @@ func ExampleSubscribeParams() {
 		Markets:    []sdkMarket.MarketTarget{{Venue: "cetus", Network: "mainnet", Chain: "sui"}},
 		Conditions: scalping.Conditions{WindowMS: scalping.DefaultWindowMS, MaximumDataAgeMS: 2000, TradeCount: &scalping.CountRange{Minimum: &count}},
 		ExecutionRule: rule.Rule{
-			Open:  rule.OpenRule{Spot: &rule.SpotOpenRule{Amount: "1000000"}, MaximumSlippageBPS: &slippage, ExecutionTTLMS: 30000},
-			Close: rule.CloseRule{TakeProfit: &rule.Trigger{Type: rule.TriggerTypePrice, Value: "2.1"}, Spot: &rule.SpotCloseRule{Markets: []rule.MarketRef{market}}, MaximumSlippageBPS: &slippage, ExecutionTTLMS: 30000},
+			MaximumSlippageBPS: &slippage,
+			Open:               rule.OpenRule{Spot: &rule.SpotOpenRule{Amount: "1000000"}, ExecutionTTLMS: 30000},
+			Close:              rule.CloseRule{TakeProfit: &rule.Trigger{Type: rule.TriggerTypePrice, Value: "2.1"}, Spot: &rule.SpotCloseRule{Markets: []rule.MarketRef{market}}, ExecutionTTLMS: 30000},
 		},
 	}.Normalize()
 	if err := p.Validate(); err != nil {

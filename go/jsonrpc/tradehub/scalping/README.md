@@ -34,8 +34,9 @@ never valid. Existing Swap request/response types are unchanged.
 
 The following is a **params-only structure example**, with placeholder asset
 and pool IDs. Replace those with resolved metadata; the numbers illustrate
-units and are not trading recommendations or SDK defaults. The omitted
-`conditions.windowMs` defaults to 60000 (60 seconds).
+units and are not trading recommendations. The omitted `conditions.windowMs`
+defaults to 60000 (60 seconds). Shared `executionRule.maximumSlippageBps` defaults
+to 50 (0.5%) when omitted; the example explicitly uses that value.
 
 ```json
 {
@@ -57,10 +58,10 @@ units and are not trading recommendations or SDK defaults. The omitted
     "tradeCount": {"minimum": 10}
   },
   "executionRule": {
+    "maximumSlippageBps": 50,
     "open": {
       "spot": {"amount": "1000000"},
       "limitPrice": "2",
-      "maximumSlippageBps": 100,
       "executionTtlMs": 30000
     },
     "close": {
@@ -71,7 +72,6 @@ units and are not trading recommendations or SDK defaults. The omitted
           {"venue": "cetus", "chain": "sui", "network": "mainnet", "poolId": "CLOSE_POOL_ID"}
         ]
       },
-      "maximumSlippageBps": 100,
       "executionTtlMs": 30000
     }
   }
@@ -116,7 +116,7 @@ idempotency key. The `open.perp` field name is unchanged.
   reference prices independently per direction. `open.spot.amount` is never
   inferred as an observation quantity. Results carry `receiveQuantity`: Buy
   receives Base; Sell receives Quote. Spot/long candidates use Buy, short
-  candidates use Sell. New saved configurations use version 3; older versions
+  candidates use Sell. New saved configurations use version 4 for shared slippage; older versions
   remain stored but fail resume with `unsupported`. Start with a new idempotency
   key; old `baseQuantity` requests are rejected.
 - `MarketRef`: `venue` and `network`, plus exactly one of `poolId` or
@@ -138,8 +138,10 @@ idempotency key. The `open.perp` field name is unchanged.
   reserved inventory. Perp closes the original account/instrument position;
   a trade on another venue is not its Close. A caller cannot disable reduce-only
   behavior through these types.
-- Slippage must be explicitly supplied, including zero, and is within
-  0..10000 bps. TTL and maximum holding time, when set, must be positive.
+- `executionRule.maximumSlippageBps` applies to both Open and Close and is within
+  0..10000 bps. It is optional: omission defaults to 50 (0.5%), while explicit zero
+  is preserved. JSON null and the former per-leg fields are rejected.
+  TTL and maximum holding time, when set, must be positive.
   TTL concerns preparation validity, not venue order time-in-force.
 
 ## Conditions and normalization
@@ -163,6 +165,15 @@ and persistence. Explicit zero, null, and values above `MaximumWindowMS` (60000)
 are rejected, never replaced or clamped. Set `"windowMs": 30000` for a shorter
 30-second window. This is the observation period, not the notification interval.
 No metric thresholds or data-age limit receive defaults.
+
+`executionrule.Rule.Normalize()` resolves omitted shared slippage for both JSON
+and Go callers. Subscribe persists the resulting explicit value; omission and an
+explicit 50 produce the same canonical settings and idempotency hash. Resume uses
+the saved value, including zero. Old per-leg settings are not converted; create a
+new execution with a new idempotency key. The execution-rule default does not
+change standalone Swap.Prepare: `simulate:false` still requires `amountLimit`
+and rejects `maximumSlippageBps`. Automatic Scalping amount-limit generation is
+a separate execution integration and is not implemented by these DTOs.
 
 Go callers retain the existing `uint64` field and must explicitly set
 `Conditions.WindowMS`, for example `WindowMS: scalping.DefaultWindowMS`.

@@ -16,7 +16,13 @@ The rule's JSON variant name `open.perp` remains unchanged. TradeHub Scalping's
 enclosing MarketType field now belongs to `finance/market`; convert explicitly
 with `executionrule.MarketType(params.MarketType)` when validating a rule alone.
 
-`Normalize` returns an independent copy without adding trading defaults.
+`Rule.MaximumSlippageBPS` is an optional shared Open/Close bound encoded as
+`executionRule.maximumSlippageBps`. Omission defaults to
+`DefaultMaximumSlippageBPS` (50 bps, 0.5%); explicit zero is preserved.
+Values are integers in 0..10000. JSON null and the former
+`open.maximumSlippageBps` / `close.maximumSlippageBps` fields are rejected.
+`Normalize` returns an independent copy and resolves this default, including for
+Go callers with a nil pointer. It does not supply TTLs or trading thresholds.
 JSON decoding rejects absent/null legs and unknown or duplicate fields.
 The structural validator does not verify asset equivalence, venue support,
 inventory, lot sizes, leverage limits, trigger accounting, or executable prices.

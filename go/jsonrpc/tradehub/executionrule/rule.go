@@ -8,11 +8,17 @@ import (
 )
 
 // Normalize returns an independent rule with normalized scopes and scalar values.
-// It does not supply trading thresholds or execution defaults.
+// Omitted shared slippage defaults to 50 bps; explicit zero is preserved.
 //
 // Version:
+//   - 2026-09-27: Default one shared slippage bound for Open and Close.
 //   - 2026-09-23: Added.
 func (r Rule) Normalize() Rule {
+	r.MaximumSlippageBPS = v.Pointer(r.MaximumSlippageBPS)
+	if r.MaximumSlippageBPS == nil {
+		value := DefaultMaximumSlippageBPS
+		r.MaximumSlippageBPS = &value
+	}
 	r.Open.Spot = v.Pointer(r.Open.Spot)
 	if r.Open.Spot != nil {
 		r.Open.Spot.Amount = strings.TrimSpace(r.Open.Spot.Amount)
@@ -24,11 +30,9 @@ func (r Rule) Normalize() Rule {
 		p.MarginMode = MarginMode(strings.ToLower(strings.TrimSpace(string(p.MarginMode))))
 	}
 	r.Open.LimitPrice = v.StringPointer(r.Open.LimitPrice)
-	r.Open.MaximumSlippageBPS = v.Pointer(r.Open.MaximumSlippageBPS)
 	r.Close.TakeProfit = normalizeTrigger(r.Close.TakeProfit)
 	r.Close.StopLoss = normalizeTrigger(r.Close.StopLoss)
 	r.Close.MaximumHoldingMS = v.Pointer(r.Close.MaximumHoldingMS)
-	r.Close.MaximumSlippageBPS = v.Pointer(r.Close.MaximumSlippageBPS)
 	r.Close.Spot = v.Pointer(r.Close.Spot)
 	if r.Close.Spot != nil {
 		r.Close.Spot.Markets = NormalizeMarkets(r.Close.Spot.Markets)
@@ -50,6 +54,7 @@ func normalizeTrigger(trigger *Trigger) *Trigger {
 // Metadata, inventory, margin availability, and actual prices require server checks.
 //
 // Version:
+//   - 2026-09-27: Validate shared optional slippage independently of leg TTLs.
 //   - 2026-09-23: Added.
 func (r Rule) Validate(marketType MarketType) error {
 	if err := marketType.Validate(); err != nil {
@@ -57,6 +62,9 @@ func (r Rule) Validate(marketType MarketType) error {
 	}
 	marketType = MarketType(strings.ToLower(strings.TrimSpace(string(marketType))))
 	r = r.Normalize()
+	if *r.MaximumSlippageBPS > 10000 {
+		return v.Invalid("validate execution rule", "maximum_slippage_bps", "out_of_range")
+	}
 	if err := validateOpen(r.Open, marketType); err != nil {
 		return fmt.Errorf("failed to validate execution rule: %w", err)
 	}
@@ -98,7 +106,7 @@ func validateOpen(open OpenRule, marketType MarketType) error {
 			return err
 		}
 	}
-	return validateExecutionBounds(op, open.MaximumSlippageBPS, open.ExecutionTTLMS)
+	return validateExecutionTTL(op, open.ExecutionTTLMS)
 }
 
 func validateClose(close CloseRule, marketType MarketType) error {
@@ -129,16 +137,10 @@ func validateClose(close CloseRule, marketType MarketType) error {
 	} else if close.Spot != nil {
 		return v.Invalid(op, "spot", "invalid")
 	}
-	return validateExecutionBounds(op, close.MaximumSlippageBPS, close.ExecutionTTLMS)
+	return validateExecutionTTL(op, close.ExecutionTTLMS)
 }
 
-func validateExecutionBounds(operation string, slippage *uint64, ttl uint64) error {
-	if slippage == nil {
-		return v.Invalid(operation, "maximum_slippage_bps", "null")
-	}
-	if *slippage > 10000 {
-		return v.Invalid(operation, "maximum_slippage_bps", "out_of_range")
-	}
+func validateExecutionTTL(operation string, ttl uint64) error {
 	if ttl == 0 {
 		return v.Invalid(operation, "execution_ttl_ms", "empty")
 	}
@@ -179,6 +181,7 @@ func (t Trigger) Validate() error {
 // Validate with the enclosing market type also rejects a mismatched open variant.
 //
 // Version:
+//   - 2026-09-27: Default omitted shared slippage and reject null or per-leg fields.
 //   - 2026-09-25: Validate perpetual variants with the canonical market type.
 //   - 2026-09-23: Added.
 func (r *Rule) UnmarshalJSON(data []byte) error {
@@ -186,9 +189,13 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 		return v.Invalid("decode execution rule", "destination", "null")
 	}
 	type wire Rule
-	var decoded wire
+	slippage := DefaultMaximumSlippageBPS
+	decoded := wire{MaximumSlippageBPS: &slippage}
 	if err := v.Decode(data, &decoded, "open", "close"); err != nil {
 		return fmt.Errorf("failed to decode execution rule: %w", err)
+	}
+	if decoded.MaximumSlippageBPS == nil {
+		return v.Invalid("decode execution rule", "maximum_slippage_bps", "null")
 	}
 	value := Rule(decoded).Normalize()
 	marketType := MarketTypeSpot

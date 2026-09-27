@@ -17,9 +17,10 @@ type SubscribeParams struct {
 	Params         *Params `json:"-"`
 }
 
-// Normalize copies subscription parameters without adding defaults.
+// Normalize copies subscription parameters and applies shared slippage defaulting.
 //
 // Version:
+//   - 2026-09-27: Default omitted executionRule.maximumSlippageBps to 50.
 //   - 2026-09-24: Added.
 func (p SubscribeParams) Normalize() SubscribeParams {
 	p.ExecutionID = strings.TrimSpace(p.ExecutionID)

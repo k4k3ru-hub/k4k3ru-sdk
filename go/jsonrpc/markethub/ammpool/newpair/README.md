@@ -169,6 +169,23 @@ old trades; only directly configured USDC amounts can be priced during recovery.
 HTTP List/Get and the `apnp` stream use the same Activity type. Request parameters,
 listing conditions and other existing response fields remain unchanged.
 
+`Activity.Windows` adds optional `1h` and `24h` observations without changing the
+monitoring-lifetime fields. Each period covers `[from,to)` on UTC minute
+boundaries; times use Unix microseconds. It contains the same directional swap
+counts/amounts, single-leg USD volumes and LP addition/removal/net quantities.
+`observedFrom` identifies the start of period aggregation within the window;
+young pools need not have a full hour/day of observations. This timestamp is not
+a completeness guarantee. `to` is the last published boundary, not necessarily
+the current time. Partial minutes are excluded from these periods.
+
+Missing `windows` supports older servers. A null period is unavailable; it does
+not mean zero trades. Unknown quantities and USD volumes remain null, and net
+LP quantities may be negative. LP additions minus removals do not include reserve
+changes caused by swaps or changes in USD valuation. `CloneActivity` and
+`CloneActivityWindows` detach all period pointers. The DTO addition does not
+by itself enable period aggregation on a server; storage and watcher rollout
+are required.
+
 ## Pool swap fee observations
 
 `Pair.Fees` is optional for compatibility with older servers. Current MarketHub

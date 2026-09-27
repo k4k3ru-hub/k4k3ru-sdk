@@ -11,9 +11,10 @@ import (
 	v "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/internal/validation"
 )
 
-// Normalize returns independent canonical parameters without adding defaults.
+// Normalize returns independent canonical parameters with default shared slippage.
 //
 // Version:
+//   - 2026-09-27: Default omitted executionRule.maximumSlippageBps to 50.
 //   - 2026-09-26: Normalize shared observation targets and explicit scaled quantities.
 //   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
 //   - 2026-09-23: Added.

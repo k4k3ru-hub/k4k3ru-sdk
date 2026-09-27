@@ -22,8 +22,9 @@ func spotParams() Params {
 		Markets:    []market.MarketTarget{{Venue: "cetus", Chain: "sui", Network: "mainnet", PoolID: "sui-usdc-pool"}},
 		Conditions: Conditions{WindowMS: 30000, MaximumDataAgeMS: 2000, TradeCount: &CountRange{Minimum: pointer(uint64(3))}},
 		ExecutionRule: rule.Rule{
-			Open:  rule.OpenRule{Spot: &rule.SpotOpenRule{Amount: "1000000"}, LimitPrice: pointer("2"), MaximumSlippageBPS: pointer(uint64(0)), ExecutionTTLMS: 30000},
-			Close: rule.CloseRule{TakeProfit: &rule.Trigger{Type: rule.TriggerTypePrice, Value: "2.1"}, StopLoss: &rule.Trigger{Type: rule.TriggerTypePrice, Value: "1.9"}, MaximumSlippageBPS: pointer(uint64(100)), ExecutionTTLMS: 30000, Spot: &rule.SpotCloseRule{Markets: []rule.MarketRef{{Venue: "uniswap-v3", Chain: "base", Network: "mainnet", PoolID: "other-chain-pool"}}}},
+			MaximumSlippageBPS: pointer(uint64(0)),
+			Open:               rule.OpenRule{Spot: &rule.SpotOpenRule{Amount: "1000000"}, LimitPrice: pointer("2"), ExecutionTTLMS: 30000},
+			Close:              rule.CloseRule{TakeProfit: &rule.Trigger{Type: rule.TriggerTypePrice, Value: "2.1"}, StopLoss: &rule.Trigger{Type: rule.TriggerTypePrice, Value: "1.9"}, ExecutionTTLMS: 30000, Spot: &rule.SpotCloseRule{Markets: []rule.MarketRef{{Venue: "uniswap-v3", Chain: "base", Network: "mainnet", PoolID: "other-chain-pool"}}}},
 		},
 	}
 }
@@ -70,6 +71,7 @@ func TestParamsRoundTrip(t *testing.T) {
 // TestParamsValidation verifies conflicting rules and exact numeric bounds.
 //
 // Version:
+//   - 2026-09-27: Validate the shared slippage bound while accepting omission.
 //   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
 //   - 2026-09-26: Use symbol-scoped observations and scaled volume bounds.
 //   - 2026-09-23: Added.
@@ -83,8 +85,7 @@ func TestParamsValidation(t *testing.T) {
 		"no close market":   func(p *Params) { p.ExecutionRule.Close.Spot = nil },
 		"empty markets":     func(p *Params) { p.Markets = nil },
 		"same assets":       func(p *Params) { p.QuoteAsset = p.BaseAsset },
-		"no slippage":       func(p *Params) { p.ExecutionRule.Open.MaximumSlippageBPS = nil },
-		"invalid slippage":  func(p *Params) { p.ExecutionRule.Close.MaximumSlippageBPS = pointer(uint64(10001)) },
+		"invalid slippage":  func(p *Params) { p.ExecutionRule.MaximumSlippageBPS = pointer(uint64(10001)) },
 		"no ttl":            func(p *Params) { p.ExecutionRule.Open.ExecutionTTLMS = 0 },
 		"zero holding":      func(p *Params) { p.ExecutionRule.Close.MaximumHoldingMS = pointer(uint64(0)) },
 		"exponent amount":   func(p *Params) { p.ExecutionRule.Open.Spot.Amount = "1e6" },
@@ -188,9 +189,10 @@ func TestParamsJSONRejectsOverrides(t *testing.T) {
 	}
 }
 
-// TestNormalizeDoesNotAlias verifies request copies and absence of trading defaults.
+// TestNormalizeDoesNotAlias verifies independent copies and the shared slippage default.
 //
 // Version:
+//   - 2026-09-27: Verify shared slippage defaulting preserves caller-owned values.
 //   - 2026-09-25: Use SDK finance market types and canonical perpetual values.
 //   - 2026-09-26: Use symbol-scoped observations and scaled volume bounds.
 //   - 2026-09-23: Added.
@@ -210,7 +212,7 @@ func TestNormalizeDoesNotAlias(t *testing.T) {
 	n.ExecutionRule.Close.Spot.Markets[0].PoolID = "changed"
 	n.ExecutionRule.Close.TakeProfit.Value = "changed"
 	*n.ExecutionRule.Open.LimitPrice = "changed"
-	*n.ExecutionRule.Open.MaximumSlippageBPS = 50
+	*n.ExecutionRule.MaximumSlippageBPS = 50
 	*n.Conditions.PriceChangeBPS.Minimum = "changed"
 	*n.Conditions.TradeCount.Minimum = 100
 	after, err := json.Marshal(p)
@@ -221,7 +223,7 @@ func TestNormalizeDoesNotAlias(t *testing.T) {
 		t.Fatal("normalization aliased input")
 	}
 	empty := (Params{}).Normalize()
-	if empty.ExecutionRule.Open.MaximumSlippageBPS != nil || empty.Conditions.PriceChangeBPS != nil || empty.Conditions.WindowMS != 0 {
-		t.Fatal("defaults were invented")
+	if empty.ExecutionRule.MaximumSlippageBPS == nil || *empty.ExecutionRule.MaximumSlippageBPS != rule.DefaultMaximumSlippageBPS || empty.Conditions.PriceChangeBPS != nil || empty.Conditions.WindowMS != 0 {
+		t.Fatal("unexpected defaults")
 	}
 }

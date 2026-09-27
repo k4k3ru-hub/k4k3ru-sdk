@@ -13,6 +13,7 @@ type Activity struct {
 	LiquidityRemoved   ActivityLiquidity `json:"liquidityRemoved"`
 	NetToken0Liquidity *string           `json:"netToken0Liquidity"`
 	NetToken1Liquidity *string           `json:"netToken1Liquidity"`
+	Windows            *ActivityWindows  `json:"windows,omitempty"`
 }
 
 type ActivitySwaps struct {
@@ -34,6 +35,7 @@ type ActivityLiquidity struct {
 //
 // Version:
 //   - 2026-09-21: Added.
+//   - 2026-09-27: Copy optional hourly and daily observations independently.
 func CloneActivity(a *Activity) *Activity {
 	if a == nil {
 		return nil
@@ -48,5 +50,6 @@ func CloneActivity(a *Activity) *Activity {
 	for _, p := range []**string{&c.Token0ToToken1.Token0Amount, &c.Token0ToToken1.Token1Amount, &c.Token0ToToken1.VolumeUSD, &c.Token1ToToken0.Token0Amount, &c.Token1ToToken0.Token1Amount, &c.Token1ToToken0.VolumeUSD, &c.LiquidityAdded.Token0Amount, &c.LiquidityAdded.Token1Amount, &c.LiquidityRemoved.Token0Amount, &c.LiquidityRemoved.Token1Amount, &c.NetToken0Liquidity, &c.NetToken1Liquidity} {
 		copyString(p)
 	}
+	c.Windows = CloneActivityWindows(a.Windows)
 	return &c
 }

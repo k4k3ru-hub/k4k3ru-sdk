@@ -6,6 +6,8 @@ type MarginMode string
 type TriggerType string
 
 const (
+	DefaultMaximumSlippageBPS uint64 = 50
+
 	MarketTypeSpot      MarketType = "spot"
 	MarketTypePerpetual MarketType = "perpetual"
 
@@ -37,16 +39,16 @@ type MarketRef struct {
 }
 
 type Rule struct {
-	Open  OpenRule  `json:"open"`
-	Close CloseRule `json:"close"`
+	MaximumSlippageBPS *uint64   `json:"maximumSlippageBps,omitempty"`
+	Open               OpenRule  `json:"open"`
+	Close              CloseRule `json:"close"`
 }
 
 type OpenRule struct {
-	Spot               *SpotOpenRule `json:"spot,omitempty"`
-	Perp               *PerpOpenRule `json:"perp,omitempty"`
-	LimitPrice         *string       `json:"limitPrice,omitempty"`
-	MaximumSlippageBPS *uint64       `json:"maximumSlippageBps"`
-	ExecutionTTLMS     uint64        `json:"executionTtlMs"`
+	Spot           *SpotOpenRule `json:"spot,omitempty"`
+	Perp           *PerpOpenRule `json:"perp,omitempty"`
+	LimitPrice     *string       `json:"limitPrice,omitempty"`
+	ExecutionTTLMS uint64        `json:"executionTtlMs"`
 }
 
 type SpotOpenRule struct {
@@ -61,12 +63,11 @@ type PerpOpenRule struct {
 }
 
 type CloseRule struct {
-	TakeProfit         *Trigger       `json:"takeProfit,omitempty"`
-	StopLoss           *Trigger       `json:"stopLoss,omitempty"`
-	MaximumHoldingMS   *uint64        `json:"maximumHoldingMs,omitempty"`
-	Spot               *SpotCloseRule `json:"spot,omitempty"`
-	MaximumSlippageBPS *uint64        `json:"maximumSlippageBps"`
-	ExecutionTTLMS     uint64         `json:"executionTtlMs"`
+	TakeProfit       *Trigger       `json:"takeProfit,omitempty"`
+	StopLoss         *Trigger       `json:"stopLoss,omitempty"`
+	MaximumHoldingMS *uint64        `json:"maximumHoldingMs,omitempty"`
+	Spot             *SpotCloseRule `json:"spot,omitempty"`
+	ExecutionTTLMS   uint64         `json:"executionTtlMs"`
 }
 
 type SpotCloseRule struct {
