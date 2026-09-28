@@ -42,52 +42,61 @@ func TestSuiOrderReference(t *testing.T) {
 	}
 }
 
-// TestSuiOMSSnapshot verifies signed gas, exact realized PnL, and terminal checkpoint requirements.
+// TestSuiOMSSnapshot verifies both Sui networks, signed gas, PnL, and terminal checkpoints.
 //
 // Version:
+//   - 2026-09-28: Cover Mainnet alongside Testnet and reject other networks.
 //   - 2026-09-25: Added.
 func TestSuiOMSSnapshot(t *testing.T) {
-	checkpoint := uint64(9007199254740993)
-	asset := "0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI"
-	snapshot := &ExecutionSnapshot{Status: ObservationStatusSuccess, ObservedAt: 1, Onchain: &OnchainExecution{ChainFamily: ChainFamilySui, Chain: "sui", Network: "testnet", TransactionID: sui.TransactionDigest{1}.String(), Checkpoint: &checkpoint}, OMS: &ExecutionOMS{
-		OrderID: "18446744073709551615", OpenExecutionID: "open_1",
-		Fill: &SwapFill{TokenInAssetID: "0x3::usdc::USDC", TokenOutAssetID: asset, TokenInDecimals: 6, TokenOutDecimals: 9, AmountIn: "4000", AmountOut: "1100000"},
-		Fee:  &ExecutionFee{AssetID: asset, Decimals: 9, Amount: "-125"},
-		PnL:  ExecutionPnL{Status: "realized", AssetID: asset, Decimals: 9, Amount: "100000"},
-	}}
-	event := SubscriptionEvent{ExecutionID: "close_1", SubscriptionKey: "sub_1", Sequence: 1, Kind: ExecutionEventSnapshot, Snapshot: snapshot}
-	encoded, err := json.Marshal(event)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var decoded SubscriptionEvent
-	if err := json.Unmarshal(encoded, &decoded); err != nil {
-		t.Fatal(err)
-	}
-	if *decoded.Snapshot.Onchain.Checkpoint != checkpoint || decoded.Snapshot.OMS.PnL.Amount != "100000" {
-		t.Fatal("lost exact quantities")
-	}
-	snapshot.Onchain.Checkpoint = nil
-	if event.Validate() == nil {
-		t.Fatal("accepted uncheckpointed fill")
-	}
-	snapshot.Onchain.Checkpoint = &checkpoint
-	snapshot.OMS.PnL.Amount = "0.1"
-	if event.Validate() == nil {
-		t.Fatal("accepted fractional atomic PnL")
-	}
-	snapshot.Status, snapshot.Failure = ObservationStatusFailed, &ExecutionFailure{Code: "transaction_failed"}
-	snapshot.OMS.Fill, snapshot.OMS.PnL = nil, ExecutionPnL{Status: "unavailable"}
-	if err := event.Validate(); err != nil {
-		t.Fatal("failed gas record rejected", err)
-	}
-	snapshot.OMS.PnL.Amount = "0"
-	if event.Validate() == nil {
-		t.Fatal("represented unavailable PnL as zero")
-	}
-	snapshot.OMS.PnL.Amount = ""
-	snapshot.Status, snapshot.Failure, snapshot.OMS.Fee, snapshot.Onchain.Checkpoint = ObservationStatusPending, nil, nil, nil
-	if err := event.Validate(); err != nil {
-		t.Fatal("pending OMS rejected", err)
+	for _, network := range []string{"testnet", "mainnet"} {
+		t.Run(network, func(t *testing.T) {
+			checkpoint := uint64(9007199254740993)
+			asset := "0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI"
+			snapshot := &ExecutionSnapshot{Status: ObservationStatusSuccess, ObservedAt: 1, Onchain: &OnchainExecution{ChainFamily: ChainFamilySui, Chain: "sui", Network: network, TransactionID: sui.TransactionDigest{1}.String(), Checkpoint: &checkpoint}, OMS: &ExecutionOMS{
+				OrderID: "18446744073709551615", OpenExecutionID: "open_1",
+				Fill: &SwapFill{TokenInAssetID: "0x3::usdc::USDC", TokenOutAssetID: asset, TokenInDecimals: 6, TokenOutDecimals: 9, AmountIn: "4000", AmountOut: "1100000"},
+				Fee:  &ExecutionFee{AssetID: asset, Decimals: 9, Amount: "-125"},
+				PnL:  ExecutionPnL{Status: "realized", AssetID: asset, Decimals: 9, Amount: "100000"},
+			}}
+			event := SubscriptionEvent{ExecutionID: "close_1", SubscriptionKey: "sub_1", Sequence: 1, Kind: ExecutionEventSnapshot, Snapshot: snapshot}
+			encoded, err := json.Marshal(event)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var decoded SubscriptionEvent
+			if err := json.Unmarshal(encoded, &decoded); err != nil {
+				t.Fatal(err)
+			}
+			if *decoded.Snapshot.Onchain.Checkpoint != checkpoint || decoded.Snapshot.OMS.PnL.Amount != "100000" {
+				t.Fatal("lost exact quantities")
+			}
+			snapshot.Onchain.Checkpoint = nil
+			if event.Validate() == nil {
+				t.Fatal("accepted uncheckpointed fill")
+			}
+			snapshot.Onchain.Checkpoint = &checkpoint
+			snapshot.OMS.PnL.Amount = "0.1"
+			if event.Validate() == nil {
+				t.Fatal("accepted fractional atomic PnL")
+			}
+			snapshot.Status, snapshot.Failure = ObservationStatusFailed, &ExecutionFailure{Code: "transaction_failed"}
+			snapshot.OMS.Fill, snapshot.OMS.PnL = nil, ExecutionPnL{Status: "unavailable"}
+			if err := event.Validate(); err != nil {
+				t.Fatal("failed gas record rejected", err)
+			}
+			snapshot.OMS.PnL.Amount = "0"
+			if event.Validate() == nil {
+				t.Fatal("represented unavailable PnL as zero")
+			}
+			snapshot.OMS.PnL.Amount = ""
+			snapshot.Status, snapshot.Failure, snapshot.OMS.Fee, snapshot.Onchain.Checkpoint = ObservationStatusPending, nil, nil, nil
+			if err := event.Validate(); err != nil {
+				t.Fatal("pending OMS rejected", err)
+			}
+			snapshot.Onchain.Network = "devnet"
+			if err := event.Validate(); err == nil {
+				t.Fatal("unsupported network accepted")
+			}
+		})
 	}
 }

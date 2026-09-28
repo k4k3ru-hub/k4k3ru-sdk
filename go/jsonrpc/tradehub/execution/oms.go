@@ -43,7 +43,7 @@ type ExecutionPnL struct {
 
 func validateSuiSnapshot(s *ExecutionSnapshot) error {
 	o := s.Onchain
-	if o.Chain != "sui" || o.Network != "testnet" || o.BlockNumber != nil || o.BlockHash != "" {
+	if o.Chain != "sui" || (o.Network != "testnet" && o.Network != "mainnet") || o.BlockNumber != nil || o.BlockHash != "" {
 		return observationInvalid("onchain=invalid")
 	}
 	if _, err := sui.ParseTransactionDigest(o.TransactionID); err != nil {

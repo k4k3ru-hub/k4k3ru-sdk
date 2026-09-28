@@ -36,6 +36,7 @@ type ActivityLiquidity struct {
 // Version:
 //   - 2026-09-21: Added.
 //   - 2026-09-27: Copy optional hourly and daily observations independently.
+//   - 2026-09-28: Include short observations and their comparisons.
 func CloneActivity(a *Activity) *Activity {
 	if a == nil {
 		return nil

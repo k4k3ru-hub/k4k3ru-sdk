@@ -12,6 +12,10 @@ go get github.com/k4k3ru-hub/k4k3ru-sdk/go@latest
 
 JSON-RPCの共通Envelopeは`jsonrpc`、各メソッドの`params`と`result`はドメイン別パッケージからimportします。
 
+Hyperliquid Testnetの手動売買用DTOは
+[`jsonrpc/tradehub/perpetual`](go/jsonrpc/tradehub/perpetual/README.md) を参照してください。
+HTTPの認証付き4 RPCを定義し、既存のSwap DTOとは別の署名・照会契約を持ちます。
+
 ```go
 import (
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc"

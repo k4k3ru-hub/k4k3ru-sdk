@@ -186,6 +186,31 @@ changes caused by swaps or changes in USD valuation. `CloneActivity` and
 by itself enable period aggregation on a server; storage and watcher rollout
 are required.
 
+`windows["5m"]` and `windows["15m"]` use the same closed-minute totals and add
+`comparison` against the immediately preceding, non-overlapping period of equal
+length. For a 5m window `[12:05,12:10)`, comparison covers `[12:00,12:05)`.
+Each comparison contains `from`, `to`, `swapCount` and `volumeUsd`. Each metric
+has nullable decimal strings `previous`, `delta` (current minus previous), and
+`changePercentage` ((current minus previous) / previous * 100). Percentage is
+truncated toward zero to 18 fractional places: `"200"` means +200%, not 2%.
+A zero previous value leaves only the rate null, including when current is zero.
+An unknown USD value leaves the affected comparison values null, independently
+of the count comparison. USD volume is the sum of both directional volumes only
+when both are known; partial known volume is never used as the total.
+
+Young pools still return their observed current totals and `observedFrom`, but
+`comparison` remains null until monitoring started no later than the preceding
+period's start and both periods can be constructed. This requires approximately
+10/30 minutes plus less than one minute of boundary alignment, and is not a
+historical completeness guarantee. No new history fetch is required to create a
+comparison. Missing short keys from older servers decode as nil. Hourly/daily
+windows retain their existing shape without a comparison field.
+
+The server reconstructs short windows from existing minute rows, keeps them in
+memory, and includes them in List/Get/Subscribe responses. It does not duplicate
+short windows/comparisons in durable snapshots. Before restoration finishes,
+short windows may be null. Period-only advancement does not write the database.
+
 ## Pool swap fee observations
 
 `Pair.Fees` is optional for compatibility with older servers. Current MarketHub

@@ -3,8 +3,34 @@ package newpair
 // ActivityWindows contains observed, minute-aligned periods independently of the
 // monitoring-lifetime totals. Nil periods are unavailable, not zero activity.
 type ActivityWindows struct {
-	OneHour         *ActivityWindow `json:"1h"`
-	TwentyFourHours *ActivityWindow `json:"24h"`
+	FiveMinutes     *ActivityShortWindow `json:"5m"`
+	FifteenMinutes  *ActivityShortWindow `json:"15m"`
+	OneHour         *ActivityWindow      `json:"1h"`
+	TwentyFourHours *ActivityWindow      `json:"24h"`
+}
+
+// ActivityShortWindow adds a preceding, non-overlapping equal-duration comparison.
+// Nil Comparison means observation history or period data is insufficient.
+type ActivityShortWindow struct {
+	ActivityWindow
+	Comparison *ActivityComparison `json:"comparison"`
+}
+
+type ActivityComparison struct {
+	From      int64          `json:"from"`
+	To        int64          `json:"to"`
+	SwapCount ActivityChange `json:"swapCount"`
+	VolumeUSD ActivityChange `json:"volumeUsd"`
+}
+
+// ActivityChange preserves exact decimal values; delta and percentage may be
+// negative. Percentage is (current-previous)/previous*100, truncated toward zero
+// to 18 fractional places. A zero previous value has a nil percentage.
+// Unknown previous/current USD values leave the unavailable fields nil.
+type ActivityChange struct {
+	Previous         *string `json:"previous"`
+	Delta            *string `json:"delta"`
+	ChangePercentage *string `json:"changePercentage"`
 }
 
 // ActivityWindow covers [From, To), in UTC Unix microseconds. ObservedFrom is
@@ -28,11 +54,35 @@ type ActivityWindow struct {
 //
 // Version:
 //   - 2026-09-27: Added.
+//   - 2026-09-28: Copy short periods and comparison values independently.
 func CloneActivityWindows(w *ActivityWindows) *ActivityWindows {
 	if w == nil {
 		return nil
 	}
-	return &ActivityWindows{OneHour: cloneActivityWindow(w.OneHour), TwentyFourHours: cloneActivityWindow(w.TwentyFourHours)}
+	return &ActivityWindows{
+		FiveMinutes: cloneActivityShortWindow(w.FiveMinutes), FifteenMinutes: cloneActivityShortWindow(w.FifteenMinutes),
+		OneHour: cloneActivityWindow(w.OneHour), TwentyFourHours: cloneActivityWindow(w.TwentyFourHours),
+	}
+}
+
+func cloneActivityShortWindow(w *ActivityShortWindow) *ActivityShortWindow {
+	if w == nil {
+		return nil
+	}
+	c := &ActivityShortWindow{ActivityWindow: *cloneActivityWindow(&w.ActivityWindow)}
+	if w.Comparison != nil {
+		v := *w.Comparison
+		for _, change := range []*ActivityChange{&v.SwapCount, &v.VolumeUSD} {
+			for _, p := range []**string{&change.Previous, &change.Delta, &change.ChangePercentage} {
+				if *p != nil {
+					value := **p
+					*p = &value
+				}
+			}
+		}
+		c.Comparison = &v
+	}
+	return c
 }
 
 func cloneActivityWindow(w *ActivityWindow) *ActivityWindow {

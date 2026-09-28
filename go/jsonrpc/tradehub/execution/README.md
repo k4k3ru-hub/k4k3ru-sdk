@@ -3,8 +3,8 @@
 `TradeHub.Execution.Subscribe` and `TradeHub.Execution.Unsubscribe` observe an
 execution previously submitted through TradeHub. They require authenticated
 WebSocket requests. Supported executions are one Base Mainnet/Sepolia EVM
-transaction (ERC-20 approval or Uniswap V3 swap), or one configured Cetus swap on
-Sui Testnet.
+transaction (ERC-20 approval or Uniswap V3 swap), or one configured Sui swap:
+Cetus, Turbos and Momentum on Testnet/Mainnet, and Bluefin on Mainnet.
 
 Subscribe with `{"executionId":"exec_..."}`. The acknowledgement returns
 `executionId` and an opaque `subscriptionKey`. Notifications use event type `exs`
@@ -51,8 +51,9 @@ TransactionBytes: preparedBytes, Signatures: []string{signatureBase64}}`.
 The server checks the signature, ownership, exact prepared bytes and gas owner.
 The signing intent digest and the returned base58 onchain `TransactionID` differ.
 
-The initial relay supports configured Cetus swaps on Sui Testnet with sender-paid
-gas. Prepare writes Execution only; first valid Submit writes an OMS order and a
+The relay supports configured Sui Testnet and Mainnet swaps with sender-paid
+gas. Network identity must match the authorized preparation and the selected relay.
+Prepare writes Execution only; first valid Submit writes an OMS order and a
 submitted/pending record before broadcast. Quantities in the request are atomic
 integer strings; OMS order quantity uses input-token decimals. Submit acceptance
 does not mean a successful swap or a fill. Retry an uncertain Submit with identical params, including
@@ -76,7 +77,7 @@ failed Close releases that claim for a new Close execution. Partial Close and
 cross-chain inventory matching are not implemented in this Sui endpoint.
 
 Successful checkpoint reconciliation records actual input/output quantities from
-the verified Cetus event and balance changes. Failed transactions have no fill.
+the verified venue event and balance changes. Failed transactions have no fill.
 Both record `fee.amount = computationCost + storageCost - storageRebate` in MIST
 (`fee.assetId` is SUI, `fee.decimals` is 9), including a negative amount when rebates
 exceed costs. No quote-currency conversion is performed.

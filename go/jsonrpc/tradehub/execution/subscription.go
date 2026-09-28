@@ -125,6 +125,7 @@ func (s ObservationStatus) Terminal() bool {
 // Validate validates a single-transaction EVM or checkpointed Sui observation.
 //
 // Version:
+//   - 2026-09-28: Accept checkpointed Sui observations on Mainnet and Testnet.
 //   - 2026-09-26: Support OMS execution history without persisted preparation.
 //   - 2026-09-25: Include Sui OMS fills, gas, and explicit round-trip PnL.
 //   - 2026-09-16: Added.
