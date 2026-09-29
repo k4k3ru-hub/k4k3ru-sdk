@@ -1,4 +1,38 @@
-# Execution observation
+# Common execution RPCs
+
+Use the owning packages:
+
+```go
+import (
+    "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/execution"
+    "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/execution/prepare"
+    "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/execution/hyperliquid"
+)
+```
+
+- `TradeHub.Execution.Prepare`: `prepare.Params` -> `prepare.Result`.
+  Use `kind: "swap"` with existing `swap.PrepareParams`, or `kind: "perpetual"`
+  with `prepare.PerpetualParams`. The latter separates venue signing inputs from
+  the order or leverage intent.
+- `TradeHub.Execution.Submit`: `execution.SubmitParams` -> `execution.SubmitResult`.
+  Onchain transaction shapes are retained. Venue signatures use
+  `signedPayload.action`; receipts use `action` without an onchain transaction ID.
+- `hyperliquid.PrepareParams`, `Prepared`, `SubmitParams` and `Receipt` bridge
+  existing Hyperliquid DTOs/journals to the common contract. `Prepared` validates
+  envelope bindings; callers must still independently verify the action and
+  digest before signing. Current adapter scope is Testnet SUI/USDC.
+
+Prepare times in the common action envelope are Unix microseconds. Hyperliquid
+payload times remain milliseconds. Preserve the returned preparation token and
+exact signed payload for reconciliation and retries. Never change RPCs, allocate
+another nonce or create a replacement order automatically after a transport error.
+
+`execution.Params` / `execution.Result` retain the earlier internal Spread
+contract. They are not the DTOs for the new public Prepare handler. The separate
+`prepare` package owns composition of existing swap and perpetual DTOs without
+creating package import cycles or facade aliases.
+
+## Execution observation
 
 `TradeHub.Execution.Subscribe` and `TradeHub.Execution.Unsubscribe` observe an
 execution previously submitted through TradeHub. They require authenticated

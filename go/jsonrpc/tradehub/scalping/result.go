@@ -21,6 +21,8 @@ type AssetMetadata struct {
 }
 
 type Result struct {
+	State        *ExecutionState       `json:"state,omitempty"`
+	Settlement   *Settlement           `json:"settlement,omitempty"`
 	EvaluationID string                `json:"evaluationId"`
 	MarketType   market.MarketType     `json:"marketType"`
 	Symbol       market.Symbol         `json:"symbol"`

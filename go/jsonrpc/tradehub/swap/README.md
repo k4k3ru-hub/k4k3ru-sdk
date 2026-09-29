@@ -1,5 +1,10 @@
 # TradeHub Swap JSON-RPC
 
+New clients call `TradeHub.Execution.Prepare` using the owning
+`execution/prepare.Params` type with `kind: "swap"` and this package's
+`PrepareParams` in `swap`. The existing method below remains a compatibility
+entrance. See [common execution](../execution/README.md).
+
 `TradeHub.AMMPool.Swap.Quote` returns a current AMM quote without preparing a
 transaction. `TradeHub.AMMPool.Swap.Prepare` validates wallet funding and prepares
 one unsigned transaction for client signing, with optional simulation. EVM funding uses ERC-20

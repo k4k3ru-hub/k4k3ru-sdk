@@ -1,8 +1,9 @@
 package scalping
 
 type SubscribeResult struct {
-	ExecutionID     string `json:"executionId"`
-	SubscriptionKey string `json:"subscriptionKey"`
+	Params          *Params `json:"params,omitempty"`
+	ExecutionID     string  `json:"executionId"`
+	SubscriptionKey string  `json:"subscriptionKey"`
 }
 
 type UnsubscribeParams struct {

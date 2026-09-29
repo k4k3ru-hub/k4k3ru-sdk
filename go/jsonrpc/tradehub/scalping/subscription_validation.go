@@ -10,9 +10,15 @@ import (
 // Validate validates a subscription acknowledgement.
 //
 // Version:
+//   - 2026-09-29: Validate restored settings when included in the acknowledgement.
 //   - 2026-09-24: Require the durable Scalping execution reference.
 //   - 2026-09-23: Added.
 func (r SubscribeResult) Validate() error {
+	if r.Params != nil {
+		if err := r.Params.Validate(); err != nil {
+			return fmt.Errorf("failed to validate scalping acknowledgement: %w", err)
+		}
+	}
 	return validateSubscriptionReference("validate scalping subscription", r.ExecutionID, r.SubscriptionKey)
 }
 

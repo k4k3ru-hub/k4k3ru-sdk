@@ -20,6 +20,7 @@ type ScalpingClient struct {
 type ScalpingSubscription struct {
 	registry *scalpingEventRegistry
 	id, key  string
+	params   *dto.Params
 	sequence uint64
 	events   chan dto.SubscriptionEvent
 	errors   chan error
@@ -49,6 +50,7 @@ func newScalpingClient(sender jsonRPCSender, events *scalpingEventRegistry, life
 // Reconnection is explicit; retain the acknowledgement's execution ID to resume.
 //
 // Version:
+//   - 2026-09-29: Preserve the acknowledged settings for durable resubscription.
 //   - 2026-09-24: Added.
 func (c *ScalpingClient) Subscribe(ctx context.Context, params dto.SubscribeParams) (*ScalpingSubscription, error) {
 	if c == nil || ctx == nil {
@@ -97,6 +99,10 @@ func (c *ScalpingClient) Subscribe(ctx context.Context, params dto.SubscribePara
 		r.finish(old, fmt.Errorf("failed to receive scalping event: subscription replaced"))
 	}
 	s.id, s.key = ack.ExecutionID, ack.SubscriptionKey
+	if ack.Params != nil {
+		settings := ack.Params.Normalize()
+		s.params = &settings
+	}
 	r.active[s.id] = s
 	buffer := s.buffer
 	s.buffer = nil
@@ -160,9 +166,10 @@ func (s *ScalpingSubscription) Errors() <-chan error {
 	return s.errors
 }
 
-// Reference returns the durable execution and connection-specific subscription IDs.
+// Reference returns detached settings and the durable and connection-specific IDs.
 //
 // Version:
+//   - 2026-09-29: Include restored configuration without exposing mutable internal state.
 //   - 2026-09-24: Added.
 func (s *ScalpingSubscription) Reference() dto.SubscribeResult {
 	if s == nil {
@@ -170,7 +177,12 @@ func (s *ScalpingSubscription) Reference() dto.SubscribeResult {
 	}
 	s.registry.mu.Lock()
 	defer s.registry.mu.Unlock()
-	return dto.SubscribeResult{ExecutionID: s.id, SubscriptionKey: s.key}
+	ref := dto.SubscribeResult{ExecutionID: s.id, SubscriptionKey: s.key}
+	if s.params != nil {
+		settings := s.params.Normalize()
+		ref.Params = &settings
+	}
+	return ref
 }
 
 func (c *ScalpingClient) request(ctx context.Context, method rpc.Method, params, result any) error {

@@ -52,10 +52,14 @@ func (a *AssetMetadata) UnmarshalJSON(data []byte) error {
 // It does not establish execution asset equivalence, inventory, or fillability.
 //
 // Version:
+//   - 2026-09-29: Validate managed inventory and settlement observations.
 //   - 2026-09-28: Validate net prices and Spot-only net receive quantities.
 //   - 2026-09-26: Separate consolidated observations from per-market candidates.
 func (r Result) Validate() error {
 	const op = "validate scalping result"
+	if err := r.validateSettlement(nil); err != nil {
+		return err
+	}
 	if err := v.Text(op, "evaluation_id", r.EvaluationID, 128); err != nil {
 		return err
 	}
@@ -273,10 +277,14 @@ func validateConsolidatedMetrics(m *observations.Metrics) error {
 // Snapshot transport-age limits are enforced by the receiver's clock.
 //
 // Version:
+//   - 2026-09-29: Bind settlement markets to the configured exit scope.
 //   - 2026-09-26: Validate expanded targets, scaled metrics and explicit observation quantities.
 func (r Result) ValidateFor(params Params) error {
 	const op = "match scalping result"
 	params = params.Normalize()
+	if err := r.validateSettlement(&params); err != nil {
+		return err
+	}
 	if err := params.Validate(); err != nil {
 		return fmt.Errorf("failed to match scalping result: %w", err)
 	}

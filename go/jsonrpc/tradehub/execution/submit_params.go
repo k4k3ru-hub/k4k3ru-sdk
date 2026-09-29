@@ -1,21 +1,19 @@
 package execution
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
-	"errors"
-	"io"
 	"strings"
 
 	k4k3ruSDKAppError "github.com/k4k3ru-hub/k4k3ru-sdk/go/apperror"
+	"github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/internal/validation"
 )
 
 type SignedPayload struct {
-	ChainFamily      ChainFamily     `json:"chainFamily"`
-	Encoding         PayloadEncoding `json:"encoding"`
-	TransactionBytes string          `json:"transactionBytes"`
+	Action           *SignedAction   `json:"action,omitempty"`
+	ChainFamily      ChainFamily     `json:"chainFamily,omitempty"`
+	Encoding         PayloadEncoding `json:"encoding,omitempty"`
+	TransactionBytes string          `json:"transactionBytes,omitempty"`
 	Signatures       []string        `json:"signatures,omitempty"`
 }
 
@@ -35,6 +33,7 @@ type SubmitParams struct {
 //   - Normalized parameters.
 //
 // Version:
+//   - 2026-09-29: Support venue action signatures and strict, secret-safe decoding.
 //   - 2026-09-26: Carry the authenticated stateless preparation token.
 //   - 2026-09-25: Normalize the optional full-close reference.
 //   - 2026-09-10: Added.
@@ -45,6 +44,11 @@ func (p SubmitParams) Normalize() SubmitParams {
 	p.PayloadDigest = strings.TrimSpace(p.PayloadDigest)
 	if p.SignedPayload != nil {
 		payload := *p.SignedPayload
+		if payload.Action != nil {
+			action := *payload.Action
+			action.Signature = append([]byte(nil), action.Signature...)
+			payload.Action = &action
+		}
 		payload.ChainFamily = ChainFamily(strings.ToLower(strings.TrimSpace(string(payload.ChainFamily))))
 		payload.Encoding = PayloadEncoding(strings.ToLower(strings.TrimSpace(string(payload.Encoding))))
 		payload.TransactionBytes = strings.TrimSpace(payload.TransactionBytes)
@@ -65,6 +69,7 @@ func (p SubmitParams) Normalize() SubmitParams {
 //   - Validation error.
 //
 // Version:
+//   - 2026-09-29: Support venue action signatures and strict, secret-safe decoding.
 //   - 2026-09-26: Bound the preparation token without requiring it in legacy decoded data.
 //   - 2026-09-25: Validate the optional full-close reference.
 //   - 2026-09-10: Added.
@@ -96,6 +101,7 @@ func (p SubmitParams) ValidateReference() error {
 //   - Validation error.
 //
 // Version:
+//   - 2026-09-29: Support venue action signatures and strict, secret-safe decoding.
 //   - 2026-09-25: Limit explicit full-close references to Sui submissions.
 //   - 2026-09-10: Added.
 func (p SubmitParams) Validate() error {
@@ -122,9 +128,16 @@ func (p SubmitParams) Validate() error {
 //   - Validation error.
 //
 // Version:
+//   - 2026-09-29: Support venue action signatures and strict, secret-safe decoding.
 //   - 2026-09-25: Require bounded Sui payloads and an Ed25519 signature.
 //   - 2026-09-10: Added.
 func (p SignedPayload) Validate() error {
+	if p.Action != nil {
+		if p.ChainFamily != "" || p.Encoding != "" || p.TransactionBytes != "" || len(p.Signatures) != 0 {
+			return invalidSignedPayloadParameterError("variant=invalid")
+		}
+		return p.Action.Validate()
+	}
 	p.ChainFamily = ChainFamily(strings.ToLower(strings.TrimSpace(string(p.ChainFamily))))
 	p.Encoding = PayloadEncoding(strings.ToLower(strings.TrimSpace(string(p.Encoding))))
 	p.TransactionBytes = strings.TrimSpace(p.TransactionBytes)
@@ -188,6 +201,7 @@ func (p SignedPayload) Validate() error {
 //   - data: JSON-encoded parameters.
 //
 // Version:
+//   - 2026-09-29: Support venue action signatures and strict, secret-safe decoding.
 //   - 2026-09-10: Added.
 func (p *SubmitParams) UnmarshalJSON(data []byte) error {
 	if p == nil {
@@ -195,17 +209,8 @@ func (p *SubmitParams) UnmarshalJSON(data []byte) error {
 	}
 	type wireParams SubmitParams
 	var decoded wireParams
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&decoded); err != nil {
-		return k4k3ruSDKAppError.Tracef("failed to decode trade hub execution submission parameters: %w", err)
-	}
-	var trailing any
-	if err := decoder.Decode(&trailing); err != io.EOF {
-		if err == nil {
-			err = errors.New("unexpected trailing json value")
-		}
-		return k4k3ruSDKAppError.Tracef("failed to decode trade hub execution submission parameters: %w", err)
+	if err := validation.Decode(data, &decoded); err != nil {
+		return &DecodeError{cause: err}
 	}
 	*p = SubmitParams(decoded)
 	return nil

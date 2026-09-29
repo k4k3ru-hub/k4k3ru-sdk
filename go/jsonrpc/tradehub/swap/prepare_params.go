@@ -17,25 +17,27 @@ import (
 )
 
 type PrepareParams struct {
-	Simulate           bool                                        `json:"simulate,omitempty"`
-	AmountLimit        string                                      `json:"amountLimit,omitempty"`
-	EVM                *EVMPrepareParams                           `json:"evm,omitempty"`
-	Chain              k4k3ruOnchainCore.Chain                     `json:"chain"`
-	Network            k4k3ruOnchainCore.Network                   `json:"network"`
-	Venue              k4k3ruSDKMarketHubArbitrage.Venue           `json:"venue"`
-	PoolID             string                                      `json:"poolId"`
-	TokenInAssetID     string                                      `json:"tokenInAssetId"`
-	TokenOutAssetID    string                                      `json:"tokenOutAssetId"`
-	Amount             string                                      `json:"amount"`
-	Kind               Kind                                        `json:"kind"`
-	MaximumSlippageBPS *uint64                                     `json:"maximumSlippageBps,omitempty"`
-	Signer             string                                      `json:"signer"`
-	Recipient          string                                      `json:"recipient"`
-	ApprovalAmount     string                                      `json:"approvalAmount,omitempty"`
-	Sui                *SuiPrepareParams                           `json:"sui,omitempty"`
-	StateReference     *k4k3ruSDKMarketHubArbitrage.StateReference `json:"stateReference,omitempty"`
-	ExecutionTTLMS     *uint64                                     `json:"executionTtlMs"`
-	IdempotencyKey     string                                      `json:"idempotencyKey"`
+	ScalpingExecutionID string                                      `json:"scalpingExecutionId,omitempty"`
+	ScalpingRevision    string                                      `json:"scalpingRevision,omitempty"`
+	Simulate            bool                                        `json:"simulate,omitempty"`
+	AmountLimit         string                                      `json:"amountLimit,omitempty"`
+	EVM                 *EVMPrepareParams                           `json:"evm,omitempty"`
+	Chain               k4k3ruOnchainCore.Chain                     `json:"chain"`
+	Network             k4k3ruOnchainCore.Network                   `json:"network"`
+	Venue               k4k3ruSDKMarketHubArbitrage.Venue           `json:"venue"`
+	PoolID              string                                      `json:"poolId"`
+	TokenInAssetID      string                                      `json:"tokenInAssetId"`
+	TokenOutAssetID     string                                      `json:"tokenOutAssetId"`
+	Amount              string                                      `json:"amount"`
+	Kind                Kind                                        `json:"kind"`
+	MaximumSlippageBPS  *uint64                                     `json:"maximumSlippageBps,omitempty"`
+	Signer              string                                      `json:"signer"`
+	Recipient           string                                      `json:"recipient"`
+	ApprovalAmount      string                                      `json:"approvalAmount,omitempty"`
+	Sui                 *SuiPrepareParams                           `json:"sui,omitempty"`
+	StateReference      *k4k3ruSDKMarketHubArbitrage.StateReference `json:"stateReference,omitempty"`
+	ExecutionTTLMS      *uint64                                     `json:"executionTtlMs"`
+	IdempotencyKey      string                                      `json:"idempotencyKey"`
 }
 
 // Normalize applies canonical formatting to swap preparation parameters.
@@ -44,10 +46,13 @@ type PrepareParams struct {
 //   - Normalized parameters.
 //
 // Version:
+//   - 2026-09-29: Normalize the optional managed inventory reference.
 //   - 2026-09-10: Added.
 //   - 2026-09-24: Support explicit Sui coin and gas selections.
 //   - 2026-09-27: Normalize explicit preparation limits.
 func (p PrepareParams) Normalize() PrepareParams {
+	p.ScalpingExecutionID = strings.TrimSpace(p.ScalpingExecutionID)
+	p.ScalpingRevision = strings.TrimSpace(p.ScalpingRevision)
 	quote := Params{
 		Chain: p.Chain, Network: p.Network, Venue: p.Venue, PoolID: p.PoolID,
 		TokenInAssetID: p.TokenInAssetID, TokenOutAssetID: p.TokenOutAssetID,
@@ -89,11 +94,25 @@ func (p PrepareParams) Normalize() PrepareParams {
 //   - Validation error.
 //
 // Version:
+//   - 2026-09-29: Bind managed Sui swaps to an observed inventory revision.
 //   - 2026-09-10: Added.
 //   - 2026-09-24: Support explicit Sui coin and gas selections.
 //   - 2026-09-27: Require explicit limits when simulation is disabled by default.
 func (p PrepareParams) Validate() error {
 	p = p.Normalize()
+	if (p.ScalpingExecutionID == "") != (p.ScalpingRevision == "") {
+		return invalidPrepareParameter("scalping_reference=invalid")
+	}
+	if p.ScalpingExecutionID != "" {
+		if p.Chain != k4k3ruOnchainCore.ChainSui || p.Kind != KindExactInput || len(p.ScalpingExecutionID) > 128 || len(p.ScalpingRevision) != 64 {
+			return invalidPrepareParameter("scalping_reference=invalid")
+		}
+		for _, c := range p.ScalpingRevision {
+			if !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f') {
+				return invalidPrepareParameter("scalping_revision=invalid")
+			}
+		}
+	}
 	quote := Params{
 		Chain: p.Chain, Network: p.Network, Venue: p.Venue, PoolID: p.PoolID,
 		TokenInAssetID: p.TokenInAssetID, TokenOutAssetID: p.TokenOutAssetID,

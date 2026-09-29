@@ -299,8 +299,8 @@ After an interrupted start before receiving the ACK, retry the same start key
 and settings. After an ACK, reconnect explicitly using the execution ID.
 Authentication is required; the owner is taken from credentials, never request
 parameters. Unsubscribe requires both identifiers and acknowledges both. It
-stops notifications, leaving saved settings and existing order/Close management
-intact. It is not an execution deletion or order cancellation operation.
+stops TP/SL monitoring and notifications, leaving saved settings and accepted-order
+reconciliation intact. It is not an execution deletion or order cancellation operation.
 
 Notification envelope type `sc` carries `SubscriptionEvent`: a positive sequence
 and exactly one full `snapshot` (Result) or `error` (code and retryability).
@@ -320,8 +320,8 @@ per TradeHub process. Missing catalog mappings produce no executable candidates.
 Cetus configured Spot pools have asset metadata; Hyperliquid Perp mappings remain
 unavailable. Hyperliquid Spot aliases must not be treated as token identity proof.
 
-Saved settings use configuration version 2 in the existing database column.
-Version 1 rows remain intact but cannot resume: create a new execution with a new
+Saved settings use configuration version 5 in the existing database column.
+Earlier-version rows remain intact but cannot resume: create a new execution with a new
 idempotency key. No migration converts legacy settings. Deploy the updated SDK,
 Gateway, CRM, MarketHub and TradeHub together. The former internal
 `ExecutionWindow.Get` operation has been removed; Aggregator window storage and
@@ -334,3 +334,42 @@ cross-chain Close references, idempotent start/resume forms, exact range boundar
 normalization, snapshot states, candidate expiry, request/result identity,
 metadata decimal presence, and subscription event variants. They use no live
 venues, credentials, trading balances, or transactions.
+
+## Managed Sui Spot settlement
+
+The ACK includes normalized `params` for execution-ID-only resubscription. A Sui
+Spot snapshot includes `state`: `idle`, `pending`, `holding`, `closed` or
+`unavailable`, plus an OMS `revision`. Held `quantity` is atomic Base quantity
+owned by this setting, not the wallet balance. `executionId` and `transactionId`
+refer to the latest assigned OMS execution. `acquiredAt` is milliseconds.
+
+While holding, entry `markets` is empty. `settlement.quantity` matches the held
+quantity; `settlement.markets[]` contains `price`, optional `trigger`
+(`take_profit`, `stop_loss`, `maximum_holding`) and optional `returnBps`.
+Prices use MarketHub Sell observations for this exact quantity. Reference-only,
+stale, disconnected or fee-unknown observations cannot trigger settlement.
+A replacement without `settlement` revokes the previous settlement signal.
+
+Return-based TP/SL uses net proceeds against the owned quantity's share of the
+wallet moving-average remaining cost, excluding gas. Missing accounting or
+conversion suspends return triggers. Price/time rules do not require known cost.
+Cost is reconstructed from effective confirmed OMS fills across the same account,
+wallet, chain/network and exact Base asset, independently of the matched PnL
+report. Actual input/output amounts include trading fees exactly once. Gas charges
+and rebates do not change this monitoring quantity or cost; the Agent separately
+checks real balances and gas. Additional buys and partial sells update the shared
+average, which can differ from this setting's own entry price. Only server-recognized
+USDC assets share a reporting unit; unknown historical conversions remain unknown.
+This calculation does not require a position table or a saved USD cost per order.
+An in-memory cache is reused only while all source order revisions match; restart
+replays the existing OMS facts. Unfinished orders in the same wallet/network or
+ambiguous execution ordering suspend return-based triggers.
+This subscription does not submit orders: the Agent calls Execution.Prepare,
+locally signs, then Submit. The swap payload includes `scalpingExecutionId` and
+`scalpingRevision`; accepted same-transaction retries bypass the new-order
+inventory revision check. Market conditions are not re-evaluated at Submit.
+
+Ownership is persisted in OMS order specification JSON and restored from active
+confirmed fills. Settings without assigned fills never adopt unrelated holdings.
+Only actual same-chain inventory is eligible initially; cross-chain references
+require an allocation implementation before they can produce executable closes.

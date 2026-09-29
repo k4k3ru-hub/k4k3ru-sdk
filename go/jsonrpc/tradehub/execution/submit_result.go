@@ -7,10 +7,11 @@ import (
 )
 
 type SubmitResult struct {
-	ExecutionID   string      `json:"executionId"`
-	ChainFamily   ChainFamily `json:"chainFamily"`
-	TransactionID string      `json:"transactionId"`
-	SubmittedAt   int64       `json:"submittedAt"`
+	Action        *ActionReceipt `json:"action,omitempty"`
+	ExecutionID   string         `json:"executionId"`
+	ChainFamily   ChainFamily    `json:"chainFamily,omitempty"`
+	TransactionID string         `json:"transactionId,omitempty"`
+	SubmittedAt   int64          `json:"submittedAt"`
 }
 
 // Validate validates an execution submission result.
@@ -19,10 +20,21 @@ type SubmitResult struct {
 //   - Validation error.
 //
 // Version:
+//   - 2026-09-29: Support venue receipts without fabricating onchain transaction identifiers.
 //   - 2026-09-11: Added.
 func (r SubmitResult) Validate() error {
 	if strings.TrimSpace(r.ExecutionID) == "" {
 		return invalidSubmitResult("execution_id=empty")
+	}
+	if r.Action != nil {
+		if r.ChainFamily != "" || r.TransactionID != "" || r.SubmittedAt <= 0 {
+			return invalidSubmitResult("variant=invalid")
+		}
+		a := r.Action
+		if strings.TrimSpace(a.Venue) == "" || strings.TrimSpace(a.Network) == "" || strings.TrimSpace(a.Kind) == "" || strings.TrimSpace(a.Status) == "" {
+			return invalidSubmitResult("action=invalid")
+		}
+		return nil
 	}
 	switch r.ChainFamily {
 	case ChainFamilyEVM, ChainFamilySui, ChainFamilySolana:
