@@ -350,20 +350,28 @@ Prices use MarketHub Sell observations for this exact quantity. Reference-only,
 stale, disconnected or fee-unknown observations cannot trigger settlement.
 A replacement without `settlement` revokes the previous settlement signal.
 
-Return-based TP/SL uses net proceeds against the owned quantity's share of the
-wallet moving-average remaining cost, excluding gas. Missing accounting or
-conversion suspends return triggers. Price/time rules do not require known cost.
-Cost is reconstructed from effective confirmed OMS fills across the same account,
-wallet, chain/network and exact Base asset, independently of the matched PnL
-report. Actual input/output amounts include trading fees exactly once. Gas charges
-and rebates do not change this monitoring quantity or cost; the Agent separately
-checks real balances and gas. Additional buys and partial sells update the shared
-average, which can differ from this setting's own entry price. Only server-recognized
-USDC assets share a reporting unit; unknown historical conversions remain unknown.
-This calculation does not require a position table or a saved USD cost per order.
-An in-memory cache is reused only while all source order revisions match; restart
-replays the existing OMS facts. Unfinished orders in the same wallet/network or
-ambiguous execution ordering suspend return-based triggers.
+Return-based TP/SL uses net proceeds against the acquisition cost of the
+quantity owned by this setting, excluding gas. Only orders explicitly assigned
+through `scalpingExecutionId` contribute to this cost; unrelated wallet activity
+and other settings do not. Multiple effective fills use a quantity-weighted
+average, and partial settlement releases the corresponding proportion of cost.
+A fully settled holding has zero remaining cost before any subsequent entry.
+
+Cost is reconstructed from confirmed OMS facts in the same account, wallet,
+chain/network and exact Base asset. The PnL worker uses the same acquisition and
+disposal calculation, isolates assigned orders from ordinary wallet round-trip
+matching, and includes only settled gains in realized PnL. Actual trading fees
+are reflected once. Gas charges and rebates do not change the managed trading
+quantity or cost; the Agent separately checks real balances and gas.
+Missing cost or conversion suspends return triggers. Price/time rules do not
+require known cost. Only server-recognized USDC assets share a reporting unit;
+asset balances remain distinct.
+
+This calculation needs no position table or saved USD cost per order. An
+in-memory cache is reused only while this setting's source order revisions match;
+restart replays its OMS facts. Unfinished assigned orders or ambiguous execution
+ordering suspend return-based triggers. No additional buys are authorized by
+this accounting rule.
 This subscription does not submit orders: the Agent calls Execution.Prepare,
 locally signs, then Submit. The swap payload includes `scalpingExecutionId` and
 `scalpingRevision`; accepted same-transaction retries bypass the new-order

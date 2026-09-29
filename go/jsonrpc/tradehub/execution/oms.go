@@ -33,14 +33,6 @@ type ExecutionFee struct {
 	Amount   string `json:"amount"`
 }
 
-// ExecutionPnL is realized only on a successful explicit full Close; it excludes gas.
-type ExecutionPnL struct {
-	Status   string `json:"status"` // unavailable or realized
-	AssetID  string `json:"assetId,omitempty"`
-	Decimals uint8  `json:"decimals,omitempty"`
-	Amount   string `json:"amount,omitempty"`
-}
-
 func validateSuiSnapshot(s *ExecutionSnapshot) error {
 	o := s.Onchain
 	if o.Chain != "sui" || (o.Network != "testnet" && o.Network != "mainnet") || o.BlockNumber != nil || o.BlockHash != "" {
@@ -89,18 +81,7 @@ func validateSuiSnapshot(s *ExecutionSnapshot) error {
 			}
 		}
 	}
-	if m.PnL.Status == "unavailable" {
-		if m.PnL.Amount != "" || m.PnL.AssetID != "" || m.PnL.Decimals != 0 {
-			return observationInvalid("pnl=invalid")
-		}
-	} else if m.PnL.Status == "realized" {
-		if s.Status != ObservationStatusSuccess || m.OpenExecutionID == "" || m.PnL.AssetID != m.Fill.TokenOutAssetID || m.PnL.Decimals != m.Fill.TokenOutDecimals || !atomicInteger(m.PnL.Amount, false) {
-			return observationInvalid("pnl=invalid")
-		}
-	} else {
-		return observationInvalid("pnl_status=invalid")
-	}
-	return nil
+	return validateSnapshotPnL(s)
 }
 
 func atomicInteger(s string, positive bool) bool {
@@ -120,7 +101,7 @@ func validateEVMOMS(s *ExecutionSnapshot) error {
 	if err != nil || id == 0 || strconv.FormatUint(id, 10) != m.OrderID {
 		return observationInvalid("order_id=invalid")
 	}
-	if m.OpenExecutionID != "" || m.PnL.Status != "unavailable" || m.PnL.Amount != "" || m.PnL.AssetID != "" || m.PnL.Decimals != 0 {
+	if m.OpenExecutionID != "" {
 		return observationInvalid("pnl=invalid")
 	}
 	if s.Status == ObservationStatusPending && (m.Fill != nil || m.Fee != nil) {
@@ -140,5 +121,5 @@ func validateEVMOMS(s *ExecutionSnapshot) error {
 			return observationInvalid("fill=invalid")
 		}
 	}
-	return nil
+	return validateSnapshotPnL(s)
 }

@@ -52,9 +52,12 @@ and the `SubscriptionEvent` type in this package. Unsubscribe with both identifi
 - `kind: "error"`: observation was interrupted, with sanitized code
   `observation_unavailable`. This is not a failed transaction.
 
-EVM completion means block inclusion, not finality. Sui completion requires
-checkpoint inclusion. The server releases a terminal watch but keeps the
-connection open. A fresh subscription rechecks EVM receipts or reads the committed
+Transient EVM approvals complete at receipt inclusion. Persisted swaps require
+reconciled finalized EVM receipts or Sui checkpoint inclusion. Transaction
+completion (`snapshot.status`) and accounting completion (`snapshot.oms.pnl.status`)
+are independent. A successful transaction with pending PnL keeps its watch open;
+the server releases it after PnL becomes `realized`, `not_applicable` or
+`unavailable`, keeping the connection open. A fresh subscription rechecks EVM receipts or reads the committed
 Sui OMS snapshot. Sui reconciliation continues independently of subscriptions and
 resumes from persisted pending submissions after a server restart.
 Unknown or other-account executions return `not_found`. Unsupported chain/leg
@@ -64,8 +67,9 @@ return `invalid_parameter`. No additional observation credit charge is configure
 The composed WebSocket SDK exposes `module.Execution()`. Register through
 `Subscribe(ctx, execution.SubscribeParams{ExecutionID: id})`, consume `Events()`
 and `Errors()`, and explicitly call `Unsubscribe` if stopping before completion.
-Duplicate active SDK calls reuse the same local handle. Terminal events close
-the event channel; transport/delivery interruptions are reported on `Errors()`.
+Duplicate active SDK calls reuse the same local handle. `snapshot.Complete()` identifies the final snapshot that closes
+the event channel; `snapshot.Status.Terminal()` identifies transaction completion.
+Release transaction reservations at transaction completion without waiting for accounting; transport/delivery interruptions are reported on `Errors()`.
 Treat interruption separately from the terminal status. The SDK does not
 automatically resubscribe or send transactions.
 
@@ -99,8 +103,9 @@ until the onchain result has been reconciled.
 `ExecutionSnapshot.Onchain.Checkpoint` identifies checkpoint inclusion; EVM block
 fields are absent for Sui. `ExecutionSnapshot.OMS` contains the string `orderId`,
 optional `openExecutionId`, actual `fill`, separate `fee`, and `pnl`. Amounts in
-these public fields are exact integer strings in the specified token's smallest
-units. The corresponding OMS records use exact token-denominated decimal strings.
+fill, gas and settlement quantity fields are exact integer strings in the specified
+token's smallest units. PnL monetary fields are decimal USDC strings. The
+corresponding OMS records use exact token-denominated decimal strings.
 
 For a full Close, set `SubmitParams.OpenExecutionID` to the successful Open's
 execution ID on the first Submit. Keep it unchanged on every retry. The server
@@ -116,7 +121,46 @@ Both record `fee.amount = computationCost + storageCost - storageRebate` in MIST
 (`fee.assetId` is SUI, `fee.decimals` is 9), including a negative amount when rebates
 exceed costs. No quote-currency conversion is performed.
 
-Only the successful explicitly linked Close returns `pnl.status: "realized"`:
-`Close.amountOut - Open.amountIn`, denominated in the original input token and
-excluding gas. DEX fees are already included in actual amounts. All other snapshots
-return `pnl.status: "unavailable"` with no numeric PnL, rather than assuming zero.
+`oms.pnl` describes only the settlement attributable to this execution. It does
+not contain the setting's cumulative PnL or unrealized valuation. An explicit
+`openExecutionId` is not required for accounting: managed Scalping orders use
+their assigned setting's weighted average basis; ordinary swaps use the account,
+wallet, chain/network and actual asset book, excluding assigned inventory.
+
+```json
+{
+  "status": "realized",
+  "settlement": {
+    "assetId": "0x2::sui::SUI",
+    "quantity": {"amount": "86646", "decimals": 9},
+    "currency": "USDC",
+    "costBasis": "0.001",
+    "proceeds": "0.00098",
+    "amount": "-0.00002"
+  }
+}
+```
+
+- `pending`: accounting inputs or calculation are pending. A confirmed transaction
+  remains successful; this status does not authorize a new submission.
+- `realized`: includes `settlement`, even for zero profit. Quantity is the matched
+  disposed asset quantity. Cost is the proportional acquisition basis; proceeds
+  include disposal fees. Amount is proceeds minus allocated cost, excluding gas.
+- `not_applicable`: no matched disposal (for example an opening-only swap or a
+  failed transaction). There is no numeric settlement.
+- `unavailable`: required cost/conversion data are missing, chronology is ambiguous,
+  or the operation is unsupported. There is no numeric settlement.
+
+Only `realized` includes `settlement`. Quantity uses atomic units; cost, proceeds
+and amount use exact rational arithmetic internally and decimal strings rounded
+once to at most 18 fractional digits (nearest, ties away from zero). Independently
+rounded displayed fields can differ at the last digit. Recognized USDC uses the
+same 1:1 reporting policy as Console. Native-funded ordinary cycles use the
+settlement's actual conversion ratio; unsupported conversions are unavailable.
+Trading fees are counted once, and gas remains in the separate `fee` field.
+
+Replay uses owned OMS event revisions and a bounded cache, not a second accounting
+ledger. A fresh subscription re-evaluates corrected facts. Current replay limits
+are 1,000 orders and 20,000 facts per scoped wallet history; exceeding them returns
+`unavailable`. Unresolved preceding chronology waits as `pending` instead of
+inventing a cost basis. No new transaction is prepared or sent by observation.

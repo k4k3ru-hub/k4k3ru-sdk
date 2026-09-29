@@ -125,9 +125,10 @@ func (c *ExecutionClient) Unsubscribe(ctx context.Context, s *ExecutionSubscript
 	return nil
 }
 
-// Events returns ordered observation events, closing after terminal delivery or interruption.
+// Events returns ordered observations until transaction and PnL completion or interruption.
 //
 // Version:
+//   - 2026-09-29: Keep success/pending PnL notifications open.
 //   - 2026-09-16: Added.
 func (s *ExecutionSubscription) Events() <-chan dto.SubscriptionEvent {
 	if s == nil {
@@ -208,7 +209,7 @@ func (r *executionEventRegistry) deliver(s *ExecutionSubscription, e dto.Subscri
 		r.finish(s, fmt.Errorf("failed to receive execution observation: event buffer full"))
 		return
 	}
-	if e.Kind == dto.ExecutionEventError || e.Snapshot != nil && e.Snapshot.Status.Terminal() {
+	if e.Kind == dto.ExecutionEventError || e.Snapshot != nil && e.Snapshot.Complete() {
 		r.finish(s, nil)
 	}
 }

@@ -22,10 +22,11 @@ func (exampleExecutionCredentials) Credential(context.Context) (authentication.C
 	return authentication.Credential{APIKey: os.Getenv("K4K3RU_API_KEY"), SecretKey: os.Getenv("K4K3RU_SECRET_KEY"), SignatureAlgorithm: authentication.SignatureAlgorithmHMACSHA256}, nil
 }
 
-// ExampleModule_Execution demonstrates observing an already-submitted transaction.
+// ExampleModule_Execution demonstrates observing a submitted transaction through accounting completion.
 // This example requires a caller-supplied execution ID and does not submit trades.
 //
 // Version:
+//   - 2026-09-29: Await accounting completion as well as transaction inclusion.
 //   - 2026-09-16: Added.
 func ExampleModule_Execution() {
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
@@ -62,7 +63,7 @@ func observeExampleExecution(ctx context.Context, id string) (status execution.O
 			if e.Error != nil {
 				return "", fmt.Errorf("failed to observe execution: %s", e.Error.Code)
 			}
-			if e.Snapshot != nil && e.Snapshot.Status.Terminal() {
+			if e.Snapshot != nil && e.Snapshot.Complete() {
 				return e.Snapshot.Status, nil
 			}
 		}

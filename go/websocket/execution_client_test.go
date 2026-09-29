@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/k4k3ru-hub/k4k3ru-sdk/go/finance/market"
 	rpc "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc"
 	dto "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/execution"
 )
@@ -135,5 +136,56 @@ func TestExecutionUnsubscribeKeepsOtherSubscriptionsAndConnection(t *testing.T) 
 	}
 	if transport.disconnects != 0 {
 		t.Fatal("connection closed before idle deadline")
+	}
+}
+
+// TestExecutionPnLPendingKeepsSubscription verifies accounting updates survive transaction confirmation.
+//
+// Version:
+//   - 2026-09-29: Added.
+func TestExecutionPnLPendingKeepsSubscription(t *testing.T) {
+	r := newExecutionEventRegistry()
+	l, _ := newSubscriptionLifecycle(&executionTransport{})
+	sender := executionSender(func(context.Context, rpc.Method, json.RawMessage) (*rpc.Response, error) {
+		return &rpc.Response{Result: json.RawMessage(`{"executionId":"exec_one","subscriptionKey":"sub_one"}`)}, nil
+	})
+	c, err := newExecutionClient(sender, r, l)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := c.Subscribe(t.Context(), dto.SubscribeParams{ExecutionID: "exec_one"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	event := executionEvent("sub_one", 1, dto.ObservationStatusSuccess)
+	event.Snapshot.OMS = &dto.ExecutionOMS{OrderID: "1", PnL: dto.ExecutionPnL{Status: dto.PnLStatusPending}, Fill: &dto.SwapFill{TokenInAssetID: "0x" + strings.Repeat("3", 40), TokenOutAssetID: "0x" + strings.Repeat("4", 40), AmountIn: "86646", AmountOut: "980", TokenInDecimals: 9, TokenOutDecimals: 6}, Fee: &dto.ExecutionFee{AssetID: "native", Decimals: 18, Amount: "1"}}
+	if err := event.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	r.route(event)
+	if got := <-s.Events(); got.Snapshot.Complete() {
+		t.Fatal("closed before pnl")
+	}
+	select {
+	case <-s.Events():
+		t.Fatal("channel closed while pnl pending")
+	default:
+	}
+	event.Sequence++
+	snapshot := *event.Snapshot
+	oms := *snapshot.OMS
+	snapshot.OMS = &oms
+	event.Snapshot = &snapshot
+	oms.PnL = dto.ExecutionPnL{Status: dto.PnLStatusRealized, Settlement: &dto.PnLSettlement{AssetID: "0x" + strings.Repeat("3", 40), Quantity: market.Quantity{Amount: "86646", Decimals: 9}, Currency: "USDC", CostBasis: "0.001", Proceeds: "0.00098", Amount: "-0.00002"}}
+	if err := event.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	r.route(event)
+	got := <-s.Events()
+	if got.Snapshot == nil || !got.Snapshot.Complete() || got.Snapshot.OMS.PnL.Settlement.Amount != "-0.00002" {
+		t.Fatal(got)
+	}
+	if _, ok := <-s.Events(); ok {
+		t.Fatal("completed stream retained")
 	}
 }
