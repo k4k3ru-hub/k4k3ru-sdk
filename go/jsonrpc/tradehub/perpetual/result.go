@@ -38,14 +38,24 @@ type Position struct {
 	MarginUsed       string  `json:"marginUsed"`
 	UnrealizedPnL    string  `json:"unrealizedPnl"`
 }
+
+// UnifiedBalance reports the shared USDC token balance and venue-reported hold.
+// Neither total nor total minus hold is a guarantee of order capacity or withdrawability.
+type UnifiedBalance struct {
+	Coin  string `json:"coin"`
+	Token uint32 `json:"token"`
+	Total string `json:"total"`
+	Hold  string `json:"hold"`
+}
 type AccountResult struct {
 	Scope
-	AccountMode      string         `json:"accountMode"`
-	TradingSupported bool           `json:"tradingSupported"`
-	Margin           *MarginSummary `json:"margin,omitempty"`
-	Withdrawable     *string        `json:"withdrawable,omitempty"`
-	Position         *Position      `json:"position,omitempty"`
-	ObservedAt       uint64         `json:"observedAt"`
+	AccountMode      string          `json:"accountMode"`
+	TradingSupported bool            `json:"tradingSupported"`
+	Margin           *MarginSummary  `json:"margin,omitempty"`
+	Withdrawable     *string         `json:"withdrawable,omitempty"`
+	UnifiedBalance   *UnifiedBalance `json:"unifiedBalance,omitempty"`
+	Position         *Position       `json:"position,omitempty"`
+	ObservedAt       uint64          `json:"observedAt"`
 }
 type SubmitResult struct {
 	PreparationID          string `json:"preparationId"`

@@ -65,7 +65,22 @@ quantity. `fillsLimited` describes local pagination limitations; a false value
 does not remove venue retention limits. `observedAveragePrice` is rounded to at
 most 18 fractional digits. Read Account.Get to determine residual positions.
 
-Only ordinary user accounts with account abstraction explicitly `disabled` are
-supported for trading. Other modes return `tradingSupported: false` with no
-perpetual balance fields. TradeHub execution must be enabled independently of
-MarketHub; Mainnet execution is not allowed by this API version.
+Ordinary user accounts with account abstraction explicitly `disabled` (Standard)
+or `unifiedAccount` are supported for trading. Account responses use these fields:
+
+| Account mode | Balance fields |
+| --- | --- |
+| `disabled` | Existing `margin` and `withdrawable`; `unifiedBalance` omitted |
+| `unifiedAccount` | `unifiedBalance: {coin: "USDC", token: 0, total: "...", hold: "..."}`; `margin` and `withdrawable` omitted |
+| Other modes | `tradingSupported: false`; all balance fields omitted |
+
+Unified totals and holds are exact decimal strings reported by Hyperliquid's
+`spotClearinghouseState`. A missing USDC entry in a valid balances array is zero.
+Other markets can share this collateral. These values do not calculate order
+capacity, withdrawability or a whole-account margin ratio. `position` still
+describes only SUI. `observedAt` is the perpetual-state server time for Standard,
+and TradeHub's balance-read completion time for Unified (spot state has no server
+timestamp). The observations are separate API calls, not an atomic snapshot.
+
+TradeHub execution must be enabled independently of MarketHub; Mainnet execution
+is not allowed by this API version.

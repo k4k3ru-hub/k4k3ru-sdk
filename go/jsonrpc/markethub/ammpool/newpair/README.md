@@ -1,5 +1,16 @@
 # MarketHub.AMMPool.NewPair
 
+`activity.windows["5m"]` and `["15m"]` may include `transactionSenders`.
+It reports outer transaction senders, not people, buyers or holders. The overall
+and directional `uniqueCount` values are nullable exact decimal strings;
+`resolvedSwapCount` is the number of corresponding Activity Swaps with a verified
+sender. Compare it with the same window's Swap count. Partial counts are lower
+bounds, never estimates. No resolved sender in a nonempty window means a null
+unique count and `"0"` resolved Swaps; an empty observed window has both `"0"`.
+An absent/null object means unavailable, unsupported or invalid state. These
+fields do not claim completeness of on-chain history or change listing rules.
+`CloneTransactionSenders` and the Activity clone helpers detach all pointers.
+
 `Pair.LPPrincipal` optionally returns Token0/Token1 principal amounts as exact
 decimal strings in whole-token units. `AmountPercentage` compares those quantities
 without price weighting: 1 token versus 99,999 tokens gives 0.001% versus 99.999%.

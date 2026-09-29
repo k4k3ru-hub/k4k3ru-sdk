@@ -13,7 +13,8 @@ type ActivityWindows struct {
 // Nil Comparison means observation history or period data is insufficient.
 type ActivityShortWindow struct {
 	ActivityWindow
-	Comparison *ActivityComparison `json:"comparison"`
+	Comparison         *ActivityComparison `json:"comparison"`
+	TransactionSenders *TransactionSenders `json:"transactionSenders"`
 }
 
 type ActivityComparison struct {
@@ -55,6 +56,7 @@ type ActivityWindow struct {
 // Version:
 //   - 2026-09-27: Added.
 //   - 2026-09-28: Copy short periods and comparison values independently.
+//   - 2026-09-29: Copy transaction sender observations independently.
 func CloneActivityWindows(w *ActivityWindows) *ActivityWindows {
 	if w == nil {
 		return nil
@@ -70,6 +72,7 @@ func cloneActivityShortWindow(w *ActivityShortWindow) *ActivityShortWindow {
 		return nil
 	}
 	c := &ActivityShortWindow{ActivityWindow: *cloneActivityWindow(&w.ActivityWindow)}
+	c.TransactionSenders = CloneTransactionSenders(w.TransactionSenders)
 	if w.Comparison != nil {
 		v := *w.Comparison
 		for _, change := range []*ActivityChange{&v.SwapCount, &v.VolumeUSD} {
