@@ -218,7 +218,7 @@ func (r *scalpingEventRegistry) route(event dto.SubscriptionEvent) {
 	}
 	if s := r.pending; s != nil && !s.closed {
 		if len(s.buffer) >= 16 {
-			r.finish(s, fmt.Errorf("failed to receive scalping event: acknowledgement buffer full"))
+			r.finish(s, fmt.Errorf("failed to receive scalping event: acknowledgement buffer full: %w", ErrSubscriptionOverflow))
 			return
 		}
 		s.buffer = append(s.buffer, event)
@@ -233,7 +233,7 @@ func (r *scalpingEventRegistry) deliver(s *ScalpingSubscription, event dto.Subsc
 	select {
 	case s.events <- event:
 	default:
-		r.finish(s, fmt.Errorf("failed to receive scalping event: event buffer full"))
+		r.finish(s, fmt.Errorf("failed to receive scalping event: event buffer full: %w", ErrSubscriptionOverflow))
 		return
 	}
 	if event.Error != nil && !event.Error.Retryable {

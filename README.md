@@ -365,6 +365,10 @@ MarketHub側はResultと購読型を持ち、`websocket.NewModule` が
 `SubscribeParams` で、新規開始（`idempotencyKey`＋設定）と再購読（`executionId`のみ）を指定します。
 `websocket.NewModule` が `module.Scalping()` を組み立て、ACK・候補snapshot・errorを受信できます。
 実行IDは再接続後も維持し、購読IDとsequenceは新しい接続で更新します。
+接続断は`websocket.ErrConnectionClosed`、TradeHub購読バッファ超過は
+`websocket.ErrSubscriptionOverflow`を`errors.Is`で判定できます。
+再購読・取引状態の照合は呼び出し側が行います。
+詳細は[購読エラー契約](go/websocket/README.md)を参照してください。
 
 `conditions.windowMs`はJSON省略時60,000ms、指定範囲は1〜60,000msです。
 明示的な0・null・上限超過は拒否します。Goでは`WindowMS: scalping.DefaultWindowMS`などを

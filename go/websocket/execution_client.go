@@ -190,7 +190,7 @@ func (r *executionEventRegistry) route(e dto.SubscriptionEvent) {
 	}
 	if s.key == "" {
 		if len(s.buffer) >= 16 {
-			r.finish(s, fmt.Errorf("failed to receive execution observation: event buffer full"))
+			r.finish(s, fmt.Errorf("failed to receive execution observation: event buffer full: %w", ErrSubscriptionOverflow))
 			return
 		}
 		s.buffer = append(s.buffer, e)
@@ -206,7 +206,7 @@ func (r *executionEventRegistry) deliver(s *ExecutionSubscription, e dto.Subscri
 	select {
 	case s.events <- e:
 	default:
-		r.finish(s, fmt.Errorf("failed to receive execution observation: event buffer full"))
+		r.finish(s, fmt.Errorf("failed to receive execution observation: event buffer full: %w", ErrSubscriptionOverflow))
 		return
 	}
 	if e.Kind == dto.ExecutionEventError || e.Snapshot != nil && e.Snapshot.Complete() {

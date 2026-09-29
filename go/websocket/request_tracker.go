@@ -11,7 +11,7 @@ import (
 	k4k3ruSDKJSONRPC "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc"
 )
 
-var errWebSocketConnectionClosed = errors.New("websocket connection closed")
+var errWebSocketConnectionClosed = ErrConnectionClosed
 
 type requestOutcome struct {
 	response k4k3ruSDKJSONRPC.Response
