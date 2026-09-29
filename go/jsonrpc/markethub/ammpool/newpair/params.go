@@ -14,6 +14,7 @@ type Params struct {
 	Chain   string `json:"chain,omitempty"`
 	Network string `json:"network,omitempty"`
 	Venue   string `json:"venue,omitempty"`
+	Query   *Query `json:"query,omitempty"`
 }
 type GetParams struct {
 	Chain   string `json:"chain"`
@@ -33,9 +34,14 @@ var poolID = regexp.MustCompile(`^[A-Za-z0-9:_-]{1,128}$`)
 // Normalize normalizes new pair selectors.
 //
 // Version:
+//   - 2026-09-29: Support optional normalized comparison queries.
 //   - 2026-09-16: Added.
 //   - 2026-09-18: Use server lifecycle retention with scope-only request filters.
 func (p Params) Normalize() Params {
+	if p.Query != nil {
+		q := p.Query.Normalize()
+		p.Query = &q
+	}
 	p.Chain = strings.ToLower(strings.TrimSpace(p.Chain))
 	p.Network = strings.ToLower(strings.TrimSpace(p.Network))
 	p.Venue = strings.ToLower(strings.TrimSpace(p.Venue))
@@ -45,8 +51,14 @@ func (p Params) Normalize() Params {
 // Validate validates chain, network and venue filters.
 //
 // Version:
+//   - 2026-09-29: Support optional normalized comparison queries.
 //   - 2026-09-18: Limit filters to chain, network and venue.
 func (p Params) Validate() error {
+	if p.Query != nil {
+		if err := p.Query.Validate(); err != nil {
+			return fmt.Errorf("failed to validate new pair parameters: %w", err)
+		}
+	}
 	p = p.Normalize()
 	for _, value := range []string{p.Chain, p.Network, p.Venue} {
 		if value != "" && !selector.MatchString(value) {
@@ -59,13 +71,22 @@ func (p Params) Validate() error {
 // SubscriptionKey identifies the complete normalized new pair filter.
 //
 // Version:
+//   - 2026-09-29: Support optional normalized comparison queries.
 //   - 2026-09-18: Limit filters to chain, network and venue.
 func (p Params) SubscriptionKey() (string, error) {
 	p = p.Normalize()
 	if err := p.Validate(); err != nil {
 		return "", fmt.Errorf("failed to create new pair subscription key: %w", err)
 	}
-	return fmt.Sprintf("MarketHub.AMMPool.NewPair:c=%s:n=%s:v=%s", p.Chain, p.Network, p.Venue), nil
+	key := fmt.Sprintf("MarketHub.AMMPool.NewPair:c=%s:n=%s:v=%s", p.Chain, p.Network, p.Venue)
+	if p.Query != nil {
+		digest, err := p.Query.Digest()
+		if err != nil {
+			return "", err
+		}
+		key += ":q=" + digest
+	}
+	return key, nil
 }
 
 // Normalize normalizes the pool's owning chain, venue and identifier.
@@ -133,10 +154,21 @@ func decode(data []byte, v any) error {
 // UnmarshalJSON rejects unknown fields and invalid filters.
 //
 // Version:
+//   - 2026-09-29: Support optional normalized comparison queries.
 //   - 2026-09-18: Limit filters to chain, network and venue.
 func (p *Params) UnmarshalJSON(data []byte) error {
 	if p == nil {
 		return fmt.Errorf("failed to decode new pair parameters: destination=null")
+	}
+	if err := validateQueryProperty(data); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return fmt.Errorf("failed to decode new pair parameters: %w: %w", app.InvalidParameter(), err)
+	}
+	if q, ok := raw["query"]; ok && bytes.Equal(bytes.TrimSpace(q), []byte("null")) {
+		return fmt.Errorf("failed to decode new pair parameters: %w: query=null", app.InvalidParameter())
 	}
 	type wire Params
 	var v wire
@@ -191,4 +223,49 @@ func (p ListParams) Normalize() ListParams {
 		p.Limit = 100
 	}
 	return p
+}
+
+// Equal compares normalized selectors and queries by value.
+//
+// Version:
+//   - 2026-09-29: Added.
+func (p Params) Equal(other Params) bool {
+	a, err := p.SubscriptionKey()
+	if err != nil {
+		return false
+	}
+	b, err := other.SubscriptionKey()
+	return err == nil && a == b
+}
+
+func validateQueryProperty(data []byte) error {
+	d := json.NewDecoder(bytes.NewReader(data))
+	token, err := d.Token()
+	if err != nil {
+		return fmt.Errorf("failed to decode new pair parameters: %w: %w", app.InvalidParameter(), err)
+	}
+	if token != json.Delim('{') {
+		return fmt.Errorf("failed to decode new pair parameters: %w: params=invalid", app.InvalidParameter())
+	}
+	seen := false
+	for d.More() {
+		key, err := d.Token()
+		if err != nil {
+			return fmt.Errorf("failed to decode new pair parameter name: %w: %w", app.InvalidParameter(), err)
+		}
+		if name, ok := key.(string); ok && name != "query" && strings.EqualFold(name, "query") {
+			return fmt.Errorf("failed to decode new pair parameters: %w: query_field=invalid", app.InvalidParameter())
+		}
+		var raw json.RawMessage
+		if err := d.Decode(&raw); err != nil {
+			return fmt.Errorf("failed to decode new pair parameter value: %w: %w", app.InvalidParameter(), err)
+		}
+		if key == "query" {
+			if seen {
+				return fmt.Errorf("failed to decode new pair parameters: %w: query=invalid", app.InvalidParameter())
+			}
+			seen = true
+		}
+	}
+	return nil
 }

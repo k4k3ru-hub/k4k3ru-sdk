@@ -1,12 +1,13 @@
 # TradeHub Swap JSON-RPC
 
-New clients call `TradeHub.Execution.Prepare` using the owning
+Clients call `TradeHub.Execution.Prepare` using the owning
 `execution/prepare.Params` type with `kind: "swap"` and this package's
-`PrepareParams` in `swap`. The existing method below remains a compatibility
-entrance. See [common execution](../execution/README.md).
+`PrepareParams` in `swap`. `TradeHub.AMMPool.Swap.Prepare` and its method constant
+were removed in the 2026-09-29 source update. See
+[common execution](../execution/README.md).
 
 `TradeHub.AMMPool.Swap.Quote` returns a current AMM quote without preparing a
-transaction. `TradeHub.AMMPool.Swap.Prepare` validates wallet funding and prepares
+transaction. `TradeHub.Execution.Prepare` with `kind: "swap"` validates wallet funding and prepares
 one unsigned transaction for client signing, with optional simulation. EVM funding uses ERC-20
 allowance; Sui uses explicit owned Coin references.
 
@@ -34,7 +35,9 @@ The gas limit applies to the transaction returned, including an approval prerequ
 Simulation-enabled preparation fails on a simulation error; it does not silently
 fall back to an unsimulated transaction. No independent Simulate RPC is added.
 
-The Result includes `simulated` and, for a ready swap, the enforced `amountLimit`.
+The common Prepare response wraps this package's `PrepareResult` in `swap`:
+`{kind: "swap", swap: {...}}`. That `swap` result includes `simulated` and, for a
+ready swap, the enforced `amountLimit`.
 For unsimulated exact input only `amountIn` is known; `amountOut` is omitted.
 For unsimulated exact output only `amountOut` is known; `amountIn` is omitted.
 When `simulated` is true both swap quantities are available. `ready` means the
@@ -47,13 +50,14 @@ Prepare returns one of two statuses:
 
 For `approval-required`, clients submit the signed approval through
 `TradeHub.Execution.Submit`, wait for completion, and call
-`TradeHub.AMMPool.Swap.Prepare` again. The next successful preparation returns `ready`.
+`TradeHub.Execution.Prepare` again with `kind: "swap"`. The next successful
+preparation returns `swap.status: "ready"`.
 For EVM, the client sends an `approvalAmount` selected from its local execution policy;
 TradeHub resolves and validates the spender rather than accepting it from the
 client.
 
-Every signing payload is bound to `submitParams.executionId` and
-`submitParams.payloadDigest`. Private keys and signed transactions are not part
+Every signing payload is bound to `swap.submitParams.executionId` and
+`swap.submitParams.payloadDigest` in the common response. Private keys and signed transactions are not part
 of Prepare parameters.
 
 After local signing, the client adds `signedPayload` to the returned submit
@@ -109,7 +113,8 @@ Replace placeholders with current wallet-owned references. Amounts and gas budge
 are atomic-unit decimal strings fitting u64. Object versions are decimal strings
 to preserve values above JavaScript's safe integer range; digests are case-sensitive.
 `execution.SuiObjectRef` owns the reference type; `swap.SuiPrepareParams` owns
-funding parameters.
+funding parameters. The JSON example above is the inner `swap` value; wrap it in
+`{"kind":"swap","swap":{...}}` when calling `TradeHub.Execution.Prepare`.
 
 - For SUI input, omit `inputCoins`; the swap splits the input amount from GasCoin.
   Selected gas coins must cover **amount + gasBudget**.

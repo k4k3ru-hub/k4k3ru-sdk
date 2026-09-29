@@ -64,6 +64,76 @@ for result := range subscription.Events() {
 `ListParams{Filter: filter, Limit: 100}` is the List request payload. Get uses
 `GetParams{Chain, Network, Venue, PoolID}`. Timestamps are Unix microseconds.
 Optional filters are chain, network and venue; empty values mean all.
+
+### Optional comparison queries
+
+`Params.Query == nil` retains legacy filters, keys and pagination. A non-nil
+`Query` (JSON `"query": {}`) opts into comparison queries. Defaults are `5m`,
+no conditions, and `poolCreatedAt` descending. The same `Params` is used for
+List's filter and Subscribe/Unsubscribe; notifications remain `apnp` without
+a subscription key. `Params.Equal` compares normalized semantics, including the
+query. Do not compare query pointers to identify equivalent filters.
+
+```go
+filter := newpair.Params{
+    Chain: "base", Network: "mainnet", Venue: "uniswap-v4",
+    Query: &newpair.Query{
+        ActivityPeriod: "5m",
+        Conditions: newpair.QueryConditions{
+            MinLiquidityUSD: "10000",
+            MinSwapCount: "20",
+            MaxPoolFeeRate: "0.01", // 1%; an example, not a default threshold.
+        },
+        Sort: newpair.QuerySort{Field: "volumeUsd", Direction: "desc"},
+    },
+}
+params := newpair.ListParams{Filter: filter, Limit: 20}
+// For continuation, preserve Filter/Limit and use the returned NextCursor.
+_ = params
+```
+
+All active conditions are ANDed against the entire listed scope before sorting
+and pagination. Unknown required metrics do not match. Missing conditions impose
+no constraint; `"0"` is an active threshold. `require*` booleans only constrain
+when true. Counts and amounts are exact decimal strings; rates are fractions
+(0–1), whereas change percentages use percent units (`"25"` means +25%).
+Limits are 78 integer digits, 18 fractional digits and 4 KiB per query JSON.
+Explicit null, unknown/duplicate fields and exponent notation are invalid.
+Normalize detaches the query and canonicalizes equivalent decimals; SubscriptionKey
+adds a SHA-256 digest while preserving the exact legacy key when Query is nil.
+
+Periods are `5m`, `15m`, `1h` and `24h`. Sender counts and preceding-period
+comparisons only support `5m`/`15m`; incompatible conditions/sorts are rejected.
+Sorting supports `poolCreatedAt`, `liquidityUsd`, `swapCount`, `volumeUsd`,
+`uniqueSenderCount`, `swapCountChangePercentage` and `volumeUsdChangePercentage`.
+Unknowns sort last in either direction; ties use creation time descending, then
+chain/network/venue/pool identity ascending. Sender counts remain lower bounds.
+
+Token conditions permit server-verified, onchain-defined trusted tokens to skip
+tax-rate and control checks. No rate or boolean is filled in: trusted USDC can
+retain null TokenTaxes. Trust matches chain/network/token ID, never a symbol.
+Other tokens need the requested observed values; renounced ownership is not
+proof that minting or other permissions are absent. LP conditions require current
+`available` protection and reject stale/expired findings. Trust never bypasses LP
+protection checks. These filters do not change the service's listing policy.
+
+Query results add `queryResult: {matchedCount: "85", expiresAt: ...}`. Live uses
+null expiry and reports the count before wire-size truncation. List holds immutable
+public data, timestamp and ordering for at most 120 seconds (earlier LP unlocks
+shorten this). Ordinary updates do not alter captured pages. Withdrawn evidence
+or sender-generation changes invalidate them. Subsequent pages need no DB read.
+
+Initial limits: 2,000 matched pools/8 MiB per search, 64 searches/64 MiB per process,
+two concurrent builders, 10-second build timeout, and 220 KB response budget.
+The cache is process-local: restart, expiry or routing to a different replica
+requires a new first-page search; multi-replica deployments need affinity.
+`expired` and `conflict` require a deliberate refresh. `CodeQueryTooLarge` means
+narrow the scope/conditions; `CodeQueryBusy` means retry later. Invalid or mismatched
+cursors use `invalid_parameter`. Existing valid searches are not evicted to admit
+new ones. Deploy the query-capable SDK/server before enabling query clients.
+
+### Pool observations
+
 The new server contract uses pool creation time for the 24-hour lifecycle, a
 confirmed observed swap, liquidity of at least 1,000 USD, and a synchronized LP state with a successful
 valuation. `SwapObservedAt` is not necessarily the first swap in pool history;

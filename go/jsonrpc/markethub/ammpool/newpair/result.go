@@ -83,15 +83,16 @@ type Coverage struct {
 }
 
 type Result struct {
-	Filter        Params     `json:"filter"`
-	Epoch         string     `json:"epoch"`
-	Version       uint64     `json:"version"`
-	Timestamp     int64      `json:"timestamp"`
-	Pairs         []Pair     `json:"pairs"`
-	ExcludedPairs []Pair     `json:"excludedPairs"`
-	Coverage      []Coverage `json:"coverage"`
-	Truncated     bool       `json:"truncated"`
-	NextCursor    string     `json:"nextCursor,omitempty"`
+	QueryResult   *QueryResult `json:"queryResult,omitempty"`
+	Filter        Params       `json:"filter"`
+	Epoch         string       `json:"epoch"`
+	Version       uint64       `json:"version"`
+	Timestamp     int64        `json:"timestamp"`
+	Pairs         []Pair       `json:"pairs"`
+	ExcludedPairs []Pair       `json:"excludedPairs"`
+	Coverage      []Coverage   `json:"coverage"`
+	Truncated     bool         `json:"truncated"`
+	NextCursor    string       `json:"nextCursor,omitempty"`
 }
 
 type GetResult struct {

@@ -11,9 +11,9 @@ There are no root-package aliases or new production dependencies.
 
 The implemented subscription identifiers are `jsonrpc.MethodTradeHubScalpingSubscribe`
 and `MethodTradeHubScalpingUnsubscribe`. Use `websocket.NewModule` and
-`module.Scalping()` for authenticated candidate notifications. The existing
-`MethodTradeHubScalpingGet` constant is reserved for future order/position state
-retrieval; it is not a one-shot candidate evaluation operation.
+`module.Scalping()` for authenticated candidate notifications.
+The unimplemented `TradeHub.Scalping.Get` method constant was removed in the
+2026-09-29 source update. No one-shot Scalping Get RPC is exposed.
 
 ## Request
 

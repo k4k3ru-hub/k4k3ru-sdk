@@ -8,6 +8,10 @@ import (
 	k4k3ruSDKAppError "github.com/k4k3ru-hub/k4k3ru-sdk/go/apperror"
 )
 
+// TestMethodValidate checks known method names and string validation.
+//
+// Version:
+//   - 2026-09-29: Remove the retired Swap Prepare constant.
 func TestMethodValidate(t *testing.T) {
 	t.Parallel()
 
@@ -123,10 +127,6 @@ func TestMethodValidate(t *testing.T) {
 		{
 			name:   "known trade hub swap quote method",
 			method: MethodTradeHubSwapQuote,
-		},
-		{
-			name:   "known trade hub swap prepare method",
-			method: MethodTradeHubSwapPrepare,
 		},
 		{
 			name:   "known trade hub execution prepare method",

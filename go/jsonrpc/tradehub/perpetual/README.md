@@ -6,19 +6,24 @@ Method constants live in `jsonrpc`; no third-party Exchange types are exposed.
 | Method suffix under `TradeHub.Perpetual` | Request | Response |
 | --- | --- | --- |
 | `Account.Get` | `AccountParams` | `AccountResult` |
-| `Prepare` | `PrepareParams` | `PrepareResult` |
-| `Submit` | `SubmitParams` | `SubmitResult` |
 | `Order.Get` | `OrderParams` | `OrderResult` |
 
 These are authenticated HTTP RPCs. Initial scope is Hyperliquid Testnet SUI/USDC.
-Use `jsonrpc.MethodTradeHubPerpetualPrepare` and a `perpetual.PrepareParams` value
-in the existing signed JSON-RPC envelope. There is no new transport constructor
-or WebSocket subscription in this package.
+Writes use `jsonrpc.MethodTradeHubExecutionPrepare` and
+`jsonrpc.MethodTradeHubExecutionSubmit` with the common
+[Execution envelopes](../execution/README.md). The old
+`TradeHub.Perpetual.Prepare` and `TradeHub.Perpetual.Submit` RPCs are removed.
+There is no new transport constructor or WebSocket subscription in this package.
+
+`PrepareParams`, `PrepareResult`, `SubmitParams` and `SubmitResult` remain the
+Hyperliquid intent/payload and journal models used by the execution adapter.
+They are not standalone RPC request/response contracts. Use the owning
+`jsonrpc/tradehub/execution/hyperliquid` conversion package for the common envelope.
 
 For example, construct the intent using the owning package:
 
 ```go
-params := perpetual.PrepareParams{
+intent := perpetual.PrepareParams{
     Scope: perpetual.Scope{
         Venue: "hyperliquid", Network: "testnet", Symbol: "SUI/USDC",
         AccountAddress: tradingAddress,
@@ -31,6 +36,7 @@ params := perpetual.PrepareParams{
         TimeInForce: "ioc", ReduceOnly: false, ClientOrderID: clientOrderID,
     },
 }
+params := hyperliquid.PrepareParams(intent)
 if err := params.Validate(); err != nil {
     return err
 }
@@ -41,10 +47,14 @@ explicit intent and durable nonce/journal workflow. `nonce`, `preparedAt`,
 `expiresAfter`, fill `time` and `observedAt` use Unix milliseconds. Order/trade
 IDs use decimal strings. Sizes, prices and fees use decimal strings.
 
-Prepare returns normalized action JSON, contract metadata, original intent,
-action hash, EIP-712 digest and a 60-second authenticated token. Reconstruct and
-verify the full intent locally before signing. Submit accepts only that token,
-preparation ID, digest and canonical low-S signature (`r`, `s`, `v: 27|28`).
+Common Prepare returns the normalized action JSON, contract metadata, original
+intent, action hash and EIP-712 digest in `action.payload`, alongside
+`action.submitParams` with a 60-second authenticated token. Reconstruct and
+verify the full intent locally before signing. Common Submit carries that token,
+execution ID, payload digest and canonical low-S signature (`r`, `s`, `v: 27|28`)
+under `signedPayload.action`. `hyperliquid.Prepared` and `hyperliquid.Receipt`
+convert common responses back to the models in this package; `hyperliquid.SubmitParams`
+wraps a persisted venue submission without changing its nonce or signature.
 Unknown fields, duplicate keys and missing required fields are rejected during
 JSON decoding. `Validate` checks semantic constraints; current market precision,
 account role, agent ownership, expiration and cryptography are server checks.
