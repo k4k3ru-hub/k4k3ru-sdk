@@ -242,7 +242,7 @@ Spot and long Perp openings use the buy ranking; short Perp openings use sell.
 assessment. `unavailable` prices do not produce candidates. These are observations;
 Prepare must verify assets, balances, inventory and executability independently.
 
-TradeHub consumes signed `InternalApp.MarketHub.Scalping.Subscribe` events at the
+TradeHub consumes signed `InternalApp.MarketHub.Scalping.Run` events at the
 MarketHub stream cadence; it does not poll an HTTP Get API. Transport failures
 withdraw all previous candidates. Reconnection signs a fresh subscription and
 starts a new candidate generation. A single active execution owns its upstream
@@ -381,3 +381,7 @@ Ownership is persisted in OMS order specification JSON and restored from active
 confirmed fills. Settings without assigned fills never adopt unrelated holdings.
 Only actual same-chain inventory is eligible initially; cross-chain references
 require an allocation implementation before they can produce executable closes.
+
+MarketHub state-price metrics preserve their original `priceEvaluatedAt` in the
+TradeHub Result. This optional Unix-ms timestamp may precede `evaluatedAt`;
+activity metrics remain evaluated on trade time at `evaluatedAt`.

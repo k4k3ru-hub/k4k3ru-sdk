@@ -21,16 +21,18 @@ type AssetMetadata struct {
 }
 
 type Result struct {
-	State        *ExecutionState       `json:"state,omitempty"`
-	Settlement   *Settlement           `json:"settlement,omitempty"`
-	EvaluationID string                `json:"evaluationId"`
-	MarketType   market.MarketType     `json:"marketType"`
-	Symbol       market.Symbol         `json:"symbol"`
-	BaseAsset    rule.AssetRef         `json:"baseAsset"`
-	QuoteAsset   rule.AssetRef         `json:"quoteAsset"`
-	EvaluatedAt  int64                 `json:"evaluatedAt"`
-	Metrics      *observations.Metrics `json:"metrics,omitempty"`
-	Markets      []MarketEvaluation    `json:"markets"`
+	// PriceEvaluatedAt preserves the confirmed end of MarketHub state-price metrics.
+	PriceEvaluatedAt *int64                `json:"priceEvaluatedAt,omitempty"`
+	State            *ExecutionState       `json:"state,omitempty"`
+	Settlement       *Settlement           `json:"settlement,omitempty"`
+	EvaluationID     string                `json:"evaluationId"`
+	MarketType       market.MarketType     `json:"marketType"`
+	Symbol           market.Symbol         `json:"symbol"`
+	BaseAsset        rule.AssetRef         `json:"baseAsset"`
+	QuoteAsset       rule.AssetRef         `json:"quoteAsset"`
+	EvaluatedAt      int64                 `json:"evaluatedAt"`
+	Metrics          *observations.Metrics `json:"metrics,omitempty"`
+	Markets          []MarketEvaluation    `json:"markets"`
 }
 
 type MarketEvaluation struct {

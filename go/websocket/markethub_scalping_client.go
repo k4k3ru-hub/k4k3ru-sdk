@@ -41,20 +41,21 @@ func newMarketHubScalpingClient(sender jsonRPCSender, events *marketHubScalpingE
 	return &MarketHubScalpingClient{sender: sender, events: events, lifecycle: lifecycle}, nil
 }
 
-// Subscribe receives complete latest-value observations for one normalized request.
+// Run starts complete latest-value observations for one normalized request.
 // Repeated calls with the same active conditions return the same subscription.
-// After disconnection callers explicitly subscribe again; no history is replayed.
+// After disconnection callers explicitly run the same request again; no history is replayed.
 //
 // Version:
+//   - 2026-10-01: Use the MarketHub.Scalping.Run RPC.
 //   - 2026-09-26: Added.
-func (c *MarketHubScalpingClient) Subscribe(ctx context.Context, params dto.Params) (*MarketHubScalpingSubscription, error) {
+func (c *MarketHubScalpingClient) Run(ctx context.Context, params dto.Params) (*MarketHubScalpingSubscription, error) {
 	if c == nil || ctx == nil {
-		return nil, fmt.Errorf("failed to subscribe market hub scalping: dependency=null")
+		return nil, fmt.Errorf("failed to run market hub scalping: dependency=null")
 	}
 	params = params.Normalize()
 	key, err := params.SubscriptionKey()
 	if err != nil {
-		return nil, fmt.Errorf("failed to subscribe market hub scalping: %w", err)
+		return nil, fmt.Errorf("failed to run market hub scalping: %w", err)
 	}
 	c.opMu.Lock()
 	defer c.opMu.Unlock()
@@ -71,12 +72,12 @@ func (c *MarketHubScalpingClient) Subscribe(ctx context.Context, params dto.Para
 	r.active[key] = s
 	r.mu.Unlock()
 	var ack dto.SubscribeResult
-	err = c.request(ctx, rpc.MethodMarketHubScalpingSubscribe, params, &ack)
+	err = c.request(ctx, rpc.MethodMarketHubScalpingRun, params, &ack)
 	if err == nil {
 		err = ack.Validate()
 	}
 	if err == nil && ack.SubscriptionKey != key {
-		err = fmt.Errorf("failed to subscribe market hub scalping: acknowledgement=invalid")
+		err = fmt.Errorf("failed to run market hub scalping: acknowledgement=invalid")
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -85,7 +86,7 @@ func (c *MarketHubScalpingClient) Subscribe(ctx context.Context, params dto.Para
 		return nil, err
 	}
 	if s.closed {
-		return nil, fmt.Errorf("failed to subscribe market hub scalping: subscription interrupted")
+		return nil, fmt.Errorf("failed to run market hub scalping: subscription interrupted")
 	}
 	return s, nil
 }

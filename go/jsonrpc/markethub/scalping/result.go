@@ -3,11 +3,14 @@ package scalping
 import "github.com/k4k3ru-hub/k4k3ru-sdk/go/finance/market"
 
 type Result struct {
-	EvaluatedAt int64         `json:"evaluatedAt"`
-	OHLC        *OHLC         `json:"ohlc,omitempty"`
-	Metrics     *Metrics      `json:"metrics,omitempty"`
-	Buy         []MarketPrice `json:"buy"`
-	Sell        []MarketPrice `json:"sell"`
+	// PriceEvaluatedAt is the common confirmed end of state-price analytics, in Unix ms.
+	// Activity metrics use EvaluatedAt and venue trade times instead.
+	PriceEvaluatedAt *int64        `json:"priceEvaluatedAt,omitempty"`
+	EvaluatedAt      int64         `json:"evaluatedAt"`
+	OHLC             *OHLC         `json:"ohlc,omitempty"`
+	Metrics          *Metrics      `json:"metrics,omitempty"`
+	Buy              []MarketPrice `json:"buy"`
+	Sell             []MarketPrice `json:"sell"`
 }
 
 type OHLC struct {

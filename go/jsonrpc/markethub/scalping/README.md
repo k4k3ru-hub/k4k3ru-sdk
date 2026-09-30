@@ -1,11 +1,11 @@
 # MarketHub Scalping parameters and observations
 
 This package owns the request, snapshot and subscription DTOs for MarketHub
-Scalping. The SDK supports `MarketHub.Scalping.Subscribe` and
+Scalping. The SDK supports `MarketHub.Scalping.Run` and
 `MarketHub.Scalping.Unsubscribe` through `websocket.Module.MarketHubScalping()`.
 Deploy the corresponding Gateway and MarketHub server changes together. Public
 `MarketHub.Scalping.Get` remains a separate step. TradeHub uses the internal
-MarketHub Subscribe feed.
+MarketHub Run feed.
 
 ```go
 import (
@@ -75,7 +75,7 @@ legacy top-level `baseQuantity` is rejected, with no compatibility conversion.
 Historical metrics do not depend on these inputs. No trading thresholds,
 execution rules or order IDs are added to MarketHub observations.
 
-The flat Result contains `evaluatedAt` (Unix milliseconds), optional consolidated
+The flat Result contains `evaluatedAt` and optional `priceEvaluatedAt` (Unix milliseconds), optional consolidated
 `ohlc` and `metrics`, and `buy` / `sell` lists of concrete markets. It has no
 network groups or issues array. MarketPrice status is `reference`, `vwap`,
 `fallback_reference` or `unavailable`. These types define the contract; they do
@@ -210,14 +210,35 @@ markets need additional fee-modifier metadata and are unavailable. Perpetual
 market observation also requires its execution-market metadata to be registered;
 the DTO alone does not enable a new adapter.
 
-Historical analytics remain based on recorded trades, without applying account
-fees to OHLC or historical VWAP. They use event time in `[T-windowMs,T)`. For each UTC second
-(clipped at both window edges), the service computes market Quote/Base VWAP,
-the median within each venue, then the median across venues. OHLC describes
-that representative series, not raw trade extrema or an executable quote.
-An even-sized median is the mean of its two central values. No forward fill or
-interpolation is performed. Missing coverage or a missing constituent price
-prevents publishing a complete price series; independent totals can still exist.
+Price analytics use validated OrderBook midpoints or marginal Pool state prices,
+without order quantities, account fees or gas. Prices are canonical Quote/Base:
+the median within each venue, then the median across venues. An even-sized
+median is the mean of its two central values. OHLC covers every admitted state
+change, rather than trade extrema or executable quotes.
+
+`priceEvaluatedAt` (Unix milliseconds) is the latest common confirmed time of
+all resolved markets, floored to milliseconds. Price analytics cover
+`[priceEvaluatedAt-windowMs, priceEvaluatedAt)`. It can trail `evaluatedAt`, the
+actual calculation time. Internal admission, receipt and source timestamps
+retain sub-microsecond precision. Late inputs are not backdated. Every market
+remains in the basket; missing coverage, disconnection or warmup omit the price
+series and its timestamp. No trade-price fallback is used.
+
+A state can remain constant during a verified no-trade interval. A socket or
+local timer alone never establishes coverage, and a gap is never interpolated.
+Sui checkpoint watermarks confirm progress even without Pool transactions.
+Hyperliquid full book updates confirm the observed book stream. EVM retained
+state currently advances only on validated input updates; an idle log stream
+alone does not advance the price watermark. Reconnection starts a new history.
+State history is bounded by market/point caps and two minutes of storage,
+including a one-minute allowance for watermark lag; the public window remains
+at most 60 seconds. If the required historical interval is no longer retained,
+price analytics are omitted. Current `netPrice` ranking is independent.
+
+Trade activity continues to use actual event time in
+`[evaluatedAt-windowMs, evaluatedAt)`. No-trade intervals produce known zero
+volume/count only when activity observation is continuous. Undefined ratios
+or VWAP remain omitted. MarketHub does not make per-evaluation RPC calls.
 
 Metrics include price-change bps, actual Quote volume, event count, buy Base
 ratio bps, and aggregate trade VWAP. Quote volume uses Amount/Decimals, selecting
@@ -226,24 +247,26 @@ once after summation. Prices and bps use 18 decimal places, ties to even.
 Quantities remain exact before output conversion. An unavailable field is
 omitted rather than reported as zero.
 
-`trend` compares `[T-5s,T)` with `[T-10s,T-5s)`: the difference in price-change
+`trend` compares `[T-5s,T)` with `[T-10s,T-5s)`, with `T=priceEvaluatedAt`
+for price changes and `T=evaluatedAt` for trade activity: the difference in price-change
 bps, Quote-volume percentage change in bps, and the difference in buy-ratio bps.
 Windows below 10 seconds omit trend. Missing inputs omit only affected values;
 a zero previous Quote volume prevents calculating its change rate.
 
-`realizedVolatilityBps` uses consecutive complete one-second consolidated prices:
+`realizedVolatilityBps` uses the closing state price of each complete UTC
+one-second interval within the confirmed price window:
 `sqrt(sum(log(P[i]/P[i-1])^2)) * 10000`, without annualization. At least three
 prices are required, with no missing full-second samples. Partial edge seconds
 are excluded from volatility, while remaining part of OHLC. This sampling
 interval is independent of delivery frequency and the five-second trend ranges.
 The implementation uses guarded arbitrary-precision arithmetic and requires
 the same rounded output at successive precisions; unstable output is omitted.
-Public Get remains a subsequent implementation step.
 
 
-## Observation subscriptions
 
-Subscribe accepts the existing `Params` unchanged. ACK contains
+## Observation runs
+
+Run accepts the existing `Params` unchanged. ACK contains
 `{"subscriptionKey":"MarketHub.Scalping:<opaque-key>","intervalMs":1000}`.
 The first full Snapshot follows ACK; later full Snapshots target a one-second
 interval, even without trades. Arrival timing is not guaranteed. Observation
@@ -283,7 +306,7 @@ handle once. The key includes every request condition, ignores target order,
 and is not a credential. The existing `module.Scalping()` / `e="sc"` remain
 TradeHub execution-candidate APIs.
 
-Public Subscribe is signed and costs 100 ticks at creation, then 100 ticks per
+Public Run is signed and costs 100 ticks at creation, then 100 ticks per
 minute from the first successful ACK. Billing is per WebSocket connection and
 normalized conditions, independent of market count, optional quantity and event
 count. Same-connection duplicates do not incur another charge or reset the
@@ -294,3 +317,9 @@ stops new billing periods. Reconnection creates a new billable subscription.
 Internal service-to-service subscriptions are signed and are not separately
 charged these public ticks. Credit exhaustion terminates only the affected
 subscription and is reported through `Errors()`.
+
+The start RPC is `MarketHub.Scalping.Run`; the previous
+`MarketHub.Scalping.Subscribe` method is no longer routed. Use
+`module.MarketHubScalping().Run(ctx, params)` to start the existing ACK and
+continuous Snapshot stream. The request fields, subscription key, event type,
+interval, Credit policy and `Unsubscribe` operation retain their existing meaning.

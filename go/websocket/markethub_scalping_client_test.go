@@ -22,6 +22,7 @@ func observationResult(at int64) dto.Result {
 // TestMarketHubScalpingLifecycle verifies ACK races, latest-only delivery, duplicate requests and reconnect.
 //
 // Version:
+//   - 2026-10-01: Verify the Run wire method and lifecycle.
 //   - 2026-09-26: Added.
 func TestMarketHubScalpingLifecycle(t *testing.T) {
 	r := newMarketHubScalpingEvents()
@@ -40,6 +41,9 @@ func TestMarketHubScalpingLifecycle(t *testing.T) {
 		if m == rpc.MethodMarketHubScalpingUnsubscribe {
 			return &rpc.Response{Result: raw}, nil
 		}
+		if m != rpc.Method("MarketHub.Scalping.Run") {
+			t.Fatalf("unexpected start method: %s", m)
+		}
 		for i := int64(1); i <= 20; i++ {
 			if err := r.route(dto.SubscriptionEvent{SubscriptionKey: key, Snapshot: observationResult(i)}); err != nil {
 				return nil, err
@@ -51,14 +55,14 @@ func TestMarketHubScalpingLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := c.Subscribe(t.Context(), p)
+	s, err := c.Run(t.Context(), p)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if v := <-s.Events(); v.EvaluatedAt != 20 {
 		t.Fatal("latest snapshot not retained", v)
 	}
-	duplicate, err := c.Subscribe(t.Context(), p)
+	duplicate, err := c.Run(t.Context(), p)
 	if err != nil || duplicate != s || calls != 1 {
 		t.Fatal("duplicate wire request", calls, err)
 	}
@@ -72,7 +76,7 @@ func TestMarketHubScalpingLifecycle(t *testing.T) {
 	if _, ok := <-s.Events(); ok {
 		t.Fatal("stale buffered snapshot survived termination")
 	}
-	next, err := c.Subscribe(t.Context(), p)
+	next, err := c.Run(t.Context(), p)
 	if err != nil || next == s {
 		t.Fatal("reconnect failed", err)
 	}
@@ -131,6 +135,7 @@ func TestMarketHubScalpingComposition(t *testing.T) {
 // TestMarketHubScalpingRejectsACK verifies a wrong interval cannot activate a subscription.
 //
 // Version:
+//   - 2026-10-01: Start the observation through Run.
 //   - 2026-09-26: Added.
 func TestMarketHubScalpingRejectsACK(t *testing.T) {
 	r := newMarketHubScalpingEvents()
@@ -148,7 +153,7 @@ func TestMarketHubScalpingRejectsACK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := c.Subscribe(t.Context(), observationParams()); err == nil {
+	if _, err := c.Run(t.Context(), observationParams()); err == nil {
 		t.Fatal("invalid ACK accepted")
 	}
 	if len(r.active) != 0 {

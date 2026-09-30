@@ -12,6 +12,7 @@ import (
 // TestScalpingResultWireContract verifies flat snapshots, omission and stable status names.
 //
 // Version:
+//   - 2026-10-01: Omit unknown price-window evaluation times.
 //   - 2026-09-28: Verify fee-inclusive result fields.
 //   - 2026-09-26: Omit unknown fees and last trade time.
 //   - 2026-09-26: Added.
@@ -33,7 +34,7 @@ func TestScalpingResultWireContract(t *testing.T) {
 			t.Fatalf("missing contract field: %s", part)
 		}
 	}
-	for _, part := range []string{`"ohlc"`, `"netPrice"`, `"issues"`, `"groups"`, `"trend"`, `"fees"`, `"lastTradeAt"`} {
+	for _, part := range []string{`"ohlc"`, `"netPrice"`, `"issues"`, `"groups"`, `"trend"`, `"fees"`, `"lastTradeAt"`, `"priceEvaluatedAt"`} {
 		if strings.Contains(string(raw), part) {
 			t.Fatalf("unexpected field: %s", part)
 		}
@@ -101,5 +102,27 @@ func TestScalpingFeeWireContract(t *testing.T) {
 		if err := json.Unmarshal([]byte(bad), &roundTrip); err == nil {
 			t.Fatal("invalid fee quantity accepted")
 		}
+	}
+}
+
+// TestPriceEvaluationTimeWire separates common price coverage from calculation time.
+//
+// Version:
+//   - 2026-10-01: Added.
+func TestPriceEvaluationTimeWire(t *testing.T) {
+	const raw = `{"evaluatedAt":1790380800000,"priceEvaluatedAt":1790380799750,"buy":[],"sell":[]}`
+	var result scalping.Result
+	if err := json.Unmarshal([]byte(raw), &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.PriceEvaluatedAt == nil || *result.PriceEvaluatedAt != 1790380799750 || result.EvaluatedAt != 1790380800000 {
+		t.Fatal("evaluation times conflated")
+	}
+	encoded, err := json.Marshal(result)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(encoded), `"priceEvaluatedAt":1790380799750`) {
+		t.Fatal("price timestamp lost")
 	}
 }
