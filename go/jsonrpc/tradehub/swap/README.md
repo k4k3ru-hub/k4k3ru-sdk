@@ -140,3 +140,32 @@ To prepare the same Sui request without simulation, omit `simulate` or set it to
 false, remove `maximumSlippageBps`, and supply `amountLimit` in output-token atomic
 units. Keep `sui.gasBudget` and owned Coin references. The resulting unsigned
 transaction still enforces that explicit minimum output.
+
+
+## Assigning Sui swaps to a Scalping Run
+
+`TradeHub.Execution.Prepare` with `kind: "swap"` accepts an optional
+`swap.scalpingRun`. Initial orders send only the durable Run identifier:
+
+```json
+{"scalpingRun":{"executionId":"scalprun_example"}}
+```
+
+Settlements additionally identify the initial OMS order and the revision from
+that order in the latest Run snapshot:
+
+```json
+{"scalpingRun":{"executionId":"scalprun_example","positionOrderId":"1790758522092893591","orderRevision":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}
+```
+
+The two settlement fields must be supplied together. This reference is mutually
+exclusive with the legacy `scalpingExecutionId` / `scalpingRevision` fields and
+with Submit's legacy `openExecutionId` association. Initial support is Sui
+exact-input Spot Buy and full settlement of one initial order's remaining units.
+
+Prepare authenticates the reference inside its token and creates no OMS order.
+First Submit validates the saved Run, account, exact asset identities, entry limits,
+and settlement inventory under a transaction lock; accepted replay keeps the same
+OMS order and bypasses the now-changed inventory revision. No candidate-condition
+reevaluation is added at Submit. A new initial order is independent of previous
+initial orders; it is never implicitly netted against them.
