@@ -4,85 +4,61 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"sync"
 
 	rpc "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc"
 	dto "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/scalping"
 )
 
-type ScalpingClient struct {
-	run       *scalpingRunClient
+type scalpingRunClient struct {
 	opMu      sync.Mutex
 	sender    jsonRPCSender
-	events    *scalpingEventRegistry
+	events    *scalpingRunEventRegistry
 	lifecycle *subscriptionLifecycle
 }
 
-// Run starts or resumes the entry/exit Run stream and returns its acknowledged handle.
-// Connection recovery is explicit using Reference().ExecutionID.
-//
-// Version:
-//   - 2026-10-01: Added.
-func (c *ScalpingClient) Run(ctx context.Context, params dto.RunParams) (*ScalpingRunSubscription, error) {
-	if c == nil || c.run == nil {
-		return nil, fmt.Errorf("failed to run scalping: client=null")
-	}
-	return c.run.Run(ctx, params)
-}
-
-// UnsubscribeRun stops a Run stream without cancelling or settling its OMS orders.
-//
-// Version:
-//   - 2026-10-01: Added.
-func (c *ScalpingClient) UnsubscribeRun(ctx context.Context, s *ScalpingRunSubscription) error {
-	if c == nil || c.run == nil {
-		return fmt.Errorf("failed to unsubscribe scalping run: client=null")
-	}
-	return c.run.Unsubscribe(ctx, s)
-}
-
-type ScalpingSubscription struct {
-	registry *scalpingEventRegistry
+type ScalpingRunSubscription struct {
+	registry *scalpingRunEventRegistry
 	id, key  string
-	params   *dto.Params
+	params   *dto.RunConfiguration
 	sequence uint64
-	events   chan dto.SubscriptionEvent
+	events   chan dto.RunEvent
 	errors   chan error
-	buffer   []dto.SubscriptionEvent
+	buffer   []dto.RunEvent
 	closed   bool
 	released bool
 }
 
-type scalpingEventRegistry struct {
+type scalpingRunEventRegistry struct {
 	mu      sync.Mutex
-	active  map[string]*ScalpingSubscription
-	pending *ScalpingSubscription
+	active  map[string]*ScalpingRunSubscription
+	pending *ScalpingRunSubscription
 }
 
-func newScalpingEventRegistry() *scalpingEventRegistry {
-	return &scalpingEventRegistry{active: make(map[string]*ScalpingSubscription)}
+func newScalpingRunEventRegistry() *scalpingRunEventRegistry {
+	return &scalpingRunEventRegistry{active: make(map[string]*ScalpingRunSubscription)}
 }
 
-func newScalpingClient(sender jsonRPCSender, events *scalpingEventRegistry, lifecycle *subscriptionLifecycle) (*ScalpingClient, error) {
+func newScalpingRunClient(sender jsonRPCSender, events *scalpingRunEventRegistry, lifecycle *subscriptionLifecycle) (*scalpingRunClient, error) {
 	if sender == nil || events == nil || lifecycle == nil {
 		return nil, fmt.Errorf("failed to create scalping websocket client: dependency=null")
 	}
-	return &ScalpingClient{sender: sender, events: events, lifecycle: lifecycle}, nil
+	return &scalpingRunClient{sender: sender, events: events, lifecycle: lifecycle}, nil
 }
 
-// Subscribe starts an idempotent execution or resumes its candidate notifications.
+// Run starts an idempotent execution or resumes its candidate notifications.
 // Reconnection is explicit; retain the acknowledgement's execution ID to resume.
 //
 // Version:
-//   - 2026-09-29: Preserve the acknowledged settings for durable resubscription.
-//   - 2026-09-24: Added.
-func (c *ScalpingClient) Subscribe(ctx context.Context, params dto.SubscribeParams) (*ScalpingSubscription, error) {
+//   - 2026-10-01: Added.
+func (c *scalpingRunClient) Run(ctx context.Context, params dto.RunParams) (*ScalpingRunSubscription, error) {
 	if c == nil || ctx == nil {
-		return nil, fmt.Errorf("failed to subscribe scalping: dependency=null")
+		return nil, fmt.Errorf("failed to run scalping: dependency=null")
 	}
 	params = params.Normalize()
 	if err := params.Validate(); err != nil {
-		return nil, fmt.Errorf("failed to subscribe scalping: %w", err)
+		return nil, fmt.Errorf("failed to run scalping: %w", err)
 	}
 	c.opMu.Lock()
 	defer c.opMu.Unlock()
@@ -95,13 +71,16 @@ func (c *ScalpingClient) Subscribe(ctx context.Context, params dto.SubscribePara
 		r.mu.Unlock()
 		return s, nil
 	}
-	s := &ScalpingSubscription{registry: r, events: make(chan dto.SubscriptionEvent, 16), errors: make(chan error, 1)}
+	s := &ScalpingRunSubscription{registry: r, events: make(chan dto.RunEvent, 16), errors: make(chan error, 1)}
 	r.pending = s
 	r.mu.Unlock()
-	var ack dto.SubscribeResult
-	err := c.request(ctx, rpc.MethodTradeHubScalpingSubscribe, params, &ack)
+	var ack dto.RunResult
+	err := c.request(ctx, rpc.MethodTradeHubScalpingRun, params, &ack)
+	if err == nil && params.Params != nil && (ack.Params == nil || !reflect.DeepEqual(*params.Params, *ack.Params)) {
+		err = fmt.Errorf("failed to run scalping: acknowledgement_configuration=mismatch")
+	}
 	if err == nil && params.ExecutionID != "" && ack.ExecutionID != params.ExecutionID {
-		err = fmt.Errorf("failed to subscribe scalping: execution_id=invalid")
+		err = fmt.Errorf("failed to run scalping: execution_id=invalid")
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -113,7 +92,7 @@ func (c *ScalpingClient) Subscribe(ctx context.Context, params dto.SubscribePara
 		return nil, err
 	}
 	if s.closed {
-		return nil, fmt.Errorf("failed to subscribe scalping: subscription interrupted")
+		return nil, fmt.Errorf("failed to run scalping: subscription interrupted")
 	}
 	if old := r.active[ack.ExecutionID]; old != nil {
 		if old.key == ack.SubscriptionKey {
@@ -136,13 +115,13 @@ func (c *ScalpingClient) Subscribe(ctx context.Context, params dto.SubscribePara
 	return s, nil
 }
 
-// Unsubscribe stops candidate delivery without cancelling orders or positions.
+// Unsubscribe stops Run delivery without cancelling orders or positions.
 //
 // Version:
-//   - 2026-09-24: Added.
-func (c *ScalpingClient) Unsubscribe(ctx context.Context, s *ScalpingSubscription) error {
+//   - 2026-10-01: Added.
+func (c *scalpingRunClient) Unsubscribe(ctx context.Context, s *ScalpingRunSubscription) error {
 	if c == nil || ctx == nil || s == nil || s.registry != c.events {
-		return fmt.Errorf("failed to unsubscribe scalping: subscription=invalid")
+		return fmt.Errorf("failed to unsubscribe scalping run: subscription=invalid")
 	}
 	c.opMu.Lock()
 	defer c.opMu.Unlock()
@@ -158,7 +137,7 @@ func (c *ScalpingClient) Unsubscribe(ctx context.Context, s *ScalpingSubscriptio
 		return err
 	}
 	if ack.ExecutionID != params.ExecutionID || ack.SubscriptionKey != params.SubscriptionKey {
-		return fmt.Errorf("failed to unsubscribe scalping: acknowledgement=invalid")
+		return fmt.Errorf("failed to unsubscribe scalping run: acknowledgement=invalid")
 	}
 	c.events.mu.Lock()
 	defer c.events.mu.Unlock()
@@ -171,8 +150,8 @@ func (c *ScalpingClient) Unsubscribe(ctx context.Context, s *ScalpingSubscriptio
 // Retryable stream errors withdraw prior candidates until a new snapshot arrives.
 //
 // Version:
-//   - 2026-09-24: Added.
-func (s *ScalpingSubscription) Events() <-chan dto.SubscriptionEvent {
+//   - 2026-10-01: Added.
+func (s *ScalpingRunSubscription) Events() <-chan dto.RunEvent {
 	if s == nil {
 		return nil
 	}
@@ -182,8 +161,8 @@ func (s *ScalpingSubscription) Events() <-chan dto.SubscriptionEvent {
 // Errors returns local transport and delivery interruptions.
 //
 // Version:
-//   - 2026-09-24: Added.
-func (s *ScalpingSubscription) Errors() <-chan error {
+//   - 2026-10-01: Added.
+func (s *ScalpingRunSubscription) Errors() <-chan error {
 	if s == nil {
 		return nil
 	}
@@ -193,15 +172,14 @@ func (s *ScalpingSubscription) Errors() <-chan error {
 // Reference returns detached settings and the durable and connection-specific IDs.
 //
 // Version:
-//   - 2026-09-29: Include restored configuration without exposing mutable internal state.
-//   - 2026-09-24: Added.
-func (s *ScalpingSubscription) Reference() dto.SubscribeResult {
+//   - 2026-10-01: Added.
+func (s *ScalpingRunSubscription) Reference() dto.RunResult {
 	if s == nil {
-		return dto.SubscribeResult{}
+		return dto.RunResult{}
 	}
 	s.registry.mu.Lock()
 	defer s.registry.mu.Unlock()
-	ref := dto.SubscribeResult{ExecutionID: s.id, SubscriptionKey: s.key}
+	ref := dto.RunResult{ExecutionID: s.id, SubscriptionKey: s.key}
 	if s.params != nil {
 		settings := s.params.Normalize()
 		ref.Params = &settings
@@ -209,7 +187,7 @@ func (s *ScalpingSubscription) Reference() dto.SubscribeResult {
 	return ref
 }
 
-func (c *ScalpingClient) request(ctx context.Context, method rpc.Method, params, result any) error {
+func (c *scalpingRunClient) request(ctx context.Context, method rpc.Method, params, result any) error {
 	encoded, err := json.Marshal(params)
 	if err != nil {
 		return fmt.Errorf("failed to encode scalping request: %w", err)
@@ -230,7 +208,7 @@ func (c *ScalpingClient) request(ctx context.Context, method rpc.Method, params,
 	return nil
 }
 
-func (r *scalpingEventRegistry) route(event dto.SubscriptionEvent) {
+func (r *scalpingRunEventRegistry) route(event dto.RunEvent) {
 	if r == nil {
 		return
 	}
@@ -249,7 +227,7 @@ func (r *scalpingEventRegistry) route(event dto.SubscriptionEvent) {
 	}
 }
 
-func (r *scalpingEventRegistry) deliver(s *ScalpingSubscription, event dto.SubscriptionEvent) {
+func (r *scalpingRunEventRegistry) deliver(s *ScalpingRunSubscription, event dto.RunEvent) {
 	if s.closed || s.id != event.ExecutionID || s.key != event.SubscriptionKey || event.Sequence <= s.sequence {
 		return
 	}
@@ -265,7 +243,7 @@ func (r *scalpingEventRegistry) deliver(s *ScalpingSubscription, event dto.Subsc
 	}
 }
 
-func (r *scalpingEventRegistry) finish(s *ScalpingSubscription, err error) {
+func (r *scalpingRunEventRegistry) finish(s *ScalpingRunSubscription, err error) {
 	if s.closed {
 		return
 	}
@@ -284,7 +262,7 @@ func (r *scalpingEventRegistry) finish(s *ScalpingSubscription, err error) {
 	close(s.events)
 }
 
-func (r *scalpingEventRegistry) interrupt() {
+func (r *scalpingRunEventRegistry) interrupt() {
 	if r == nil {
 		return
 	}

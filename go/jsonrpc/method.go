@@ -60,6 +60,7 @@ const (
 	MethodTradeHubSpreadGet                        Method = "TradeHub.Spread.Get"
 	MethodTradeHubSpreadSubscribe                  Method = "TradeHub.Spread.Subscribe"
 	MethodTradeHubSpreadUnsubscribe                Method = "TradeHub.Spread.Unsubscribe"
+	MethodTradeHubScalpingRun                      Method = "TradeHub.Scalping.Run"
 	MethodTradeHubScalpingSubscribe                Method = "TradeHub.Scalping.Subscribe"
 	MethodTradeHubScalpingUnsubscribe              Method = "TradeHub.Scalping.Unsubscribe"
 	MethodTradeHubAMMPoolGet                       Method = "TradeHub.AMMPool.Get"

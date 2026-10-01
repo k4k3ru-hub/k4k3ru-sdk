@@ -14,6 +14,7 @@ type EventType string
 const (
 	EventTypeMarketHubScalping EventType = "msc"
 	EventTypeScalping          EventType = "sc"
+	EventTypeScalpingRun       EventType = "scr"
 	EventTypeAMMPoolYield      EventType = "apyld"
 	EventTypeAMMPoolNewPair    EventType = "apnp"
 	EventTypeAMMPool           EventType = "ap"
@@ -66,6 +67,7 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 //   - Validation error.
 //
 // Version:
+//   - 2026-10-01: Accept TradeHub Scalping Run snapshots.
 //   - 2026-09-26: Accept MarketHub Scalping observations.
 //   - 2026-09-24: Accept Scalping candidate notifications.
 //   - 2026-09-19: Accept AMM pool yield events.
@@ -77,7 +79,7 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 //   - 2026-08-30: Added.
 func (e Event) Validate() error {
 	switch e.Type {
-	case EventTypeMarketHubScalping, EventTypeScalping, EventTypeAMMPoolYield, EventTypeAMMPoolNewPair, EventTypeAMMPool, EventTypeBBO, EventTypeArbitrage, EventTypeOrderBook, EventTypeSpread, EventTypeCarry, EventTypeExecution, EventTypeExecutionStatus:
+	case EventTypeScalpingRun, EventTypeMarketHubScalping, EventTypeScalping, EventTypeAMMPoolYield, EventTypeAMMPoolNewPair, EventTypeAMMPool, EventTypeBBO, EventTypeArbitrage, EventTypeOrderBook, EventTypeSpread, EventTypeCarry, EventTypeExecution, EventTypeExecutionStatus:
 	default:
 		if e.Type == "" {
 			return k4k3ruSDKAppError.Tracef("failed to validate subscription event: %w: event_type=empty", k4k3ruSDKAppError.InvalidParameter())

@@ -53,6 +53,7 @@ type Module struct {
 //   - Configuration or composition error.
 //
 // Version:
+//   - 2026-10-01: Compose the TradeHub Scalping Run stream.
 //   - 2026-09-26: Compose the MarketHub Scalping observation client.
 //   - 2026-09-24: Compose the Scalping subscription client.
 //   - 2026-09-16: Compose the execution observation client.
@@ -115,6 +116,7 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 	ammPoolNewPairEvents := newAMMPoolNewPairEventRegistry()
 	executionEvents := newExecutionEventRegistry()
 	scalpingEvents := newScalpingEventRegistry()
+	scalpingRunEvents := newScalpingRunEventRegistry()
 	marketHubScalpingEvents := newMarketHubScalpingEvents()
 	router, err := newMessageRouter(requests, bboEvents, orderBookEvents, spreadEvents, carryEvents, ammPoolEvents, ammPoolNewPairEvents)
 	if err != nil {
@@ -122,6 +124,7 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 	}
 	router.executionEvents = executionEvents
 	router.scalpingEvents = scalpingEvents
+	router.scalpingRunEvents = scalpingRunEvents
 	router.marketHubScalpingEvents = marketHubScalpingEvents
 	handler := &sessionHandler{receiver: router}
 	option := k4k3ruWebSocket.DefaultClientOption()
@@ -173,6 +176,10 @@ func newModule(ctx context.Context, config ModuleConfig, deps moduleDeps) (*Modu
 		return nil, err
 	}
 	scalpingClient, err := newScalpingClient(sender, scalpingEvents, subscriptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create websocket module: %w", err)
+	}
+	scalpingClient.run, err = newScalpingRunClient(sender, scalpingRunEvents, subscriptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create websocket module: %w", err)
 	}

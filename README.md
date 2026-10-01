@@ -12,6 +12,10 @@ go get github.com/k4k3ru-hub/k4k3ru-sdk/go@latest
 
 JSON-RPCの共通Envelopeは`jsonrpc`、各メソッドの`params`と`result`はドメイン別パッケージからimportします。
 
+新しい`TradeHub.Scalping.Run`のRequest型・検証規則・JSON例は
+[`scalping/RUN.md`](go/jsonrpc/tradehub/scalping/RUN.md) を参照してください。
+`module.Scalping().Run()`、保存設定を含むACK、注文ごとの全量Snapshot通知に対応しました。新Run形式からのAgent発注連携は後続対応です。
+
 Hyperliquid Testnetの手動売買用DTOは
 [`jsonrpc/tradehub/perpetual`](go/jsonrpc/tradehub/perpetual/README.md) を参照してください。
 HTTPの認証付き4 RPCを定義し、既存のSwap DTOとは別の署名・照会契約を持ちます。

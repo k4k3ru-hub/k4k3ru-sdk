@@ -1,0 +1,27 @@
+{
+  "idempotencyKey": "example-spot-buy-001",
+  "marketType": "spot",
+  "symbol": "SUI/USDC",
+  "testMode": true,
+  "observation": {
+    "markets": [{"venue": "cetus", "chain": "sui"}, {"venue": "turbos", "chain": "sui"}],
+    "windowMs": 60000,
+    "buy": {"quantity": {"amount": "100", "decimals": 1}},
+    "maximumSnapshotAgeMs": 3000
+  },
+  "executionRule": {
+    "markets": [{"venue": "cetus", "chain": "sui", "accountAddress": "YOUR_SUI_WALLET_ADDRESS"}],
+    "entry": {
+      "side": "buy",
+      "maximumQuantity": {"amount": "100", "decimals": 1},
+      "condition": {"priceChangeBps": {"minimum": "20"}, "buyVolumeRatioBps": {"minimum": "6000"}},
+      "limitPrice": "2.5"
+    },
+    "exit": {
+      "takeProfit": {"type": "return_bps", "value": "100"},
+      "stopLoss": {"type": "return_bps", "value": "-50"},
+      "maximumHoldingMs": 60000
+    },
+    "maximumUnsettledOrders": 3
+  }
+}

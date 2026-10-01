@@ -1,5 +1,10 @@
 # TradeHub Scalping contracts
 
+The new **`TradeHub.Scalping.Run` contract** is documented in [RUN.md](RUN.md).
+It uses `RunParams` / `RunConfiguration` with observation and entry/exit rules.
+Request validation, the Run WebSocket client, ACK and full snapshots are implemented. The sections below describe the existing
+Subscribe contract.
+
 Import request, result, and subscription DTOs from
 `github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/scalping`.
 Import shared round-trip rules and market/asset references from

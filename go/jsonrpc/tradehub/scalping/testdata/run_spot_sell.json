@@ -1,0 +1,23 @@
+{
+  "idempotencyKey": "example-spot-sell-001",
+  "marketType": "spot",
+  "symbol": "SUI/USDC",
+  "testMode": true,
+  "observation": {
+    "markets": [{"venue": "cetus", "chain": "sui"}],
+    "sell": {"quantity": {"amount": "100", "decimals": 1}}
+  },
+  "executionRule": {
+    "markets": [{"venue": "cetus", "chain": "sui", "accountAddress": "YOUR_SUI_WALLET_ADDRESS"}],
+    "entry": {
+      "side": "sell",
+      "maximumQuantity": {"amount": "100", "decimals": 1},
+      "condition": {"priceChangeBps": {"maximum": "-20"}}
+    },
+    "exit": {
+      "condition": {"priceChangeDeltaBps": {"minimum": "10"}},
+      "takeProfit": {"type": "price", "value": "2"},
+      "stopLoss": {"type": "price", "value": "3"}
+    }
+  }
+}

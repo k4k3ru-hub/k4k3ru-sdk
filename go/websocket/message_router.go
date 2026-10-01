@@ -22,6 +22,7 @@ import (
 type messageRouter struct {
 	marketHubScalpingEvents *marketHubScalpingEvents
 	scalpingEvents          *scalpingEventRegistry
+	scalpingRunEvents       *scalpingRunEventRegistry
 	executionEvents         *executionEventRegistry
 	requests                *requestTracker
 	bboEvents               *bboEventRegistry
@@ -61,6 +62,7 @@ func newMessageRouter(requests *requestTracker, bboEvents *bboEventRegistry, ord
 // HandleMessage routes responses and typed subscription events.
 //
 // Version:
+//   - 2026-10-01: Route TradeHub Run snapshots and reject malformed streams.
 //   - 2026-09-26: Route MarketHub observations and keyed termination.
 //   - 2026-09-24: Route Scalping notifications.
 //   - 2026-09-16: Route execution observation and transport interruptions.
@@ -78,6 +80,7 @@ func (r *messageRouter) HandleMessage(message []byte) {
 // HandleClose interrupts pending requests and active execution observers.
 //
 // Version:
+//   - 2026-10-01: Interrupt TradeHub Run streams on connection closure.
 //   - 2026-09-26: Interrupt MarketHub observations.
 //   - 2026-09-24: Interrupt Scalping subscriptions on transport closure.
 //   - 2026-09-16: Notify execution observers of transport closure.
@@ -88,6 +91,7 @@ func (r *messageRouter) HandleClose() {
 	r.requests.failAll(errWebSocketConnectionClosed)
 	r.executionEvents.interrupt()
 	r.scalpingEvents.interrupt()
+	r.scalpingRunEvents.interrupt()
 	r.marketHubScalpingEvents.interrupt()
 }
 
@@ -131,6 +135,13 @@ func (r *messageRouter) route(message []byte) error {
 		return fmt.Errorf("failed to route websocket event: %w", err)
 	}
 	switch event.Type {
+	case k4k3ruSDKSubscription.EventTypeScalpingRun:
+		var value scalping.RunEvent
+		if err := json.Unmarshal(event.Data, &value); err != nil {
+			r.scalpingRunEvents.interrupt()
+			return fmt.Errorf("failed to route scalping run event: %w", err)
+		}
+		r.scalpingRunEvents.route(value)
 	case k4k3ruSDKSubscription.EventTypeMarketHubScalping:
 		var value marketScalping.SubscriptionEvent
 		if err := json.Unmarshal(event.Data, &value); err != nil {

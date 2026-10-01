@@ -1,0 +1,34 @@
+{
+  "idempotencyKey": "example-perpetual-sell-001",
+  "marketType": "perpetual",
+  "symbol": "SUI/USDC",
+  "testMode": true,
+  "observation": {
+    "markets": [{"venue": "hyperliquid", "venueSymbol": "SUI"}],
+    "maximumTradeAgeMs": 10000,
+    "maximumSnapshotAgeMs": 3000
+  },
+  "executionRule": {
+    "markets": [{
+      "venue": "hyperliquid",
+      "venueSymbol": "SUI",
+      "accountAddress": "YOUR_HYPERLIQUID_TRADING_ACCOUNT",
+      "perpetual": {"leverage": 3, "marginMode": "isolated"}
+    }],
+    "entry": {
+      "side": "sell",
+      "maximumQuantity": {"amount": "100", "decimals": 1},
+      "condition": {"priceChangeBps": {"maximum": "-20"}, "spreadBps": {"maximum": "10"}}
+    },
+    "exit": {
+      "takeProfit": {"type": "return_bps", "value": "100"},
+      "stopLoss": {"type": "return_bps", "value": "-50"},
+      "maximumHoldingMs": 60000
+    },
+    "minimumOrderIntervalMs": 1000,
+    "maximumUnsettledOrders": 2,
+    "maximumSlippageBps": 50,
+    "reserveBufferBps": 100,
+    "executionTtlMs": 30000
+  }
+}
