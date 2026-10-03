@@ -96,6 +96,9 @@ func validateRunObservation(o Observation) error {
 	}
 	for _, side := range []*observations.SideParams{o.Buy, o.Sell} {
 		if side != nil {
+			if side.Kind != "" && side.Kind != observations.KindExactInput {
+				return v.Invalid(op, "observation_kind", "invalid")
+			}
 			if err := side.Validate(); err != nil {
 				return fmt.Errorf("failed to validate scalping run observation: %w", err)
 			}

@@ -78,7 +78,10 @@ type RunOrder struct {
 	// notional for Perpetual. Trading fees must follow the product's accounting.
 	EntryValue *market.Quantity `json:"entryValue,omitempty"`
 	AcquiredAt *int64           `json:"acquiredAt,omitempty"`
-	Exit       RunEvaluation    `json:"exit"`
+	// Exit prices for Spot Buy are observed for this revision's full remaining
+	// quantity, independently of Observation.Sell. VWAP net receipts can size
+	// settlement constraints; reference prices cannot supply a quantity estimate.
+	Exit RunEvaluation `json:"exit"`
 }
 
 // Validate checks a complete replacement snapshot and its independently managed orders.

@@ -107,7 +107,11 @@ func validateSnapshotPnL(s *ExecutionSnapshot) error {
 		return err
 	}
 	if p.Status == PnLStatusRealized {
-		if s.Status != ObservationStatusSuccess || s.OMS.Fill == nil || p.Settlement.AssetID != s.OMS.Fill.TokenInAssetID || p.Settlement.Quantity.Decimals != s.OMS.Fill.TokenInDecimals {
+		if s.Status != ObservationStatusSuccess || s.OMS.Fill == nil {
+			return observationInvalid("pnl_settlement=invalid")
+		}
+		f, v := s.OMS.Fill, p.Settlement
+		if !(v.AssetID == f.TokenInAssetID && v.Quantity.Decimals == f.TokenInDecimals || v.AssetID == f.TokenOutAssetID && v.Quantity.Decimals == f.TokenOutDecimals) {
 			return observationInvalid("pnl_settlement=invalid")
 		}
 	}

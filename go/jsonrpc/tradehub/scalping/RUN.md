@@ -108,6 +108,21 @@ no quantity-based observation calculation. They are not inferred from order
 caps. Leverage never multiplies `maximumQuantity`; actual order sizing still
 requires inventory, reservations and venue metadata.
 
+For Spot exits, these fixed observation inputs are independent of settlement
+estimates. TradeHub derives the full remaining Base quantity from each OMS order
+and internally subscribes to MarketHub for that quantity. Omitting or changing
+the observation Sell quantity does not disable those order-specific estimates.
+
+Run does not expose an exact-input/exact-output selector. Execution follows the
+order purpose: Spot entries and Buy-start settlement fix the input quantity;
+Sell-start buyback fixes the remaining sold Base quantity derived from OMS.
+The latter uses exact output internally, with a maximum Quote payment and a
+refund of unused funds. Users do not supply a buyback quantity or `kind` in Run.
+The common Swap preparation contract still carries `kind` internally; omitting
+it there is not supported. Run observation quantities retain exact-input semantics;
+non-default `kind` in a Run observation is rejected. TradeHub creates the
+exact-output MarketHub request internally for Sell-start settlement.
+
 `entry.condition` is required and contains at least one of these nine fields.
 An optional `exit.condition` uses the same type. All specified metrics combine
 with **AND**, inclusive of their bounds. A missing specified metric holds that
@@ -256,6 +271,22 @@ cost; for Spot Sell it is net sale proceeds. Gas is excluded. The contract's
 Perpetual entry value means remaining entry notional, not margin or ROE.
 Perpetual restoration is not connected in this implementation stage.
 
+For Spot Buy, `orders[].exit.markets[].price` is evaluated for that same order's
+`remainingQuantity`. Bind it to the accompanying `orderId` and `revision`; never
+combine an estimate from one snapshot with an order from another. A `vwap` net
+receipt can supply the settlement minimum output after slippage; `reference` and
+`fallback_reference` cannot. A changed amount withdraws the old estimate until the
+replacement is available. A missing estimate does not imply zero holdings or PnL.
+The wire fields are unchanged; deploy the corresponding server behavior before
+an Agent that relies on this quantity contract.
+
+For Spot Sell, the exit estimate fixes `netReceiveQuantity` to the order's
+remaining sold Base quantity and supplies fee-inclusive `netPayQuantity` in Quote.
+The return is `(entryValue - netPayQuantity) / entryValue * 10000`; `entryValue`
+is that same order's remaining allocated sale proceeds. Agent rounds the maximum
+payment up after slippage and refuses to exceed the existing per-order Quote
+reservation. Neither side derives an amount by inverting `netPrice`.
+
 Replace the entire prior snapshot. `orders: []` clears the active-order view;
 closed orders are available through OMS/history rather than retained here.
 A stream error invalidates prior actionable candidates. Disconnect, malformed
@@ -274,12 +305,23 @@ while saved settings and OMS records remain.
   entry orders never share acquisition cost. Closed and zero-fill completed
   orders leave the snapshot; unresolved settlement remains `settling`.
 - TP/SL price conditions use the corresponding net settlement-side price.
-  Spot Buy return thresholds can reuse a net receipt only when observation
-  Sell quantity exactly equals the order's remaining quantity. A mismatched
-  quantity, missing cost or unavailable receipt yields `exit_input_unavailable`.
+  Spot Buy return thresholds use an OMS-sized net receipt. The existing observation
+  is reusable if its Sell input matches exactly; otherwise an internal MarketHub
+  Run follows the required quantity. Equivalent quantity/market/fee inputs share
+  an estimate within a Run, but order costs remain separate. Unneeded streams are
+  released on quantity changes, settlement and Run cancellation; resume rebuilds
+  them from OMS. Missing cost or an unavailable receipt holds return evaluation.
+  Analysis metrics still come from the original observation scope. Both source
+  and estimate timestamps respect the configured freshness limits; publishing a
+  new Run snapshot does not refresh a cached estimate's age.
   Non-terminating allocated basis is omitted instead of rounded into a trigger.
-- Order-specific quantity subscriptions, exact Base buyback for Spot Sell,
-  Perpetual OMS/position reconciliation and new Run submission are later stages.
+- Sui Spot Buy and Sell execution use common Execution.Prepare/Submit with the
+  Run ID and, for settlement, the initial order ID and OMS revision. Sell buyback
+  uses exact output for Cetus, Turbos and Momentum. OMS acceptance compares the
+  output Base quantity to the remaining sold quantity; confirmed input is actual
+  payment after refunds. Per-order realized PnL is allocated sale proceeds minus
+  actual buyback cost, including trading fees and excluding gas. Perpetual
+  execution and position reconciliation remain subsequent work.
 - Gross entry Limit comparison requires a gross venue price, which the current
   MarketHub price result does not expose. Such entries report
   `gross_price_unavailable`; net price is not substituted.

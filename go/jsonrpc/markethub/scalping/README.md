@@ -66,7 +66,7 @@ Optional `buy.quantity` and `sell.quantity` specify independent exact inputs:
 }
 ```
 
-For SUI/USDC, this evaluates spending 100 USDC to buy SUI and selling 1 SUI
+With the default `kind: "exact-input"`, for SUI/USDC this evaluates spending 100 USDC to buy SUI and selling 1 SUI
 for USDC. Buy input is Quote; Sell input is Base. Each quantity requires both
 `amount` and `decimals`: a positive unsigned integer string up to 384 digits,
 and a decimal scale from 0 to 255. An omitted/null side or quantity disables
@@ -74,6 +74,24 @@ quantity calculations for that side. Empty sides normalize to omission. The
 legacy top-level `baseQuantity` is rejected, with no compatibility conversion.
 Historical metrics do not depend on these inputs. No trading thresholds,
 execution rules or order IDs are added to MarketHub observations.
+
+Spot sides also accept `kind: "exact-output"` with a required positive `quantity`.
+It fixes **net received** Base for Buy or Quote for Sell, not the payment amount.
+Omitted `kind` and explicit `exact-input` normalize to the same subscription key;
+exact output has a distinct key. Perpetual exact output is rejected. For example,
+`"buy": {"kind":"exact-output","quantity":{"amount":"1000000","decimals":9}}`
+estimates buying back exactly 0.001 SUI in SUI/USDC. No trade is submitted.
+
+Spot VWAP results include `netPayQuantity` (fee-inclusive input) and
+`netReceiveQuantity` (fee-inclusive output). Amounts come from raw calculations,
+not inversion of the rounded public `netPrice`. Reference/fallback/unavailable
+prices omit both quantities, as do Perpetual prices. Exact-output payments round
+up at the input precision; received quantity must be exactly representable at
+output precision. OrderBook depth includes received-token fees. Cetus, Turbos,
+and Momentum use immutable cached Pool/tick state with normal swap fees and no
+network fallback. Other AMM adapters without exact-output support retain
+`fallback_reference` when a reference is available. An insufficient or incomplete
+snapshot never supplies a fabricated payment estimate.
 
 The flat Result contains `evaluatedAt` and optional `priceEvaluatedAt` (Unix milliseconds), optional consolidated
 `ohlc` and `metrics`, and `buy` / `sell` lists of concrete markets. It has no
@@ -94,7 +112,7 @@ output are required; otherwise a known fee-adjusted reference can be returned.
 
 Spot `netPrice` is Quote input / published Net Base output for Buy and published
 Net Quote output / Base input for Sell. Perpetual entries have `netPrice` and
-`fees`, but never `netReceiveQuantity`: they do not deliver spot tokens. Their
+`fees`, but never `netReceiveQuantity` or `netPayQuantity`: they do not deliver spot tokens. Their
 Buy price is (Quote notional + Quote fee) / Base size; Sell price is
 (Quote notional - Quote fee) / Base size. Request quantities remain notional or
 Base size, independent of margin and leverage. Prices are published to 18
@@ -199,7 +217,7 @@ cannot be subtracted directly from an output-asset quantity.
 `taker` represents immediate OrderBook execution fees, using the retained
 standard/account rate and supported market modifiers. Known zero fees retain
 `amount: "0"` and explicit `decimals`. Quantity omission, reference fallback and
-unavailable prices omit `fees` and `netReceiveQuantity`; gas is excluded. No
+unavailable prices omit `fees`, `netPayQuantity` and `netReceiveQuantity`; gas is excluded. No
 `issues` array or additional fee status is added.
 
 Service coverage depends on configured adapters: directional Net AMM output is

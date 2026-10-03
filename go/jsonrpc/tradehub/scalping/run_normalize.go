@@ -96,10 +96,14 @@ func runDefault(value *uint64, fallback uint64) *uint64 {
 }
 
 func copyRunSide(side *observations.SideParams) *observations.SideParams {
-	if side == nil || side.Quantity == nil {
+	if side == nil || side.Quantity == nil && side.Kind == "" {
 		return nil
 	}
-	return &observations.SideParams{Quantity: v.Pointer(side.Quantity)}
+	kind := side.Kind
+	if kind == observations.KindExactInput {
+		kind = ""
+	}
+	return &observations.SideParams{Kind: kind, Quantity: v.Pointer(side.Quantity)}
 }
 
 func normalizeRunMarket(m MarketSelector) MarketSelector {

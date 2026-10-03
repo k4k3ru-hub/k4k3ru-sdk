@@ -108,7 +108,7 @@ func (p PrepareParams) Normalize() PrepareParams {
 func (p PrepareParams) Validate() error {
 	p = p.Normalize()
 	if p.ScalpingRun != nil {
-		if p.ScalpingExecutionID != "" || p.ScalpingRevision != "" || p.Chain != k4k3ruOnchainCore.ChainSui || p.Kind != KindExactInput {
+		if p.ScalpingExecutionID != "" || p.ScalpingRevision != "" || p.Chain != k4k3ruOnchainCore.ChainSui || p.Kind == KindExactOutput && p.ScalpingRun.PositionOrderID == "" {
 			return invalidPrepareParameter("scalping_run=unsupported")
 		}
 		if err := p.ScalpingRun.Validate(); err != nil {

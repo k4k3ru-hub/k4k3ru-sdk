@@ -135,14 +135,22 @@ func validateEvaluation(e MarketEvaluation, at int64, marketType market.MarketTy
 			return v.Invalid(op, "net_price", "out_of_range")
 		}
 	case observations.PriceStatusUnavailable:
-		if e.Price.NetPrice != nil || e.Price.NetReceiveQuantity != nil || e.Price.Fees != nil {
+		if e.Price.NetPrice != nil || e.Price.NetReceiveQuantity != nil || e.Price.NetPayQuantity != nil || e.Price.Fees != nil {
 			return v.Invalid(op, "unavailable_price", "invalid")
 		}
 	default:
 		return v.Invalid(op, "price_status", "invalid")
 	}
-	if marketType == market.MarketTypePerpetual && e.Price.NetReceiveQuantity != nil {
+	if marketType == market.MarketTypePerpetual && (e.Price.NetReceiveQuantity != nil || e.Price.NetPayQuantity != nil) {
 		return v.Invalid(op, "net_receive_quantity", "invalid")
+	}
+	if q := e.Price.NetPayQuantity; q != nil {
+		if err := q.Validate(); err != nil {
+			return fmt.Errorf("failed to validate market evaluation: %w", err)
+		}
+		if strings.Trim(q.Amount, "0") == "" {
+			return v.Invalid(op, "net_pay_quantity", "out_of_range")
+		}
 	}
 	if e.Price.NetReceiveQuantity != nil {
 		if err := e.Price.NetReceiveQuantity.Validate(); err != nil {
@@ -155,7 +163,7 @@ func validateEvaluation(e MarketEvaluation, at int64, marketType market.MarketTy
 	if marketType == market.MarketTypeSpot && e.Price.Status == observations.PriceStatusVWAP && e.Price.NetReceiveQuantity == nil {
 		return v.Invalid(op, "net_receive_quantity", "null")
 	}
-	if e.Price.Status != observations.PriceStatusVWAP && (e.Price.NetReceiveQuantity != nil || e.Price.Fees != nil) {
+	if e.Price.Status != observations.PriceStatusVWAP && (e.Price.NetReceiveQuantity != nil || e.Price.NetPayQuantity != nil || e.Price.Fees != nil) {
 		return v.Invalid(op, "reference_quantity", "invalid")
 	}
 	for _, timestamp := range []*int64{e.Price.ObservedAt, e.Price.LastTradeAt} {

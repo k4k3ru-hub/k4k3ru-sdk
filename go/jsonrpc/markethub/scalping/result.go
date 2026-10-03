@@ -51,6 +51,8 @@ type MarketPrice struct {
 	Status PriceStatus      `json:"status"`
 	// NetPrice is the effective Quote/Base price including trading fees, excluding gas.
 	NetPrice *string `json:"netPrice,omitempty"`
+	// NetPayQuantity is the fee-inclusive Spot input; omitted for reference prices.
+	NetPayQuantity *market.Quantity `json:"netPayQuantity,omitempty"`
 	// NetReceiveQuantity is fee-inclusive Spot output: Base for Buy and Quote for Sell.
 	// Perpetual prices do not represent delivery of the underlying asset.
 	NetReceiveQuantity *market.Quantity `json:"netReceiveQuantity,omitempty"`

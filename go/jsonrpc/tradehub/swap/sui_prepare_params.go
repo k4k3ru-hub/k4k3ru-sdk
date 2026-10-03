@@ -76,7 +76,7 @@ func validateSuiPrepare(p PrepareParams) error {
 	if p.StateReference != nil {
 		return invalidPrepareParameter("state_reference=unsupported")
 	}
-	if p.Kind != KindExactInput {
+	if p.Kind != KindExactInput && p.Kind != KindExactOutput {
 		return invalidPrepareParameter("kind=unsupported")
 	}
 	amount, err := strconv.ParseUint(p.Amount, 10, 64)

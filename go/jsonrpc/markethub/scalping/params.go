@@ -30,6 +30,7 @@ type Params struct {
 // Normalize returns independent canonical parameters without defaulting explicit zeros.
 //
 // Version:
+//   - 2026-10-02: Support optional Spot exact-output estimates.
 //   - 2026-09-28: Include optional trading accounts for fee-aware observations.
 //   - 2026-09-26: Use independent Buy Quote and Sell Base input quantities.
 //   - 2026-09-25: Added.
@@ -59,6 +60,7 @@ func (p Params) Normalize() Params {
 // The server must verify each market's symbol, assets, metadata and data quality.
 //
 // Version:
+//   - 2026-10-02: Support optional Spot exact-output estimates.
 //   - 2026-09-28: Include optional trading accounts for fee-aware observations.
 //   - 2026-09-26: Use independent Buy Quote and Sell Base input quantities.
 //   - 2026-09-25: Added.
@@ -91,6 +93,9 @@ func (p Params) Validate() error {
 			if err := side.Validate(); err != nil {
 				return fmt.Errorf("failed to validate scalping observations: %w", err)
 			}
+			if side.Kind == KindExactOutput && p.MarketType != market.MarketTypeSpot {
+				return invalid("kind", "invalid")
+			}
 		}
 	}
 	if err := validateFeeAccounts(p); err != nil {
@@ -113,6 +118,7 @@ func (p Params) Validate() error {
 // Decode failure leaves the receiver unchanged.
 //
 // Version:
+//   - 2026-10-02: Support optional Spot exact-output estimates.
 //   - 2026-09-28: Include optional trading accounts for fee-aware observations.
 //   - 2026-09-26: Use independent Buy Quote and Sell Base input quantities.
 //   - 2026-09-25: Added.
@@ -145,24 +151,52 @@ func invalid(field, state string) error {
 	return fmt.Errorf("failed to validate scalping observations: %w: %s=%s", apperror.InvalidParameter(), field, state)
 }
 
-// SideParams specifies exact input units: Quote for Buy, Base for Sell.
+// QuantityKind selects the fixed side of a Spot quantity estimate.
+type QuantityKind string
+
+const (
+	KindExactInput  QuantityKind = "exact-input"
+	KindExactOutput QuantityKind = "exact-output"
+)
+
+// SideParams fixes input (Quote for Buy, Base for Sell) by default.
+// Exact output instead fixes net receipt (Base for Buy, Quote for Sell).
 type SideParams struct {
+	Kind     QuantityKind     `json:"kind,omitempty"`
 	Quantity *market.Quantity `json:"quantity,omitempty"`
 }
 
 func normalizeSide(side *SideParams) *SideParams {
-	if side == nil || side.Quantity == nil {
+	if side == nil {
 		return nil
 	}
-	q := *side.Quantity
-	return &SideParams{Quantity: &q}
+	copy := *side
+	if copy.Kind == KindExactInput {
+		copy.Kind = ""
+	}
+	if copy.Quantity == nil {
+		if copy.Kind == "" {
+			return nil
+		}
+	} else {
+		q := *copy.Quantity
+		copy.Quantity = &q
+	}
+	return &copy
 }
 
-// Validate validates an optional positive exact input quantity.
+// Validate validates a positive quantity and the optional fixed-side selector.
 //
 // Version:
+//   - 2026-10-02: Support optional Spot exact-output estimates.
 //   - 2026-09-26: Added.
 func (p SideParams) Validate() error {
+	if p.Kind != "" && p.Kind != KindExactInput && p.Kind != KindExactOutput {
+		return invalid("kind", "invalid")
+	}
+	if p.Kind == KindExactOutput && p.Quantity == nil {
+		return invalid("quantity", "null")
+	}
 	if p.Quantity == nil {
 		return nil
 	}
@@ -178,6 +212,7 @@ func (p SideParams) Validate() error {
 // UnmarshalJSON rejects unknown side fields and validates explicit quantities.
 //
 // Version:
+//   - 2026-10-02: Support optional Spot exact-output estimates.
 //   - 2026-09-26: Added.
 func (p *SideParams) UnmarshalJSON(data []byte) error {
 	if p == nil {

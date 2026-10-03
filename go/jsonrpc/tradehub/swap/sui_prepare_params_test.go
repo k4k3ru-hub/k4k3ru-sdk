@@ -16,6 +16,7 @@ func suiPrepareParams() PrepareParams {
 // TestSuiPrepareParams verifies lossless JSON, validation and immutable normalization.
 //
 // Version:
+//   - 2026-10-02: Accept the supported Sui exact-output kind.
 //   - 2026-09-24: Added.
 func TestSuiPrepareParams(t *testing.T) {
 	p := suiPrepareParams()
@@ -55,7 +56,7 @@ func TestSuiPrepareParams(t *testing.T) {
 		"overflow amount": func(p *PrepareParams) { p.Amount = "18446744073709551616" },
 		"zero gas":        func(p *PrepareParams) { p.Sui.GasBudget = "0" },
 		"approval":        func(p *PrepareParams) { p.ApprovalAmount = "1" },
-		"exact output":    func(p *PrepareParams) { p.Kind = KindExactOutput },
+		"unknown kind":    func(p *PrepareParams) { p.Kind = "unknown" },
 		"missing sui":     func(p *PrepareParams) { p.Sui = nil },
 		"evm with sui":    func(p *PrepareParams) { p.Chain = "base"; p.Network = "sepolia"; p.ApprovalAmount = "1" },
 		"ttl overflow":    func(p *PrepareParams) { v := ^uint64(0); p.ExecutionTTLMS = &v },
