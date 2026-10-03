@@ -63,15 +63,26 @@ type PerpetualSettings struct {
 	MarginMode rule.MarginMode `json:"marginMode"`
 }
 
+// PerpetualRunSettings applies across all execution markets in one Run.
+// Per-venue leverage and margin mode remain in ExecutionMarket.Perpetual.
+type PerpetualRunSettings struct {
+	// MaximumPositionQuantity caps aggregate absolute Base position quantity,
+	// including pending increases not yet reflected in venue positions. Omission
+	// defaults to EntryRule.MaximumQuantity; leverage does not scale this limit.
+	MaximumPositionQuantity *market.Quantity `json:"maximumPositionQuantity,omitempty"`
+}
+
 type ExecutionRule struct {
-	Markets                []ExecutionMarket `json:"markets"`
-	Entry                  EntryRule         `json:"entry"`
-	Exit                   ExitRule          `json:"exit"`
-	MinimumOrderIntervalMS *uint64           `json:"minimumOrderIntervalMs,omitempty"`
-	MaximumUnsettledOrders *uint64           `json:"maximumUnsettledOrders,omitempty"`
-	MaximumSlippageBPS     *uint64           `json:"maximumSlippageBps,omitempty"`
-	ReserveBufferBPS       *uint64           `json:"reserveBufferBps,omitempty"`
-	ExecutionTTLMS         *uint64           `json:"executionTtlMs,omitempty"`
+	Markets                []ExecutionMarket     `json:"markets"`
+	Entry                  EntryRule             `json:"entry"`
+	Exit                   ExitRule              `json:"exit"`
+	Perpetual              *PerpetualRunSettings `json:"perpetual,omitempty"`
+	MinimumOrderIntervalMS *uint64               `json:"minimumOrderIntervalMs,omitempty"`
+	// MaximumUnsettledOrders is Spot-only; Perpetual rejects an explicit value.
+	MaximumUnsettledOrders *uint64 `json:"maximumUnsettledOrders,omitempty"`
+	MaximumSlippageBPS     *uint64 `json:"maximumSlippageBps,omitempty"`
+	ReserveBufferBPS       *uint64 `json:"reserveBufferBps,omitempty"`
+	ExecutionTTLMS         *uint64 `json:"executionTtlMs,omitempty"`
 }
 
 type Side string

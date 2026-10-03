@@ -14,6 +14,7 @@ import (
 //
 // Version:
 //   - 2026-10-01: Added.
+//   - 2026-10-03: Default position limits for Perpetual and order counts for Spot.
 func (p RunParams) Normalize() RunParams {
 	p.ExecutionID = strings.TrimSpace(p.ExecutionID)
 	p.IdempotencyKey = strings.TrimSpace(p.IdempotencyKey)
@@ -29,6 +30,7 @@ func (p RunParams) Normalize() RunParams {
 //
 // Version:
 //   - 2026-10-01: Added.
+//   - 2026-10-03: Separate and detach Run-wide Perpetual position limits.
 func (p RunConfiguration) Normalize() RunConfiguration {
 	p.MarketType = p.MarketType.Normalize()
 	p.Symbol = market.Symbol(strings.ToUpper(strings.TrimSpace(string(p.Symbol))))
@@ -60,7 +62,22 @@ func (p RunConfiguration) Normalize() RunConfiguration {
 	r.Exit.StopLoss = normalizeRunTrigger(r.Exit.StopLoss)
 	r.Exit.MaximumHoldingMS = v.Pointer(r.Exit.MaximumHoldingMS)
 	r.MinimumOrderIntervalMS = runDefault(r.MinimumOrderIntervalMS, DefaultMinimumOrderIntervalMS)
-	r.MaximumUnsettledOrders = runDefault(r.MaximumUnsettledOrders, DefaultMaximumUnsettledOrders)
+	r.MaximumUnsettledOrders = v.Pointer(r.MaximumUnsettledOrders)
+	r.Perpetual = v.Pointer(r.Perpetual)
+	if r.Perpetual != nil {
+		r.Perpetual.MaximumPositionQuantity = v.Pointer(r.Perpetual.MaximumPositionQuantity)
+	}
+	switch p.MarketType {
+	case market.MarketTypeSpot:
+		r.MaximumUnsettledOrders = runDefault(r.MaximumUnsettledOrders, DefaultMaximumUnsettledOrders)
+	case market.MarketTypePerpetual:
+		if r.Perpetual == nil {
+			r.Perpetual = &PerpetualRunSettings{}
+		}
+		if r.Perpetual.MaximumPositionQuantity == nil {
+			r.Perpetual.MaximumPositionQuantity = v.Pointer(&r.Entry.MaximumQuantity)
+		}
+	}
 	r.MaximumSlippageBPS = runDefault(r.MaximumSlippageBPS, rule.DefaultMaximumSlippageBPS)
 	r.ReserveBufferBPS = runDefault(r.ReserveBufferBPS, DefaultReserveBufferBPS)
 	r.ExecutionTTLMS = runDefault(r.ExecutionTTLMS, DefaultExecutionTTLMS)

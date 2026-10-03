@@ -12,10 +12,11 @@ and connection lifecycle into the Run client. Use `UnsubscribeRun(ctx, handle)`
 to stop monitoring without cancelling accepted orders.
 
 The server connects authenticated Gateway forwarding, saved Run settings,
-MarketHub observations and Spot OMS order restoration. This stage does not
-connect Agent order submission to the new Run contract. The existing Subscribe
-client and its `Params`/Result types remain separate during migration; old
-settings are not converted into Run settings.
+MarketHub observations and Spot OMS order restoration. Perpetual position-limit
+enforcement, venue-position synchronization and Agent execution require separate
+runtime integration; accepting a request in this SDK does not enforce its limit.
+The existing Subscribe client and its `Params`/Result types remain separate
+during migration; old settings are not converted into Run settings.
 
 ## Start and resume
 
@@ -102,11 +103,50 @@ must be positive; volume range bounds may be zero.
 | Spot Buy `entry.maximumQuantity` | Maximum USDC payment per initial order |
 | Spot Sell `entry.maximumQuantity` | Maximum SUI sold per initial order |
 | Perpetual Buy/Sell `entry.maximumQuantity` | Maximum SUI position quantity per initial order |
+| Perpetual `executionRule.perpetual.maximumPositionQuantity` | Maximum aggregate absolute SUI position quantity across this Run's execution markets |
 
 `observation.buy`/`sell` use MarketHub's `SideParams`. Omitted quantities cause
 no quantity-based observation calculation. They are not inferred from order
 caps. Leverage never multiplies `maximumQuantity`; actual order sizing still
 requires inventory, reservations and venue metadata.
+
+### Product-specific position and order limits
+
+Spot retains `executionRule.maximumUnsettledOrders` (default 1). It rejects
+`executionRule.perpetual`, even an empty object.
+
+Perpetual uses a Run-wide `PerpetualRunSettings` object instead:
+
+```json
+{
+  "perpetual": {
+    "maximumPositionQuantity": {"amount":"30","decimals":0}
+  }
+}
+```
+
+This fragment belongs directly inside `executionRule`. The limit uses Base units
+and applies to the sum of absolute venue position quantities across all execution
+markets in this Run. Long and Short quantities do not offset, and leverage does
+not multiply the limit. It is neither a per-venue allowance nor a margin amount.
+`executionRule.markets[].perpetual` still contains only venue-specific leverage
+and margin mode; placing the position limit there is invalid.
+
+Omitting the Run-wide object or its quantity defaults the limit to
+`entry.maximumQuantity`, preserving the exact amount and decimal scale. An
+explicit quantity must be positive. A smaller limit than the per-order maximum
+is valid because the latter is a cap, not a mandatory order size. Normalization
+and saved JSON materialize the effective limit without changing the caller's data.
+
+Perpetual rejects an explicit `maximumUnsettledOrders`, including zero, and does
+not supply its Spot default. Previously saved Perpetual configurations containing
+that field are invalid; no compatibility conversion or silent removal is made.
+
+Runtime sizing must also reserve pending position increases, without counting
+fills already reflected in venue positions twice. Unresolved submissions hold
+new entries until reconciliation. Starting whole-position settlement stops
+additional entries even when partial closes create quantity headroom. These are
+runtime requirements, not computations performed by the SDK's validator.
 
 For Spot exits, these fixed observation inputs are independent of settlement
 estimates. TradeHub derives the full remaining Base quantity from each OMS order
@@ -177,12 +217,18 @@ TP/SL reuse `executionrule.Trigger`:
 - Same-type thresholds require SL < TP for return bps and Buy price triggers;
   Sell price triggers require TP < SL. Equality is invalid.
 - Mixed types are allowed without comparing their numeric values across units.
-- TP/SL refer to each initial order's weighted fill cost and remaining quantity,
-  not the cost of all orders in the wallet. Sell-first Spot settles by buying back
-  the sold Base quantity. Perpetual return bps uses entry notional, not margin ROE.
-  Trading fees are included; gas and Funding are excluded.
+- Spot TP/SL refer to each initial order's weighted fill cost and remaining
+  quantity, not the cost of all orders in the wallet. Sell-first Spot settles by
+  buying back the sold Base quantity.
+- Perpetual TP/SL refer to the venue position's current quantity and average
+  entry price. Further entries update that shared basis rather than creating
+  separate order-level exit allocations. Return bps uses entry notional, not
+  margin ROE. Trading fees are included in exit estimates; gas and Funding are
+  excluded. Reported Perpetual PnL comes from the venue, without constructing
+  independent per-entry realized PnL. Position monitoring and Result integration
+  are subsequent runtime work.
 
-`maximumHoldingMs` starts at that initial order's first valid fill timestamp.
+Spot `maximumHoldingMs` starts at that initial order's first valid fill timestamp.
 Further fills do not extend it; downtime counts. Resume must restore the origin
 from OMS. This is a settlement trigger, not a guaranteed fill deadline.
 The SDK validates these settings; it does not implement monitoring or settlement.
@@ -195,7 +241,8 @@ The SDK validates these settings; it does not implement monitoring or settlement
 | `observation.maximumTradeAgeMs` | No age cap | 1..D |
 | `observation.maximumSnapshotAgeMs` | No age cap | 1..D |
 | `executionRule.minimumOrderIntervalMs` | 1000 | 0..D |
-| `executionRule.maximumUnsettledOrders` | 1 | Positive uint64 |
+| Spot `executionRule.maximumUnsettledOrders` | 1 | Positive uint64; forbidden for Perpetual |
+| Perpetual `executionRule.perpetual.maximumPositionQuantity` | `entry.maximumQuantity` | Positive scaled Base quantity; Run-wide object forbidden for Spot |
 | `executionRule.maximumSlippageBps` | 50 | 0..9999 |
 | `executionRule.reserveBufferBps` | 100 | Nonnegative uint64 |
 | `executionRule.executionTtlMs` | 30000 | 1..D |
@@ -223,8 +270,9 @@ server integration.
   per-order exits and up to three unsettled initial orders.
 - [Spot Sell](testdata/run_spot_sell.json): sell up to 10 SUI, then buy back the
   filled Base quantity when an exit alternative matches.
-- [Perpetual Sell](testdata/run_perpetual_sell.json): short up to 10 SUI, with
-  3x isolated settings; this is not a 30 SUI order.
+- [Perpetual Sell](testdata/run_perpetual_sell.json): short up to 10 SUI per order,
+  with an explicit Run-wide 30 SUI position cap and 3x isolated settings. The
+  leverage does not turn the order into 30 SUI or the position cap into 90 SUI.
 - [Go construction example](run_example_test.go): owning-package imports,
   normalization, validation and reference-only resume.
 

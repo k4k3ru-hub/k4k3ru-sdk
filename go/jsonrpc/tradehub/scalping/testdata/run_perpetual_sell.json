@@ -9,6 +9,9 @@
     "maximumSnapshotAgeMs": 3000
   },
   "executionRule": {
+    "perpetual": {
+      "maximumPositionQuantity": {"amount": "30", "decimals": 0}
+    },
     "markets": [{
       "venue": "hyperliquid",
       "venueSymbol": "SUI",
@@ -26,7 +29,6 @@
       "maximumHoldingMs": 60000
     },
     "minimumOrderIntervalMs": 1000,
-    "maximumUnsettledOrders": 2,
     "maximumSlippageBps": 50,
     "reserveBufferBps": 100,
     "executionTtlMs": 30000

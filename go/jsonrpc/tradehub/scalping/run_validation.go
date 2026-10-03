@@ -17,6 +17,7 @@ import (
 //
 // Version:
 //   - 2026-10-01: Added.
+//   - 2026-10-03: Enforce product-specific order and position limits.
 func (p RunParams) Validate() error {
 	p = p.Normalize()
 	const op = "validate scalping run parameters"
@@ -44,6 +45,7 @@ func (p RunParams) Validate() error {
 //
 // Version:
 //   - 2026-10-01: Added.
+//   - 2026-10-03: Reject Perpetual order counts and Spot position settings.
 func (p RunConfiguration) Validate() error {
 	const op = "validate scalping run configuration"
 	p = p.Normalize()
@@ -206,8 +208,28 @@ func validateRunExecution(r ExecutionRule, marketType market.MarketType, observe
 	if err := validateRunDuration(op, "execution_ttl_ms", r.ExecutionTTLMS, false); err != nil {
 		return err
 	}
-	if *r.MaximumUnsettledOrders == 0 {
-		return v.Invalid(op, "maximum_unsettled_orders", "empty")
+	switch marketType {
+	case market.MarketTypeSpot:
+		if r.Perpetual != nil {
+			return v.Invalid(op, "perpetual", "invalid")
+		}
+		if r.MaximumUnsettledOrders == nil || *r.MaximumUnsettledOrders == 0 {
+			return v.Invalid(op, "maximum_unsettled_orders", "empty")
+		}
+	case market.MarketTypePerpetual:
+		if r.MaximumUnsettledOrders != nil {
+			return v.Invalid(op, "maximum_unsettled_orders", "invalid")
+		}
+		if r.Perpetual == nil || r.Perpetual.MaximumPositionQuantity == nil {
+			return v.Invalid(op, "maximum_position_quantity", "null")
+		}
+		q := *r.Perpetual.MaximumPositionQuantity
+		if err := q.Validate(); err != nil {
+			return fmt.Errorf("failed to validate scalping run position limit: %w", err)
+		}
+		if scaledQuantity(q).Sign() == 0 {
+			return v.Invalid(op, "maximum_position_quantity", "empty")
+		}
 	}
 	if *r.MaximumSlippageBPS >= 10_000 {
 		return v.Invalid(op, "maximum_slippage_bps", "out_of_range")

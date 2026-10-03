@@ -16,6 +16,7 @@ import (
 //
 // Version:
 //   - 2026-10-01: Added.
+//   - 2026-10-03: Persist product-specific order and position limits.
 func (p RunConfiguration) MarshalJSON() ([]byte, error) {
 	p = p.Normalize()
 	if err := p.Validate(); err != nil {
@@ -30,6 +31,7 @@ func (p RunConfiguration) MarshalJSON() ([]byte, error) {
 //
 // Version:
 //   - 2026-10-01: Added.
+//   - 2026-10-03: Validate and default product-specific position settings.
 func (p *RunConfiguration) UnmarshalJSON(data []byte) error {
 	if p == nil {
 		return v.Invalid("decode scalping run configuration", "destination", "null")
@@ -51,6 +53,7 @@ func (p *RunConfiguration) UnmarshalJSON(data []byte) error {
 //
 // Version:
 //   - 2026-10-01: Added.
+//   - 2026-10-03: Persist Perpetual position limits without default order counts.
 func (p RunParams) MarshalJSON() ([]byte, error) {
 	p = p.Normalize()
 	if err := p.Validate(); err != nil {
@@ -74,6 +77,7 @@ func (p RunParams) MarshalJSON() ([]byte, error) {
 //
 // Version:
 //   - 2026-10-01: Added.
+//   - 2026-10-03: Reject Perpetual order counts and validate position settings.
 func (p *RunParams) UnmarshalJSON(data []byte) error {
 	const op = "decode scalping run parameters"
 	if p == nil {
