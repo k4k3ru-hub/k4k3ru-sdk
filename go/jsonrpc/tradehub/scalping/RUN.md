@@ -225,8 +225,8 @@ TP/SL reuse `executionrule.Trigger`:
   separate order-level exit allocations. Return bps uses entry notional, not
   margin ROE. Trading fees are included in exit estimates; gas and Funding are
   excluded. Reported Perpetual PnL comes from the venue, without constructing
-  independent per-entry realized PnL. Position monitoring and Result integration
-  are subsequent runtime work.
+  independent per-entry realized PnL. The position Result contract is defined
+  below; venue synchronization and monitoring are subsequent runtime work.
 
 Spot `maximumHoldingMs` starts at that initial order's first valid fill timestamp.
 Further fills do not extend it; downtime counts. Resume must restore the origin
@@ -302,7 +302,8 @@ A snapshot contains:
 | `priceEvaluatedAt` | Optional confirmed end of state-price metrics, Unix ms |
 | `metrics` | Consolidated MarketHub metrics, once per snapshot |
 | `entry` | Entry evaluation and eligible market candidates |
-| `orders` | Complete list of unsettled or uncertain initial OMS orders |
+| `orders` | Spot only: complete list of unsettled or uncertain initial OMS orders |
+| `positions` | Perpetual only: complete list of resolved execution-market/account scopes |
 
 `RunEvaluation` has `status`, `markets` and optional `reasons`. Each market
 contains the MarketHub `price`, condition `status`, optional `candidate`, and
@@ -315,9 +316,8 @@ Candidates describe a signal, not a balance reservation or permission to submit.
 `accountAddress`, canonical entry `side`, and `exit`. Optional fields are
 `remainingQuantity` (Base), `entryValue` (allocated Quote basis), and `acquiredAt`
 (first valid fill, Unix ms). For Spot Buy, basis is fee-inclusive acquisition
-cost; for Spot Sell it is net sale proceeds. Gas is excluded. The contract's
-Perpetual entry value means remaining entry notional, not margin or ROE.
-Perpetual restoration is not connected in this implementation stage.
+cost; for Spot Sell it is net sale proceeds. Gas is excluded. Perpetual does not
+use `RunOrder` or assign venue positions to separate initial-order cost bases.
 
 For Spot Buy, `orders[].exit.markets[].price` is evaluated for that same order's
 `remainingQuantity`. Bind it to the accompanying `orderId` and `revision`; never
@@ -342,6 +342,91 @@ notifications and local buffer overflow surface on `Errors()`; resume explicitly
 with the saved execution ID. Never infer a filled or cancelled order from a
 missing connection or stream error. Unsubscribe and disconnect stop monitoring,
 while saved settings and OMS records remain.
+
+### Perpetual position snapshots
+
+Perpetual snapshots use `positions` and omit `orders`. Spot snapshots use
+`orders` (including an explicit empty array) and omit `positions`. Mixing the
+arrays is invalid, including an empty array for the other product.
+
+Each `RunPosition` contains the following fields:
+
+| Field | Meaning |
+|---|---|
+| `market` | Resolved venue, network and native product; Perp DEX qualifiers remain in `venueSymbol` |
+| `accountAddress` | Actual trading account, not the delegated signer |
+| `syncStatus` | `syncing`, `synced` or `unavailable` |
+| `observedAt` | Optional account-state observation time, Unix ms; mandatory for synchronized or last-known position data |
+| `position` | Optional venue position, using `jsonrpc/tradehub/perpetual.Position` |
+| `exit` | Evaluation for closing this venue position; uses the existing `RunEvaluation` type |
+| `reasons` | Required for `syncing`/`unavailable`; omitted for `synced` |
+
+Market and account form the identity; there is no synthetic position ID or root
+OMS order ID. Native product identifiers must distinguish separate Perp DEXs.
+Every resolved execution scope remains present, even when flat or unavailable;
+`positions: []` is invalid. The runtime must check complete scope coverage against
+the saved Run resolution; the standalone SDK validator cannot infer it.
+
+- `syncing`: initial or resumed reconciliation, or an unresolved venue operation.
+- `synced`: venue state and relevant in-flight operations have been reconciled.
+- `unavailable`: synchronization cannot currently produce a trustworthy view.
+
+Only `synced` **with no `position`** means confirmed flat. Omission while syncing
+or unavailable means unknown. Last-known position data may be included with its
+original `observedAt`, but cannot create an actionable exit. Any unsynchronized
+scope requires `entry.status: unavailable`, since the Run-wide position cap cannot
+be verified. Another synchronized position may still have an exit candidate.
+Re-emitting a snapshot must never advance an account-state observation timestamp.
+
+The nested venue `position` reuses the existing Perpetual API representation:
+
+```json
+{
+  "quantity": "-10",
+  "entryPrice": "2",
+  "leverage": 3,
+  "marginMode": "isolated",
+  "marginUsed": "6.666667",
+  "unrealizedPnl": "0.1"
+}
+```
+
+`quantity` is a signed decimal Base quantity (positive Long, negative Short),
+not `market.Quantity`'s integer-and-scale input representation. Zero is represented
+by omitting the whole `position` in a synchronized scope. `entryPrice` is the
+venue average and may be absent if unavailable; `liquidationPrice` is also optional.
+`marginUsed` and `unrealizedPnl` retain the venue API's monetary units and accounting
+meaning. In the current SUI/USDC Hyperliquid integration these are USDC quantities.
+PnL may be negative and is not recomputed by the SDK, combined with historical
+realized PnL, or substituted for the fee-aware `exit.markets[].returnBps` trigger.
+Venue PnL's funding/fee conventions are not changed by this Result wrapper.
+
+Exit prices/candidates can reference only the position's own venue, network and
+native product. The account is inherited from that `RunPosition`. Synced flat or
+unsynchronized scopes require `exit.status: unavailable`; exit candidates suppress
+new entry candidates. A close-in-progress runtime must also keep entry suspended
+until reconciliation, even if partial closes create quantity headroom. SDK shape
+validation does not implement that lifecycle or authorize order submission.
+
+The [Perpetual notification example](testdata/run_perpetual_snapshot.json) is
+decoded and round-tripped by tests and routed through the WebSocket client using
+an injected fake. Replacing it with the following scope clears the previous
+position only after flat state has been confirmed:
+
+```json
+{
+  "market": {"venue":"hyperliquid","network":"testnet","venueSymbol":"SUI"},
+  "accountAddress": "0x1111111111111111111111111111111111111111",
+  "syncStatus": "synced",
+  "observedAt": 1790985602000,
+  "exit": {"status":"unavailable","markets":[],"reasons":["position_flat"]}
+}
+```
+
+This stage adds the public Result and its validation. Server venue synchronization,
+maximum-position sizing, Agent order submission and runtime SDK dependency updates
+are still pending. Update the TradeHub consumer of `maximumUnsettledOrders` together
+with its SDK dependency: this Spot-only pointer is absent for Perpetual settings.
 
 ## Current server boundaries
 

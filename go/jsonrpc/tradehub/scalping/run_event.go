@@ -29,8 +29,12 @@ type RunSnapshot struct {
 	PriceEvaluatedAt *int64                `json:"priceEvaluatedAt,omitempty"`
 	Metrics          *observations.Metrics `json:"metrics,omitempty"`
 	Entry            RunEvaluation         `json:"entry"`
-	// Orders contains all unsettled or uncertain initial orders, never closed history.
-	Orders []RunOrder `json:"orders"`
+	// Orders contains Spot's unsettled or uncertain initial orders, never closed history.
+	// An empty Spot array is emitted explicitly by MarshalJSON.
+	Orders []RunOrder `json:"orders,omitempty"`
+	// Positions contains every resolved Perpetual execution scope, including flat
+	// and unsynchronized scopes. Perpetual never synthesizes per-order positions.
+	Positions []RunPosition `json:"positions,omitempty"`
 }
 
 type RunEvaluation struct {
@@ -74,8 +78,7 @@ type RunOrder struct {
 	Side              Side             `json:"side"`
 	RemainingQuantity *market.Quantity `json:"remainingQuantity,omitempty"`
 	// EntryValue is the allocated Quote basis for the remaining Base quantity.
-	// It is acquisition cost for Spot Buy, sale proceeds for Spot Sell, or entry
-	// notional for Perpetual. Trading fees must follow the product's accounting.
+	// It is acquisition cost for Spot Buy or sale proceeds for Spot Sell.
 	EntryValue *market.Quantity `json:"entryValue,omitempty"`
 	AcquiredAt *int64           `json:"acquiredAt,omitempty"`
 	// Exit prices for Spot Buy are observed for this revision's full remaining
@@ -84,10 +87,11 @@ type RunOrder struct {
 	Exit RunEvaluation `json:"exit"`
 }
 
-// Validate checks a complete replacement snapshot and its independently managed orders.
+// Validate checks a complete replacement snapshot of Spot orders or Perpetual scopes.
 //
 // Version:
 //   - 2026-10-01: Added.
+//   - 2026-10-03: Separate venue positions from Spot orders and reject unsafe candidates.
 func (r RunSnapshot) Validate() error {
 	const op = "validate scalping run snapshot"
 	if err := v.Text(op, "evaluation_id", r.EvaluationID, 128); err != nil {
@@ -106,14 +110,30 @@ func (r RunSnapshot) Validate() error {
 	if r.EvaluatedAt <= 0 || r.PriceEvaluatedAt != nil && (*r.PriceEvaluatedAt <= 0 || *r.PriceEvaluatedAt > r.EvaluatedAt) {
 		return v.Invalid(op, "timestamps", "out_of_range")
 	}
-	if r.Orders == nil {
-		return v.Invalid(op, "orders", "null")
+	switch r.MarketType {
+	case market.MarketTypeSpot:
+		if r.Orders == nil {
+			return v.Invalid(op, "orders", "null")
+		}
+		if r.Positions != nil {
+			return v.Invalid(op, "positions", "invalid")
+		}
+	case market.MarketTypePerpetual:
+		if r.Orders != nil {
+			return v.Invalid(op, "orders", "invalid")
+		}
+		if len(r.Positions) == 0 {
+			return v.Invalid(op, "positions", "empty")
+		}
 	}
 	if err := validateConsolidatedMetrics(r.Metrics); err != nil {
 		return fmt.Errorf("failed to validate scalping run snapshot: %w", err)
 	}
 	if err := validateRunEvaluation(r.Entry, r.EvaluatedAt, r.MarketType, false); err != nil {
 		return err
+	}
+	if r.MarketType == market.MarketTypePerpetual {
+		return validateRunPositions(r)
 	}
 	seen := make(map[string]bool, len(r.Orders))
 	for _, order := range r.Orders {

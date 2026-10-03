@@ -1,0 +1,40 @@
+{
+  "executionId": "example-perpetual-run",
+  "subscriptionKey": "example-stream",
+  "sequence": 1,
+  "kind": "snapshot",
+  "snapshot": {
+    "evaluationId": "example-evaluation",
+    "marketType": "perpetual",
+    "symbol": "SUI/USDC",
+    "evaluatedAt": 1790985601000,
+    "entry": {
+      "status": "not_matched",
+      "markets": []
+    },
+    "positions": [
+      {
+        "market": {
+          "venue": "hyperliquid",
+          "network": "testnet",
+          "venueSymbol": "SUI"
+        },
+        "accountAddress": "0x1111111111111111111111111111111111111111",
+        "syncStatus": "synced",
+        "observedAt": 1790985600900,
+        "position": {
+          "quantity": "-10",
+          "entryPrice": "2",
+          "leverage": 3,
+          "marginMode": "isolated",
+          "marginUsed": "6.666667",
+          "unrealizedPnl": "0.1"
+        },
+        "exit": {
+          "status": "not_matched",
+          "markets": []
+        }
+      }
+    ]
+  }
+}
