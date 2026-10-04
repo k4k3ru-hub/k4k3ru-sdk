@@ -3,7 +3,9 @@
 package prepare
 
 import (
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/internal/validation"
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/perpetual"
@@ -34,7 +36,9 @@ type PerpetualParams struct {
 	Kind           string                    `json:"kind"`
 	Order          *perpetual.OrderIntent    `json:"order,omitempty"`
 	Leverage       *perpetual.LeverageIntent `json:"leverage,omitempty"`
-	Signing        SigningContext            `json:"signing"`
+	// ExecutionTTLMS is a signed-action lifetime, not an HTTP timeout or holding duration.
+	ExecutionTTLMS *uint64        `json:"executionTtlMs,omitempty"`
+	Signing        SigningContext `json:"signing"`
 }
 
 type SigningContext struct {
@@ -44,10 +48,39 @@ type HyperliquidSigning struct {
 	Nonce uint64 `json:"nonce"`
 }
 
+// UnmarshalJSON distinguishes an omitted execution lifetime from an invalid explicit null.
+//
+// Version:
+//   - 2026-10-04: Added.
+func (p *PerpetualParams) UnmarshalJSON(data []byte) error {
+	if p == nil {
+		return validation.Invalid("decode execution preparation", "destination", "null")
+	}
+	type plain PerpetualParams
+	var value plain
+	if err := validation.Decode(data, &value); err != nil {
+		return &decodeError{cause: err}
+	}
+	if value.ExecutionTTLMS == nil {
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal(data, &fields); err != nil {
+			return &decodeError{cause: err}
+		}
+		for key := range fields {
+			if strings.EqualFold(key, "executionTtlMs") {
+				return validation.Invalid("decode execution preparation", "execution_ttl_ms", "null")
+			}
+		}
+	}
+	*p = PerpetualParams(value)
+	return nil
+}
+
 // Validate validates the discriminated intent; adapters apply venue capabilities.
 //
 // Version:
 //   - 2026-09-29: Added.
+//   - 2026-10-04: Validate Perpetual's optional execution lifetime.
 func (p Params) Validate() error {
 	switch p.Kind {
 	case KindSwap:
@@ -62,6 +95,9 @@ func (p Params) Validate() error {
 			return invalid("intent")
 		}
 		v := p.Perpetual
+		if v.ExecutionTTLMS != nil && (*v.ExecutionTTLMS == 0 || *v.ExecutionTTLMS > perpetual.MaximumExecutionTTLMS) {
+			return validation.Invalid("validate execution preparation", "execution_ttl_ms", "out_of_range")
+		}
 		for _, f := range []struct{ name, value string }{{"venue", v.Venue}, {"network", v.Network}, {"symbol", v.Symbol}, {"account_address", v.AccountAddress}, {"signer_address", v.SignerAddress}} {
 			if err := validation.Text("validate execution preparation", f.name, f.value, 256); err != nil {
 				return err

@@ -11,6 +11,7 @@ import (
 // TestExactOutputContract separates fixed input/output subscriptions and preserves default input semantics.
 //
 // Version:
+//   - 2026-10-04: Accept fixed Perpetual Buy contract sizes without Spot receipt semantics.
 //   - 2026-10-02: Added.
 func TestExactOutputContract(t *testing.T) {
 	var p scalping.Params
@@ -52,7 +53,15 @@ func TestExactOutputContract(t *testing.T) {
 		}
 	}
 	p.MarketType = market.MarketTypePerpetual
+	if err := p.Validate(); err != nil {
+		t.Fatal("Perpetual contract quantity rejected", err)
+	}
+	perpKey, err := p.SubscriptionKey()
+	if err != nil || perpKey == outputKey {
+		t.Fatal("Spot receipt and Perpetual contracts shared identity", err)
+	}
+	p.Sell = &scalping.SideParams{Kind: scalping.KindExactOutput, Quantity: p.Buy.Quantity}
 	if p.Validate() == nil {
-		t.Fatal("Spot receipt semantics accepted for perpetual")
+		t.Fatal("Perpetual Quote receipt target accepted")
 	}
 }

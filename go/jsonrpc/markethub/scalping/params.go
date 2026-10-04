@@ -60,6 +60,7 @@ func (p Params) Normalize() Params {
 // The server must verify each market's symbol, assets, metadata and data quality.
 //
 // Version:
+//   - 2026-10-04: Accept Perpetual Buy exact-output as fixed Base contract quantity.
 //   - 2026-10-02: Support optional Spot exact-output estimates.
 //   - 2026-09-28: Include optional trading accounts for fee-aware observations.
 //   - 2026-09-26: Use independent Buy Quote and Sell Base input quantities.
@@ -93,10 +94,12 @@ func (p Params) Validate() error {
 			if err := side.Validate(); err != nil {
 				return fmt.Errorf("failed to validate scalping observations: %w", err)
 			}
-			if side.Kind == KindExactOutput && p.MarketType != market.MarketTypeSpot {
-				return invalid("kind", "invalid")
-			}
 		}
+	}
+	// Perpetual Sell already fixes Base contracts with exact-input. A Quote
+	// output target has no settlement meaning here and remains unsupported.
+	if p.MarketType == market.MarketTypePerpetual && p.Sell != nil && p.Sell.Kind == KindExactOutput {
+		return invalid("sell_kind", "invalid")
 	}
 	if err := validateFeeAccounts(p); err != nil {
 		return err
@@ -118,6 +121,7 @@ func (p Params) Validate() error {
 // Decode failure leaves the receiver unchanged.
 //
 // Version:
+//   - 2026-10-04: Accept Perpetual Buy contract-quantity estimates.
 //   - 2026-10-02: Support optional Spot exact-output estimates.
 //   - 2026-09-28: Include optional trading accounts for fee-aware observations.
 //   - 2026-09-26: Use independent Buy Quote and Sell Base input quantities.
@@ -151,7 +155,7 @@ func invalid(field, state string) error {
 	return fmt.Errorf("failed to validate scalping observations: %w: %s=%s", apperror.InvalidParameter(), field, state)
 }
 
-// QuantityKind selects the fixed side of a Spot quantity estimate.
+// QuantityKind selects the fixed side of a quantity estimate.
 type QuantityKind string
 
 const (
@@ -161,6 +165,8 @@ const (
 
 // SideParams fixes input (Quote for Buy, Base for Sell) by default.
 // Exact output instead fixes net receipt (Base for Buy, Quote for Sell).
+// Perpetual Buy exact-output fixes Base contract quantity, not token receipt.
+// Perpetual Sell uses exact-input to fix Base contract quantity.
 type SideParams struct {
 	Kind     QuantityKind     `json:"kind,omitempty"`
 	Quantity *market.Quantity `json:"quantity,omitempty"`

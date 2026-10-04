@@ -16,11 +16,13 @@ import (
 //
 // Version:
 //   - 2026-09-29: Added.
+//   - 2026-10-04: Preserve the requested signed-action lifetime.
 func PrepareParams(p perpetual.PrepareParams) prepare.Params {
 	return prepare.Params{Kind: prepare.KindPerpetual, Perpetual: &prepare.PerpetualParams{
 		Venue: p.Venue, Network: p.Network, Symbol: p.Symbol, AccountAddress: p.AccountAddress,
 		SignerAddress: p.SignerAddress, Kind: p.Kind, Order: p.Order, Leverage: p.Leverage,
-		Signing: prepare.SigningContext{Hyperliquid: &prepare.HyperliquidSigning{Nonce: p.Nonce}},
+		ExecutionTTLMS: p.ExecutionTTLMS,
+		Signing:        prepare.SigningContext{Hyperliquid: &prepare.HyperliquidSigning{Nonce: p.Nonce}},
 	}}
 }
 
@@ -28,6 +30,7 @@ func PrepareParams(p perpetual.PrepareParams) prepare.Params {
 //
 // Version:
 //   - 2026-09-29: Added.
+//   - 2026-10-04: Carry execution lifetime into the protected venue intent.
 func Intent(p prepare.PerpetualParams) (perpetual.PrepareParams, error) {
 	if err := (prepare.Params{Kind: prepare.KindPerpetual, Perpetual: &p}).Validate(); err != nil {
 		return perpetual.PrepareParams{}, fmt.Errorf("failed to convert hyperliquid intent: %w", err)
@@ -36,6 +39,7 @@ func Intent(p prepare.PerpetualParams) (perpetual.PrepareParams, error) {
 		return perpetual.PrepareParams{}, invalid("signing")
 	}
 	v := perpetual.PrepareParams{Scope: perpetual.Scope{Venue: p.Venue, Network: p.Network, Symbol: p.Symbol, AccountAddress: p.AccountAddress}, SignerAddress: p.SignerAddress, Kind: p.Kind, Nonce: p.Signing.Hyperliquid.Nonce, Order: p.Order, Leverage: p.Leverage}
+	v.ExecutionTTLMS = p.ExecutionTTLMS
 	if err := v.Validate(); err != nil {
 		return perpetual.PrepareParams{}, fmt.Errorf("failed to convert hyperliquid intent: %w", err)
 	}

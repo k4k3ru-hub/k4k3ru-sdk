@@ -5,8 +5,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/internal/validation"
 )
@@ -18,6 +20,12 @@ type Scope struct {
 	AccountAddress string `json:"accountAddress"`
 }
 type AccountParams struct{ Scope }
+
+const (
+	DefaultExecutionTTLMS uint64 = 60_000
+	MaximumExecutionTTLMS uint64 = uint64(math.MaxInt64 / int64(time.Millisecond))
+)
+
 type PrepareParams struct {
 	Scope
 	SignerAddress string          `json:"signerAddress"`
@@ -25,7 +33,23 @@ type PrepareParams struct {
 	Nonce         uint64          `json:"nonce"`
 	Order         *OrderIntent    `json:"order,omitempty"`
 	Leverage      *LeverageIntent `json:"leverage,omitempty"`
+	// ExecutionTTLMS bounds the signed action lifetime from preparation time.
+	// Omission preserves the manual preparation default of 60 seconds.
+	ExecutionTTLMS *uint64 `json:"executionTtlMs,omitempty"`
 }
+
+// EffectiveExecutionTTLMS returns the explicit lifetime or the manual default, in milliseconds.
+// Call Validate before using the result to construct an expiration timestamp.
+//
+// Version:
+//   - 2026-10-04: Added.
+func (p PrepareParams) EffectiveExecutionTTLMS() uint64 {
+	if p.ExecutionTTLMS != nil {
+		return *p.ExecutionTTLMS
+	}
+	return DefaultExecutionTTLMS
+}
+
 type OrderIntent struct {
 	Side          string `json:"side"`
 	Quantity      string `json:"quantity"`
@@ -103,6 +127,7 @@ func (p Scope) Validate() error {
 //
 // Version:
 //   - 2026-09-28: Added.
+//   - 2026-10-04: Validate an optional positive signed-action lifetime.
 func (p PrepareParams) Validate() error {
 	if err := p.Scope.Validate(); err != nil {
 		return fmt.Errorf("failed to validate preparation: %w", err)
@@ -115,6 +140,9 @@ func (p PrepareParams) Validate() error {
 	}
 	if p.Nonce == 0 {
 		return validation.Invalid("validate preparation", "nonce", "empty")
+	}
+	if ttl := p.EffectiveExecutionTTLMS(); ttl == 0 || ttl > MaximumExecutionTTLMS {
+		return validation.Invalid("validate preparation", "execution_ttl_ms", "out_of_range")
 	}
 	switch p.Kind {
 	case "order":
@@ -241,9 +269,29 @@ func (p *AccountParams) UnmarshalJSON(data []byte) error {
 //
 // Version:
 //   - 2026-09-28: Added.
+//   - 2026-10-04: Reject null lifetimes while preserving omitted legacy values.
 func (p *PrepareParams) UnmarshalJSON(data []byte) error {
+	if p == nil {
+		return validation.Invalid("decode perpetual parameters", "destination", "null")
+	}
 	type plain PrepareParams
-	return decode(data, (*plain)(p), "venue", "network", "symbol", "accountAddress", "signerAddress", "kind", "nonce")
+	var value plain
+	if err := decode(data, &value, "venue", "network", "symbol", "accountAddress", "signerAddress", "kind", "nonce"); err != nil {
+		return err
+	}
+	if value.ExecutionTTLMS == nil {
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal(data, &fields); err != nil {
+			return &DecodeError{cause: err}
+		}
+		for key := range fields {
+			if strings.EqualFold(key, "executionTtlMs") {
+				return validation.Invalid("decode perpetual parameters", "execution_ttl_ms", "null")
+			}
+		}
+	}
+	*p = PrepareParams(value)
+	return nil
 }
 
 // UnmarshalJSON requires an explicit reduce-only choice and IOC constraints.

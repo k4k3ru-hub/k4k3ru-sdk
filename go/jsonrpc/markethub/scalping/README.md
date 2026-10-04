@@ -78,9 +78,17 @@ execution rules or order IDs are added to MarketHub observations.
 Spot sides also accept `kind: "exact-output"` with a required positive `quantity`.
 It fixes **net received** Base for Buy or Quote for Sell, not the payment amount.
 Omitted `kind` and explicit `exact-input` normalize to the same subscription key;
-exact output has a distinct key. Perpetual exact output is rejected. For example,
+exact output has a distinct key. For example,
 `"buy": {"kind":"exact-output","quantity":{"amount":"1000000","decimals":9}}`
 estimates buying back exactly 0.001 SUI in SUI/USDC. No trade is submitted.
+
+Perpetual **Buy** also accepts `kind: "exact-output"`: its quantity is fixed Base
+contract size. For example, `{"kind":"exact-output","quantity":{"amount":"1","decimals":0}}`
+prices a 1 SUI Long or a 1 SUI Short cover. It does not mean receipt of a token,
+margin deposit or leveraged quantity. Buy fees are charged in Quote on the walked
+notional; the contract size is not reduced by those fees. Perpetual Sell continues
+to use `exact-input` Base contract quantity; Sell `exact-output` is unsupported.
+Both directions return `netPrice` and `fees`, omitting Spot settlement quantities.
 
 Spot VWAP results include `netPayQuantity` (fee-inclusive input) and
 `netReceiveQuantity` (fee-inclusive output). Amounts come from raw calculations,

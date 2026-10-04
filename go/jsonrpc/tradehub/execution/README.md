@@ -27,6 +27,16 @@ payload times remain milliseconds. Preserve the returned preparation token and
 exact signed payload for reconciliation and retries. Never change RPCs, allocate
 another nonce or create a replacement order automatically after a transport error.
 
+Perpetual Prepare accepts optional `perpetual.executionTtlMs`. It sets the signed
+action's expiry relative to `preparedAt`; omission preserves 60,000 ms for manual
+requests. Scalping execution should pass its configured lifetime (30,000 ms by
+default) explicitly. Values must be positive integers no larger than
+9,223,372,036,854 ms; explicit null is invalid. A lifetime is neither a request
+timeout nor a position holding duration. The adapter may return an already-expired
+preparation when the requested lifetime is shorter than preparation work; it must
+not be signed or sent. Submit and Agent verification check the exact lifetime,
+and retries retain the original signed expiry. No Run ID is required for this field.
+
 `execution.Params` / `execution.Result` retain the earlier internal Spread
 contract. They are not the DTOs for the new public Prepare handler. The separate
 `prepare` package owns composition of existing swap and perpetual DTOs without

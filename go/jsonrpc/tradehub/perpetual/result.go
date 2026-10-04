@@ -49,13 +49,14 @@ type UnifiedBalance struct {
 }
 type AccountResult struct {
 	Scope
-	AccountMode      string          `json:"accountMode"`
-	TradingSupported bool            `json:"tradingSupported"`
-	Margin           *MarginSummary  `json:"margin,omitempty"`
-	Withdrawable     *string         `json:"withdrawable,omitempty"`
-	UnifiedBalance   *UnifiedBalance `json:"unifiedBalance,omitempty"`
-	Position         *Position       `json:"position,omitempty"`
-	ObservedAt       uint64          `json:"observedAt"`
+	AccountMode      string           `json:"accountMode"`
+	TradingSupported bool             `json:"tradingSupported"`
+	Margin           *MarginSummary   `json:"margin,omitempty"`
+	Withdrawable     *string          `json:"withdrawable,omitempty"`
+	UnifiedBalance   *UnifiedBalance  `json:"unifiedBalance,omitempty"`
+	Position         *Position        `json:"position,omitempty"`
+	TradingCapacity  *TradingCapacity `json:"tradingCapacity,omitempty"`
+	ObservedAt       uint64           `json:"observedAt"`
 }
 type SubmitResult struct {
 	PreparationID          string `json:"preparationId"`
