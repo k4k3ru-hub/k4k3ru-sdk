@@ -349,3 +349,16 @@ The start RPC is `MarketHub.Scalping.Run`; the previous
 `module.MarketHubScalping().Run(ctx, params)` to start the existing ACK and
 continuous Snapshot stream. The request fields, subscription key, event type,
 interval, Credit policy and `Unsubscribe` operation retain their existing meaning.
+
+### Fee-exclusive limit evidence
+
+Optional `grossPrice` is Quote/Base for the same market, direction and requested
+quantity with trading fees excluded. Reference and fallback results use the best
+OrderBook quote or pool marginal price without a quantity calculation. A full
+VWAP uses the independently calculated fee-free depth/pool estimate. Ranking,
+spread and TP/SL continue to use `netPrice`.
+
+The field is omitted when that independent estimate is unavailable. In
+particular, AMM exact-output adapters currently retain only fee-inclusive input;
+they do not advertise a gross estimate for a different output quantity. OrderBook
+exact-output estimates walk depth again for the same fee-free output target.

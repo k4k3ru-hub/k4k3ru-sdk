@@ -51,6 +51,10 @@ type MarketPrice struct {
 	Status PriceStatus      `json:"status"`
 	// NetPrice is the effective Quote/Base price including trading fees, excluding gas.
 	NetPrice *string `json:"netPrice,omitempty"`
+	// GrossPrice is the fee-exclusive Quote/Base price on the same retained state
+	// and requested quantity. Reference/fallback prices use the best quote or pool
+	// marginal price. Omitted when an independent fee-free estimate is unavailable.
+	GrossPrice *string `json:"grossPrice,omitempty"`
 	// NetPayQuantity is the fee-inclusive Spot input; omitted for reference prices.
 	NetPayQuantity *market.Quantity `json:"netPayQuantity,omitempty"`
 	// NetReceiveQuantity is fee-inclusive Spot output: Base for Buy and Quote for Sell.

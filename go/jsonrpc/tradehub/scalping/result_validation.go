@@ -134,8 +134,17 @@ func validateEvaluation(e MarketEvaluation, at int64, marketType market.MarketTy
 		if n.Sign() <= 0 {
 			return v.Invalid(op, "net_price", "out_of_range")
 		}
+		if e.Price.GrossPrice != nil {
+			n, err := v.Number(op, "gross_price", *e.Price.GrossPrice, false, false)
+			if err != nil {
+				return err
+			}
+			if n.Sign() <= 0 {
+				return v.Invalid(op, "gross_price", "out_of_range")
+			}
+		}
 	case observations.PriceStatusUnavailable:
-		if e.Price.NetPrice != nil || e.Price.NetReceiveQuantity != nil || e.Price.NetPayQuantity != nil || e.Price.Fees != nil {
+		if e.Price.NetPrice != nil || e.Price.GrossPrice != nil || e.Price.NetReceiveQuantity != nil || e.Price.NetPayQuantity != nil || e.Price.Fees != nil {
 			return v.Invalid(op, "unavailable_price", "invalid")
 		}
 	default:
