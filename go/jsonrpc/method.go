@@ -11,7 +11,7 @@ const maxMethodLength = 64
 type Method string
 
 const (
-	MethodMarketHubScalpingRun                     Method = "MarketHub.Scalping.Run"
+	MethodMarketHubScalpingSubscribe               Method = "MarketHub.Scalping.Subscribe"
 	MethodMarketHubScalpingUnsubscribe             Method = "MarketHub.Scalping.Unsubscribe"
 	MethodMarketHubAMMPoolGet                      Method = "MarketHub.AMMPool.Get"
 	MethodMarketHubAMMPoolNewPairGet               Method = "MarketHub.AMMPool.NewPair.Get"

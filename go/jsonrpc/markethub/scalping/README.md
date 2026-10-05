@@ -1,9 +1,10 @@
 # MarketHub Scalping parameters and observations
 
 This package owns the request, snapshot and subscription DTOs for MarketHub
-Scalping. The SDK supports `MarketHub.Scalping.Run` and
+Scalping. The SDK supports `MarketHub.Scalping.Subscribe` and
 `MarketHub.Scalping.Unsubscribe` through `websocket.Module.MarketHubScalping()`.
-Deploy the corresponding Gateway and MarketHub server changes together. Public
+Deploy the corresponding Gateway, CRM authentication, MarketHub and TradeHub
+internal-client changes together. Public
 `MarketHub.Scalping.Get` remains a separate step. TradeHub uses the internal
 MarketHub Run feed.
 
@@ -344,9 +345,9 @@ Internal service-to-service subscriptions are signed and are not separately
 charged these public ticks. Credit exhaustion terminates only the affected
 subscription and is reported through `Errors()`.
 
-The start RPC is `MarketHub.Scalping.Run`; the previous
-`MarketHub.Scalping.Subscribe` method is no longer routed. Use
-`module.MarketHubScalping().Run(ctx, params)` to start the existing ACK and
+The start RPC is `MarketHub.Scalping.Subscribe`; the previous
+`MarketHub.Scalping.Run` method is no longer routed. Use
+`module.MarketHubScalping().Subscribe(ctx, params)` to start the existing ACK and
 continuous Snapshot stream. The request fields, subscription key, event type,
 interval, Credit policy and `Unsubscribe` operation retain their existing meaning.
 

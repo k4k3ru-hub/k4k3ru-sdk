@@ -361,9 +361,9 @@ TradeHub Scalpingも旧値 `perp` はエラーとし、保存済み設定の再�
 新しい単一シンボルのMarketHub Scalping
 [`Params`](go/jsonrpc/markethub/scalping/README.md) も追加しています。
 MarketHub側はResultと購読型を持ち、`websocket.NewModule` が
-`module.MarketHubScalping()` を組み立てます。`Run(ctx, params)`で開始し、1秒間隔を目標に全量Snapshotを受信します。
+`module.MarketHubScalping()` を組み立てます。`Subscribe(ctx, params)`で開始し、1秒間隔を目標に全量Snapshotを受信します。
 `Events()`で最新値、`Errors()`で切断・Credit不足による終了を確認できます。
-対応するGateway・MarketHubも更新してください。TradeHubの内部呼出も `InternalApp.MarketHub.Scalping.Run` を使います。公開Getは別工程です。
+対応するGateway・MarketHubも更新してください。TradeHubの内部呼出も `InternalApp.MarketHub.Scalping.Subscribe` を使います。公開Getは別工程です。
 
 [`jsonrpc/tradehub/scalping`](go/jsonrpc/tradehub/scalping/README.md) の
 `SubscribeParams` で、新規開始（`idempotencyKey`＋設定）と再購読（`executionId`のみ）を指定します。

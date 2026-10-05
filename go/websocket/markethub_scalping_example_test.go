@@ -13,7 +13,7 @@ import (
 // ExampleModule_MarketHubScalping shows composition and full-result replacement with application credentials.
 //
 // Version:
-//   - 2026-10-01: Use the MarketHub.Scalping.Run RPC.
+//   - 2026-10-05: Use the MarketHub.Scalping.Subscribe RPC.
 //   - 2026-09-26: Added.
 func ExampleModule_MarketHubScalping() {
 	observe := func(ctx context.Context, credentials authentication.CredentialProvider) (scalping.Result, error) {
@@ -22,7 +22,7 @@ func ExampleModule_MarketHubScalping() {
 			return scalping.Result{}, err
 		}
 		read := func() (scalping.Result, error) {
-			sub, err := module.MarketHubScalping().Run(ctx, scalping.Params{MarketType: market.MarketTypeSpot, Symbol: market.SUIUSDC, WindowMS: scalping.DefaultWindowMS, Markets: []market.MarketTarget{{Venue: market.Cetus, Chain: "sui", Network: "testnet"}}})
+			sub, err := module.MarketHubScalping().Subscribe(ctx, scalping.Params{MarketType: market.MarketTypeSpot, Symbol: market.SUIUSDC, WindowMS: scalping.DefaultWindowMS, Markets: []market.MarketTarget{{Venue: market.Cetus, Chain: "sui", Network: "testnet"}}})
 			if err != nil {
 				return scalping.Result{}, err
 			}

@@ -247,7 +247,7 @@ Spot and long Perp openings use the buy ranking; short Perp openings use sell.
 assessment. `unavailable` prices do not produce candidates. These are observations;
 Prepare must verify assets, balances, inventory and executability independently.
 
-TradeHub consumes signed `InternalApp.MarketHub.Scalping.Run` events at the
+TradeHub consumes signed `InternalApp.MarketHub.Scalping.Subscribe` events at the
 MarketHub stream cadence; it does not poll an HTTP Get API. Transport failures
 withdraw all previous candidates. Reconnection signs a fresh subscription and
 starts a new candidate generation. A single active execution owns its upstream
