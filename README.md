@@ -27,6 +27,19 @@ import (
 )
 ```
 
+### Historical Composite candles
+
+`MarketHub.Candles.Get` は保存済みCompositeをHTTPで取得します。公開型は
+[`jsonrpc/markethub/candles`](go/jsonrpc/markethub/candles/README.md)、呼び出しは
+[`httpclient.NewClient`](go/httpclient/README.md) が組み立てる
+`client.MarketHub().Candles().Get(ctx, params)` を使用してください。
+
+`from` / `to` はUTC秒、期間は最大7日です。`limit` は実際の返却本数を数え、
+既定値・最大値ともに300本です。次の `from` にレスポンスの `to` を設定し、
+最初に指定した `to` まで取得します。cursorはありません。1日分の1分足は
+欠損がなければ5回で取得できます。各回に既存の利用制限・課金規則が適用され、
+SDKは自動で再試行や次ページ取得を行いません。
+
 ### 商品の付与クレジット
 
 `jsonrpc/account/app.ListProductsProduct.CreditTicks`は、購入特典を含む付与総量です。

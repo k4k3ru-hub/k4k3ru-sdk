@@ -40,6 +40,7 @@ const (
 	MethodMarketHubBBOSubscribe                    Method = "MarketHub.BBO.Subscribe"
 	MethodMarketHubBBOUnsubscribe                  Method = "MarketHub.BBO.Unsubscribe"
 	MethodMarketHubBBOGet                          Method = "MarketHub.BBO.Get"
+	MethodMarketHubCandlesGet                      Method = "MarketHub.Candles.Get"
 	MethodMarketHubOrderBookSubscribe              Method = "MarketHub.OrderBook.Subscribe"
 	MethodMarketHubOrderBookUnsubscribe            Method = "MarketHub.OrderBook.Unsubscribe"
 	MethodMarketHubOrderBookGet                    Method = "MarketHub.OrderBook.Get"
