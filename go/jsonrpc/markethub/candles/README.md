@@ -5,6 +5,11 @@ is `composite`; calculation versions and Parquet paths are not request parameter
 Use [`httpclient.NewClient`](../../../httpclient/README.md) to compose the client,
 then `client.MarketHub().Candles().Get(ctx, candles.Params{...})`.
 
+Signed authentication is required: inject an `authentication.CredentialProvider`.
+The account/method quota is 60 requests per rolling 60 seconds. Each successful
+request costs 1,000 credits from the first call, including empty results and
+continuation pages. There is no anonymous access or free allowance.
+
 | Parameter | Contract |
 | --- | --- |
 | `asset` | Canonical lowercase asset slug, such as `btc`; required. |

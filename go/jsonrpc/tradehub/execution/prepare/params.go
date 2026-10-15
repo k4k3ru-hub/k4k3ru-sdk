@@ -36,6 +36,7 @@ type PerpetualParams struct {
 	Kind           string                    `json:"kind"`
 	Order          *perpetual.OrderIntent    `json:"order,omitempty"`
 	Leverage       *perpetual.LeverageIntent `json:"leverage,omitempty"`
+	Margin         *MarginIntent             `json:"margin,omitempty"`
 	// ExecutionTTLMS is a signed-action lifetime, not an HTTP timeout or holding duration.
 	ExecutionTTLMS *uint64        `json:"executionTtlMs,omitempty"`
 	Signing        SigningContext `json:"signing"`
@@ -43,6 +44,16 @@ type PerpetualParams struct {
 
 type SigningContext struct {
 	Hyperliquid *HyperliquidSigning `json:"hyperliquid,omitempty"`
+	Bluefin     *BluefinSigning     `json:"bluefin,omitempty"`
+}
+type MarginIntent struct {
+	Leverage uint32 `json:"leverage"`
+	Mode     string `json:"mode"`
+}
+type BluefinSigning struct {
+	SessionID  string `json:"sessionId"`
+	Salt       string `json:"salt"`
+	SignedAtMS int64  `json:"signedAtMillis"`
 }
 type HyperliquidSigning struct {
 	Nonce uint64 `json:"nonce"`
@@ -79,6 +90,7 @@ func (p *PerpetualParams) UnmarshalJSON(data []byte) error {
 // Validate validates the discriminated intent; adapters apply venue capabilities.
 //
 // Version:
+//   - 2026-10-14: Validate Bluefin authentication references and explicit order margin intent.
 //   - 2026-09-29: Added.
 //   - 2026-10-04: Validate Perpetual's optional execution lifetime.
 func (p Params) Validate() error {
@@ -117,6 +129,22 @@ func (p Params) Validate() error {
 		}
 		if v.Signing.Hyperliquid != nil && (v.Venue != "hyperliquid" || v.Signing.Hyperliquid.Nonce == 0) {
 			return invalid("signing")
+		}
+		if v.Venue == "bluefin" {
+			if v.Kind != "order" || v.Signing.Bluefin == nil || v.Signing.Hyperliquid != nil || v.Margin == nil {
+				return invalid("bluefin_intent")
+			}
+			if v.Margin.Leverage == 0 || (v.Margin.Mode != "cross" && v.Margin.Mode != "isolated") || v.Signing.Bluefin.SignedAtMS <= 0 {
+				return invalid("bluefin_signing")
+			}
+			if err := validation.Text("validate bluefin signing", "session_id", v.Signing.Bluefin.SessionID, 128); err != nil {
+				return err
+			}
+			if _, err := validation.Number("validate bluefin signing", "salt", v.Signing.Bluefin.Salt, true, false); err != nil {
+				return err
+			}
+		} else if v.Signing.Bluefin != nil || v.Margin != nil {
+			return invalid("bluefin_intent")
 		}
 	default:
 		return invalid("kind")

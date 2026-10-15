@@ -20,12 +20,13 @@ type ListSymbolsSymbol struct {
 }
 
 type ListSymbolsVenue struct {
-	LiquidityModel string              `json:"liquidityModel"`
-	Name           string              `json:"name"`
-	Page           uint64              `json:"page"`
-	Limit          uint64              `json:"limit"`
-	Total          uint64              `json:"total"`
-	Symbols        []ListSymbolsSymbol `json:"symbols"`
+	MarketLiquidityModels *MarketLiquidityModels `json:"marketLiquidityModels,omitempty"`
+	LiquidityModel        string                 `json:"liquidityModel"`
+	Name                  string                 `json:"name"`
+	Page                  uint64                 `json:"page"`
+	Limit                 uint64                 `json:"limit"`
+	Total                 uint64                 `json:"total"`
+	Symbols               []ListSymbolsSymbol    `json:"symbols"`
 }
 
 type ListSymbolsResult struct {

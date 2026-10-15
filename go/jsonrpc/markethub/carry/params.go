@@ -54,6 +54,7 @@ func (r RouteSelector) Normalize() RouteSelector {
 //
 // Version:
 //   - 2026-09-06: Added.
+//   - 2026-10-14: Accept Sui Bluefin perpetual instruments without an AMM pool.
 func (r RouteSelector) Validate() error {
 	r = r.Normalize()
 	for _, m := range []MarketSelector{r.Buy, r.Sell} {
@@ -79,7 +80,8 @@ func (r RouteSelector) Validate() error {
 			if m.Network != NetworkMainnet {
 				return invalid("network=invalid")
 			}
-			if m.PoolID == "" {
+			bluefinPerp := m.Venue == "bluefin" && m.MarketType == MarketTypePerp && m.Chain == ChainSui
+			if m.PoolID == "" && !bluefinPerp {
 				return invalid("pool_id=empty")
 			}
 		}

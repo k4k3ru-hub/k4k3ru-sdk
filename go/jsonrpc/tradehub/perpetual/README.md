@@ -1,5 +1,7 @@
 # Manual perpetual RPC models
 
+Bluefin uses the separate [Bluefin-owned contracts](bluefin/README.md), including session authentication and the same common Execution entrances. The remainder of this page describes the Hyperliquid models.
+
 Owning import: `github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/tradehub/perpetual`.
 Method constants live in `jsonrpc`; no third-party Exchange types are exposed.
 

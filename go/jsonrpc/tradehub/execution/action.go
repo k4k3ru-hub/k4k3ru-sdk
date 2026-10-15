@@ -11,6 +11,7 @@ type SignedAction struct {
 	Venue     string          `json:"venue"`
 	Network   string          `json:"network"`
 	Signature json.RawMessage `json:"signature"`
+	SessionID string          `json:"sessionId,omitempty"`
 }
 
 type ActionReceipt struct {
@@ -29,12 +30,20 @@ type ActionReceipt struct {
 // Validate validates the signature envelope before a venue adapter checks its protocol.
 //
 // Version:
+//   - 2026-10-14: Keep Bluefin session references separate from signature values.
 //   - 2026-09-29: Added.
 func (a SignedAction) Validate() error {
 	for _, f := range []struct{ name, value string }{{"venue", a.Venue}, {"network", a.Network}} {
 		if err := validation.Text("validate signed action", f.name, f.value, 64); err != nil {
 			return err
 		}
+	}
+	if a.Venue == "bluefin" {
+		if err := validation.Text("validate signed action", "session_id", a.SessionID, 128); err != nil {
+			return err
+		}
+	} else if a.SessionID != "" {
+		return invalidSignedPayloadParameterError("session_id=unsupported")
 	}
 	if len(a.Signature) > 4096 {
 		return invalidSignedPayloadParameterError("signature=too_long")

@@ -22,7 +22,7 @@ client, err := httpclient.NewClient(httpclient.Config{
             return http.ErrUseLastResponse
         },
     },
-    // CredentialProvider: provider, // Omit for anonymous access.
+    CredentialProvider: provider, // Your authentication.CredentialProvider.
 })
 if err != nil {
     return err
@@ -45,7 +45,7 @@ if page.To < params.To {
 
 The caller owns the injected `HTTPDoer` and its timeout, connection and redirect
 policies. A standard `*http.Client` works; disable redirects when signing requests
-so credentials remain at the configured endpoint. For signed calls, inject an
+so credentials remain at the configured endpoint. Historical calls require an
 `authentication.CredentialProvider`; existing HMAC-SHA256 and Ed25519 credentials
 are supported. The provider is called for each request. Supplying a provider that
 fails does not fall back to anonymous access. `Now` and `Nonce` can be injected
@@ -57,10 +57,13 @@ There are no root aliases. The method constant is `jsonrpc.MethodMarketHubCandle
 No new production dependency is required.
 
 `Get` performs one request, with no automatic retries or page fetching. Every
-request counts toward the existing Gateway quota and may cost credits. Anonymous
-access allows 3 requests per rolling minute. Signed accounts allow 60 per minute,
-with the first 3 free and subsequent requests costing 100 credits each. A full day
-at 1m requires five requests when all 1,440 candles exist; pace anonymous calls.
+request counts toward the Gateway quota of 60 per rolling minute per account and
+method. Authentication is required; there is no free allowance. Each successful
+request costs 1,000 credits, including an empty result. A full day at 1m requires
+five requests when all 1,440 candles exist, costing 5,000 credits. Gateway confirms
+the debit before reading data and returns `out_of_ticks` when funds are insufficient.
+Upstream failures enqueue a refund. A nil credential provider leaves the generic
+transport unsigned; the Historical endpoint rejects those requests as `unauthorized`.
 
 Application errors remain inspectable with `errors.Is`/`errors.As`. Non-2xx HTTP
 responses return `*httpclient.HTTPError`, with `StatusCode` and `RetryAfter` (the raw

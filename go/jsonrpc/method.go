@@ -69,6 +69,8 @@ const (
 	MethodTradeHubSwapQuote                        Method = "TradeHub.AMMPool.Swap.Quote"
 	MethodTradeHubPerpetualAccountGet              Method = "TradeHub.Perpetual.Account.Get"
 	MethodTradeHubPerpetualOrderGet                Method = "TradeHub.Perpetual.Order.Get"
+	MethodTradeHubPerpetualSessionCreate           Method = "TradeHub.Perpetual.Session.Create"
+	MethodTradeHubPerpetualSessionDelete           Method = "TradeHub.Perpetual.Session.Delete"
 	MethodTradeHubExecutionPrepare                 Method = "TradeHub.Execution.Prepare"
 	MethodTradeHubExecutionSubmit                  Method = "TradeHub.Execution.Submit"
 	MethodTradeHubExecutionSubscribe               Method = "TradeHub.Execution.Subscribe"
