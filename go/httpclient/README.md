@@ -1,7 +1,7 @@
-# Historical candles over HTTP
+# MarketHub over HTTP
 
 `httpclient.NewClient` is the composition root for HTTP JSON-RPC. It constructs
-the request sender, MarketHub group and Candles operation once. It is separate
+the request sender, MarketHub group, Candles and Price operations once. It is separate
 from `websocket.NewModule`; Historical candles use HTTP only.
 
 ```go
@@ -74,3 +74,21 @@ Errors do not include raw response bodies or request authentication payloads.
 
 The client and contract have fake-transport and composition tests. The compiled
 [`ExampleCandlesClient_Get`](example_test.go) uses the same composition root.
+
+## Current price
+
+Import `github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/price` and use the
+same composed client:
+
+```go
+snapshot, err := client.MarketHub().Price().Get(ctx, price.Params{
+    Asset: "sui", MarketType: "spot",
+})
+if err != nil {
+    return err
+}
+// snapshot.Price can be nil; snapshot.SentAt is Unix microseconds.
+```
+
+Unlike Candles, Price permits an omitted CredentialProvider. Its quota and
+charging rules are documented in [the price contract](../jsonrpc/markethub/price/README.md).

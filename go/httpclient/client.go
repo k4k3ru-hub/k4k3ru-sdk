@@ -31,6 +31,7 @@ type Client struct {
 
 type MarketHubClient struct {
 	candles *CandlesClient
+	price   *PriceClient
 }
 
 type endpointParseError struct{ cause error }
@@ -55,6 +56,7 @@ func (e endpointParseError) Unwrap() error { return e.cause }
 // concurrent use when the resulting client is shared between goroutines.
 //
 // Version:
+//   - 2026-10-18: Compose the current-price client with the shared transport.
 //   - 2026-10-11: Added.
 func NewClient(config Config) (*Client, error) {
 	u, err := url.Parse(config.EndpointURL)
@@ -78,7 +80,22 @@ func NewClient(config Config) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create http client: %w", err)
 	}
-	return &Client{marketHub: &MarketHubClient{candles: candles}}, nil
+	price, err := newPriceClient(sender)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create http client: %w", err)
+	}
+	return &Client{marketHub: &MarketHubClient{candles: candles, price: price}}, nil
+}
+
+// Price returns the current Composite price operation client.
+//
+// Version:
+//   - 2026-10-18: Added.
+func (c *MarketHubClient) Price() *PriceClient {
+	if c == nil {
+		return nil
+	}
+	return c.price
 }
 
 // MarketHub returns the composed MarketHub HTTP API group.
