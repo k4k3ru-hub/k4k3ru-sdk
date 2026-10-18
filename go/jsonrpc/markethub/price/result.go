@@ -34,12 +34,12 @@ type Result struct {
 // Validate validates the response values and their availability relationship.
 //
 // Version:
-//   - 2026-10-18: Added.
+//   - 2026-10-18: Validate latest-price weighting with a rolling 60-second volume window.
 func (r Result) Validate() error {
 	if err := (Params{Asset: r.Asset, MarketType: r.MarketType}).Validate(); err != nil {
 		return fmt.Errorf("failed to validate price response: %w", err)
 	}
-	if r.Definition != "composite" || r.Currency != "USD" || r.Method != "vwap" || r.Interval != "5s" || r.SentAt <= 0 {
+	if r.Definition != "composite" || r.Currency != "USD" || r.Method != "volume_weighted_latest" || r.Interval != "60s" || r.SentAt <= 0 {
 		return fmt.Errorf("failed to validate price response: metadata=invalid")
 	}
 	switch r.Status {

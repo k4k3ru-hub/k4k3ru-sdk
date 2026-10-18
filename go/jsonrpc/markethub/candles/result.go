@@ -29,6 +29,7 @@ type Candle struct {
 // requested end is reached. Pages do not share an immutable publication snapshot.
 type Result struct {
 	Definition     string   `json:"definition"`
+	Method         string   `json:"method"` // Calculation identity; histories with different methods must not be spliced.
 	Asset          string   `json:"asset"`
 	MarketType     string   `json:"marketType"`
 	Interval       string   `json:"interval"`

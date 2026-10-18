@@ -41,9 +41,22 @@ stored values and `Revision`.
 `Coverage` reports membership evidence and missing minute publications inside
 each candle. Result-level `MissingMinutes` also counts entirely absent intervals
 inside the processed `[From,To)` window. A valid price does not imply complete
-volume or coverage. Idle publications have zero trades and nil prices; missing
+volume or coverage. Idle publications have zero trades and may retain a valid
+admitted price from the trailing window; missing
 publications have no row. Higher intervals aggregate whole intervals of stored
 one-minute publications; pages do not freeze revisions across requests.
 
 This replaces the previous interval-slot limit and opaque cursor contract.
 Update requests using limits over 300 or a cursor together with the server.
+
+The current method is `volume_weighted_latest`: each minute's OHLC is the path
+of Composite prices admitted by MarketHub, using latest market prices weighted
+by trailing 60-second base volume. `method` identifies this calculation separately
+from the candle `interval`. A usable price candle can have zero `tradeCount` when
+recent trades still contribute to the rolling price window. Volume is actual
+transaction-time volume, not repeated rolling volume. Missing conversion or
+observation evidence remains visible in coverage; it does not mean zero activity.
+
+The new method reads only its own history from a seven-day memory cache, populated
+by background Parquet restoration. It never splices the old five-second VWAP
+history. A range predating cutover may therefore be empty or shorter than requested.
