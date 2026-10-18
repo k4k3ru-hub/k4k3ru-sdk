@@ -1,8 +1,8 @@
 # MarketHub over HTTP
 
 `httpclient.NewClient` is the composition root for HTTP JSON-RPC. It constructs
-the request sender, MarketHub group, Candles and Price operations once. It is separate
-from `websocket.NewModule`; Historical candles use HTTP only.
+the request sender, MarketHub group, Candles, Price and Price.Change operations
+once. It is separate from `websocket.NewModule`; Historical candles use HTTP only.
 
 ```go
 import (
@@ -92,3 +92,28 @@ if err != nil {
 
 Unlike Candles, Price permits an omitted CredentialProvider. Its quota and
 charging rules are documented in [the price contract](../jsonrpc/markethub/price/README.md).
+
+## Price changes
+
+Import `github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/price/change`:
+
+```go
+changes, err := client.MarketHub().Price().Change().Get(ctx, change.Params{
+    Asset: "sui", MarketType: "spot",
+    Periods: []change.Period{change.Period5m, change.Period15m, change.Period24h},
+})
+if err != nil {
+    return err
+}
+// changes.Price is common to all periods. Each entry has its own status,
+// nullable changePercentage, referencePrice and referenceAt (Unix microseconds).
+```
+
+Omitting `Periods` selects all six supported periods. One HTTP call retrieves the
+entire selection; there is no automatic retry or candle fetch. The client verifies
+that the response includes each requested period exactly once, independent of
+response order. The [contract](../jsonrpc/markethub/price/change/README.md) documents
+backward reference selection and partial availability. The compiled
+[`ExamplePriceChangeClient_Get`](price_change_example_test.go) uses the same
+composition root. Server deployment and the new method's access/credit policy
+are separate from this SDK implementation.

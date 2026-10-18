@@ -32,3 +32,8 @@ Volume uses actual transaction-time totals and is not the sum of rolling weights
 New-method candle history starts at cutover; older five-second VWAP files are
 retained separately. Current-price responses are memory-only and do not restore
 an old candle close as a fresh price after restart.
+
+For multi-period percentage comparisons, use the separate
+[`MarketHub.Price.Change.Get` contract](change/README.md) and
+`client.MarketHub().Price().Change().Get(ctx, params)`. It returns the current
+price once and exposes the actual reference price/time and status for each period.

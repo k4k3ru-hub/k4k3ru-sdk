@@ -9,13 +9,30 @@ import (
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/price"
 )
 
-type PriceClient struct{ caller jsonRPCCaller }
+type PriceClient struct {
+	caller jsonRPCCaller
+	change *PriceChangeClient
+}
 
-func newPriceClient(caller jsonRPCCaller) (*PriceClient, error) {
+func newPriceClient(caller jsonRPCCaller, change *PriceChangeClient) (*PriceClient, error) {
 	if caller == nil {
 		return nil, fmt.Errorf("failed to create price client: caller=null")
 	}
-	return &PriceClient{caller: caller}, nil
+	if change == nil {
+		return nil, fmt.Errorf("failed to create price client: change_client=null")
+	}
+	return &PriceClient{caller: caller, change: change}, nil
+}
+
+// Change returns the composed Composite price-change operation client.
+//
+// Version:
+//   - 2026-10-18: Added.
+func (c *PriceClient) Change() *PriceChangeClient {
+	if c == nil {
+		return nil
+	}
+	return c.change
 }
 
 // Get retrieves the latest in-memory Composite price without automatic retries.
