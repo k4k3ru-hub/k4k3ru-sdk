@@ -38,10 +38,11 @@ type Result struct {
 	Symbol         market.Symbol     `json:"symbol,omitempty"` // Canonical pair for definition=venue.
 	Currency       string            `json:"currency"`         // OHLC and quote volume currency: USD.
 	Interval       string            `json:"interval"`
-	From           int64             `json:"from"`   // Unix seconds.
-	To             int64             `json:"to"`     // Processed range end in Unix seconds.
-	AsOf           int64             `json:"asOf"`   // Request evaluation time in Unix seconds.
-	SentAt         int64             `json:"sentAt"` // Public Gateway send time in Unix microseconds.
+	From           int64             `json:"from"`                  // Unix seconds.
+	To             int64             `json:"to"`                    // Processed range end in Unix seconds.
+	HistoryFrom    *int64            `json:"historyFrom,omitempty"` // Earliest retained minute in this series, Unix seconds; absent while unknown or empty. Not limited to this page; may be unusable.
+	AsOf           int64             `json:"asOf"`                  // Request evaluation time in Unix seconds.
+	SentAt         int64             `json:"sentAt"`                // Public Gateway send time in Unix microseconds.
 	Candles        []Candle          `json:"candles"`
 	MissingMinutes int               `json:"missingMinutes"`
 }

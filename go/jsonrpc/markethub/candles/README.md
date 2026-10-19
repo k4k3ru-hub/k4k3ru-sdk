@@ -5,8 +5,9 @@
 empty and unsupported types are errors. Existing callers must add the selector;
 the existing `marketType` values (`spot` / `perp`) remain unchanged.
 
-The HTTP operation reads Composite or one resolved Mainnet DEX market's candles
-from shared memory. `market` omitted selects Composite, including eligible CEX
+The HTTP operation reads Composite or one resolved Mainnet DEX market's candles.
+The recent seven days come from shared memory; earlier minutes come from retained
+Parquet history. `market` omitted selects Composite, including eligible CEX
 and DEX sources. Calculation versions and Parquet paths are not request parameters.
 Use [`httpclient.NewClient`](../../../httpclient/README.md) to compose the client,
 then `client.MarketHub().Candles().Get(ctx, candles.Params{...})`.
@@ -52,6 +53,15 @@ is the requested end, including trailing gaps. An entirely missing range returns
 an empty array and advances to the requested end. An empty final page is possible
 after a full page. There are no `cursor` / `nextCursor` fields.
 
+`Result.HistoryFrom` optionally gives the earliest retained one-minute publication
+for the selected series, in Unix seconds, independent of this page's range. It is
+omitted while the background history index is unknown or the series is empty.
+This boundary can be an idle/unusable minute; it does not promise usable prices
+or continuous coverage. The index refreshes in the background every five minutes.
+To load all history, first discover this boundary, align it down to the requested
+interval, and paginate to the desired end. Each request still has a maximum
+seven-day span and 300 returned candles. The SDK does not fetch pages automatically.
+
 `Result.From`, `To`, `AsOf`, and `Candle.Time` use Unix seconds. `AsOf` is the
 request evaluation time, not a completeness watermark or a snapshot selector.
 `Result.SentAt` is the public Gateway send time in Unix **microseconds**.
@@ -90,8 +100,10 @@ recent trades still contribute to the rolling price window. Volume is actual
 transaction-time volume, not repeated rolling volume. Missing conversion or
 observation evidence remains visible in coverage; it does not mean zero activity.
 
-The new method reads only its own history from a seven-day memory cache, populated
-by background Parquet restoration. It never splices the old five-second VWAP
+The new method reads only its own history. The seven-day memory cache is populated
+by background Parquet restoration; older requests read the same method's archive.
+An interval crossing the cache boundary aggregates the archive and memory portions
+once each. It never splices the old five-second VWAP
 history. A range predating cutover may therefore be empty or shorter than requested.
 
 Venue USD charts use the existing USD/USDT/USDC/USDG equivalence policy, or retained
@@ -102,5 +114,6 @@ remain visible. Venue and Composite OHLC have different time bases; both retain
 actual transaction-time volume.
 
 The existing 1,000-credit success charge and authenticated quota also apply to
-the new selectors and refresh requests. Console chart integration and its free
-internal route are a separate step; this change does not alter the paid Historical page.
+archive pages, selectors and refresh requests. The Console Market chart uses a
+free internal route to this same calculation and shares the account/method quota.
+The paid Historical page remains unchanged.
