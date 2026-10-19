@@ -14,10 +14,11 @@ import (
 // TestParamsValidate checks public limits, UTC alignment, ranges and asset selectors.
 //
 // Version:
+//   - 2026-10-19: Update required crypto asset selectors.
 //   - 2026-10-11: Added.
 func TestParamsValidate(t *testing.T) {
 	from := time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC).Unix()
-	base := Params{Asset: "btc", MarketType: "spot", From: from, To: from + 86400, Interval: "1m"}
+	base := Params{AssetType: "crypto", Asset: "btc", MarketType: "spot", From: from, To: from + 86400, Interval: "1m"}
 	for _, limit := range []int{0, 1, 300} {
 		for _, interval := range []string{"1m", "5m", "15m", "1h", "4h", "1d"} {
 			p := base
@@ -61,6 +62,7 @@ func TestParamsValidate(t *testing.T) {
 // TestCandleJSONContract preserves nullable prices and publication units without cursor fields.
 //
 // Version:
+//   - 2026-10-19: Update required crypto asset selectors.
 //   - 2026-10-11: Added.
 //   - 2026-10-18: Preserve the explicit calculation method in historical results.
 func TestCandleJSONContract(t *testing.T) {
@@ -76,7 +78,7 @@ func TestCandleJSONContract(t *testing.T) {
 	if err != nil || string(encoded) != wire {
 		t.Fatalf("result wire contract changed: %s %v", encoded, err)
 	}
-	params, err := json.Marshal(Params{Asset: "btc", MarketType: "spot", From: result.From, To: result.To, Interval: "1m"})
+	params, err := json.Marshal(Params{AssetType: "crypto", Asset: "btc", MarketType: "spot", From: result.From, To: result.To, Interval: "1m"})
 	if err != nil || strings.Contains(string(params), "cursor") || strings.Contains(string(params), "limit") {
 		t.Fatalf("unexpected default request fields: %s %v", params, err)
 	}

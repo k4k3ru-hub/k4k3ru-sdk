@@ -13,6 +13,7 @@ step; publishing this SDK does not deploy the endpoint.
   "id": "price-change-1",
   "method": "MarketHub.Price.Change.Get",
   "params": {
+    "assetType": "crypto",
     "asset": "sui",
     "marketType": "spot",
     "periods": ["5m", "15m", "24h"]
@@ -20,6 +21,9 @@ step; publishing this SDK does not deploy the endpoint.
 }
 ```
 
+- `assetType` is required and must be `crypto`; the Go type is
+  `finance/market.AssetClass` (`market.AssetClassCrypto`). Omission, null, empty
+  and unsupported values are errors. Normalize does not supply a default.
 - `asset` and `marketType` use the same canonical selectors as `Price.Get`:
   lowercase asset slug and `spot` or `perpetual`. `perp` is not accepted.
 - Supported periods are `5m`, `15m`, `1h`, `4h`, `24h`, `7d`; these are elapsed

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/authentication"
+	"github.com/k4k3ru-hub/k4k3ru-sdk/go/finance/market"
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/httpclient"
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/candles"
 )
@@ -32,6 +33,7 @@ func (environmentCredentialProvider) Credential(context.Context) (authentication
 // ExampleCandlesClient_Get shows one HTTP request and the next range position.
 //
 // Version:
+//   - 2026-10-19: Update required crypto asset selectors.
 //   - 2026-10-12: Require a credential provider for paid Historical requests.
 //   - 2026-10-11: Added.
 func ExampleCandlesClient_Get() {
@@ -49,7 +51,7 @@ func ExampleCandlesClient_Get() {
 		fmt.Println(err)
 		return
 	}
-	params := candles.Params{Asset: "btc", MarketType: "spot", From: 1791331200, To: 1791417600, Interval: "1m", Limit: 300}
+	params := candles.Params{AssetType: market.AssetClassCrypto, Asset: "btc", MarketType: "spot", From: 1791331200, To: 1791417600, Interval: "1m", Limit: 300}
 	page, err := client.MarketHub().Candles().Get(context.Background(), params)
 	if err != nil {
 		fmt.Println(err)

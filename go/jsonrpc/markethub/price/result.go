@@ -34,9 +34,10 @@ type Result struct {
 // Validate validates the response values and their availability relationship.
 //
 // Version:
+//   - 2026-10-19: Validate the crypto-only response independently of request defaults.
 //   - 2026-10-18: Validate latest-price weighting with a rolling 60-second volume window.
 func (r Result) Validate() error {
-	if err := (Params{Asset: r.Asset, MarketType: r.MarketType}).Validate(); err != nil {
+	if err := (Params{AssetType: market.AssetClassCrypto, Asset: r.Asset, MarketType: r.MarketType}).Validate(); err != nil {
 		return fmt.Errorf("failed to validate price response: %w", err)
 	}
 	if r.Definition != "composite" || r.Currency != "USD" || r.Method != "volume_weighted_latest" || r.Interval != "60s" || r.SentAt <= 0 {

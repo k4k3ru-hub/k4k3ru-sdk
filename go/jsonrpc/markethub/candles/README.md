@@ -1,5 +1,10 @@
 # MarketHub.Candles.Get
 
+`assetType` is required and only `crypto` is accepted. Use
+`AssetType: market.AssetClassCrypto` from `finance/market` in Go. Missing, null,
+empty and unsupported types are errors. Existing callers must add the selector;
+the existing `marketType` values (`spot` / `perp`) and Result remain unchanged.
+
 The HTTP operation reads stored Composite candles. Its stable series identifier
 is `composite`; calculation versions and Parquet paths are not request parameters.
 Use [`httpclient.NewClient`](../../../httpclient/README.md) to compose the client,
@@ -12,6 +17,7 @@ continuation pages. There is no anonymous access or free allowance.
 
 | Parameter | Contract |
 | --- | --- |
+| `assetType` | Required `crypto`, using the shared `finance/market.AssetClass` enum. No omission default. |
 | `asset` | Canonical lowercase asset slug, such as `btc`; required. |
 | `marketType` | `spot` or `perp`; required. |
 | `from`, `to` | Positive Unix **seconds**; half-open `[from,to)` range of at most 7 days, aligned to the interval. |

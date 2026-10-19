@@ -8,14 +8,15 @@ import (
 // TestPriceContract checks selectors, decimal values and unavailable serialization.
 //
 // Version:
+//   - 2026-10-19: Update required crypto asset selectors.
 //   - 2026-10-18: Added.
 func TestPriceContract(t *testing.T) {
-	for _, p := range []Params{{"sui", "spot"}, {"btc", "perpetual"}} {
+	for _, p := range []Params{{AssetType: "crypto", Asset: "sui", MarketType: "spot"}, {AssetType: "crypto", Asset: "btc", MarketType: "perpetual"}} {
 		if err := p.Validate(); err != nil {
 			t.Fatal(err)
 		}
 	}
-	for _, p := range []Params{{"SUI", "spot"}, {"sui", "perp"}, {"../sui", "spot"}, {"sui", ""}} {
+	for _, p := range []Params{{AssetType: "crypto", Asset: "SUI", MarketType: "spot"}, {AssetType: "crypto", Asset: "sui", MarketType: "perp"}, {AssetType: "crypto", Asset: "../sui", MarketType: "spot"}, {AssetType: "crypto", Asset: "sui"}} {
 		if p.Validate() == nil {
 			t.Fatalf("invalid selectors accepted: %+v", p)
 		}

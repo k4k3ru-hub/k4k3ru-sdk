@@ -40,7 +40,7 @@ func (f credentialFunc) Credential(ctx context.Context) (authentication.Credenti
 }
 
 func testParams() candles.Params {
-	return candles.Params{Asset: "btc", MarketType: "spot", From: 1791417600, To: 1791504000, Interval: "1m", Limit: 1}
+	return candles.Params{AssetType: "crypto", Asset: "btc", MarketType: "spot", From: 1791417600, To: 1791504000, Interval: "1m", Limit: 1}
 }
 
 func decodeTestRequest(t *testing.T, r *http.Request) jsonrpc.Request {

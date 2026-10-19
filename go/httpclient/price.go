@@ -12,16 +12,31 @@ import (
 type PriceClient struct {
 	caller jsonRPCCaller
 	change *PriceChangeClient
+	ranges *PriceRangeClient
 }
 
-func newPriceClient(caller jsonRPCCaller, change *PriceChangeClient) (*PriceClient, error) {
+func newPriceClient(caller jsonRPCCaller, change *PriceChangeClient, ranges *PriceRangeClient) (*PriceClient, error) {
 	if caller == nil {
 		return nil, fmt.Errorf("failed to create price client: caller=null")
 	}
 	if change == nil {
 		return nil, fmt.Errorf("failed to create price client: change_client=null")
 	}
-	return &PriceClient{caller: caller, change: change}, nil
+	if ranges == nil {
+		return nil, fmt.Errorf("failed to create price client: range_client=null")
+	}
+	return &PriceClient{caller: caller, change: change, ranges: ranges}, nil
+}
+
+// Range returns the composed Composite price-range operation client.
+//
+// Version:
+//   - 2026-10-19: Added.
+func (c *PriceClient) Range() *PriceRangeClient {
+	if c == nil {
+		return nil
+	}
+	return c.ranges
 }
 
 // Change returns the composed Composite price-change operation client.

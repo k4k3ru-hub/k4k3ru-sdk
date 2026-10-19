@@ -4,6 +4,11 @@
 canonical asset slug, and `Params.MarketType` uses the owning
 `finance/market.MarketType` (`spot` or `perpetual`).
 
+`Params.AssetType` is required: use `market.AssetClassCrypto` from
+`finance/market` (`"assetType":"crypto"`). Missing, null, empty and unsupported
+values are rejected; no crypto default is applied. Existing requests must add
+the field. The Result is unchanged.
+
 `Result.Price` is a decimal string pointer, `nil` for `unavailable`.
 `Status` is `live`, `stale`, or `unavailable`. The fixed metadata is
 `definition: composite`, `currency: USD`, `method: volume_weighted_latest`, `interval: 60s`.

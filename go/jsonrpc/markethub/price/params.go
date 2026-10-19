@@ -11,6 +11,7 @@ import (
 var assetPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,63}$`)
 
 type Params struct {
+	AssetType  market.AssetClass `json:"assetType"` // Required; only crypto is supported.
 	Asset      string            `json:"asset"`
 	MarketType market.MarketType `json:"marketType"`
 }
@@ -18,8 +19,15 @@ type Params struct {
 // Validate validates the canonical asset and supported Composite market type.
 //
 // Version:
+//   - 2026-10-19: Require the crypto asset type.
 //   - 2026-10-18: Added.
 func (p Params) Validate() error {
+	if p.AssetType == market.AssetClassUnknown {
+		return fmt.Errorf("failed to validate price parameters: %w: asset_type=empty", apperror.InvalidParameter())
+	}
+	if p.AssetType != market.AssetClassCrypto {
+		return fmt.Errorf("failed to validate price parameters: %w: asset_type=invalid", apperror.InvalidParameter())
+	}
 	if !assetPattern.MatchString(p.Asset) {
 		return fmt.Errorf("failed to validate price parameters: %w: asset=invalid", apperror.InvalidParameter())
 	}

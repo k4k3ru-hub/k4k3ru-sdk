@@ -56,6 +56,7 @@ func (e endpointParseError) Unwrap() error { return e.cause }
 // concurrent use when the resulting client is shared between goroutines.
 //
 // Version:
+//   - 2026-10-19: Compose the price-range client with the shared transport.
 //   - 2026-10-18: Compose current-price and price-change clients with the shared transport.
 //   - 2026-10-11: Added.
 func NewClient(config Config) (*Client, error) {
@@ -84,16 +85,21 @@ func NewClient(config Config) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create http client: %w", err)
 	}
-	price, err := newPriceClient(sender, change)
+	ranges, err := newPriceRangeClient(sender)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create http client: %w", err)
+	}
+	price, err := newPriceClient(sender, change, ranges)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create http client: %w", err)
 	}
 	return &Client{marketHub: &MarketHubClient{candles: candles, price: price}}, nil
 }
 
-// Price returns the Composite price group with current-price and change operations.
+// Price returns the Composite price group with current-price, change and range operations.
 //
 // Version:
+//   - 2026-10-19: Include the composed price-range operation.
 //   - 2026-10-18: Include the composed price-change operation.
 func (c *MarketHubClient) Price() *PriceClient {
 	if c == nil {

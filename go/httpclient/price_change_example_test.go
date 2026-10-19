@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/k4k3ru-hub/k4k3ru-sdk/go/finance/market"
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/httpclient"
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/price/change"
 )
@@ -13,6 +14,7 @@ import (
 // ExamplePriceChangeClient_Get shows a multi-period request through the composition root.
 //
 // Version:
+//   - 2026-10-19: Update required crypto asset selectors.
 //   - 2026-10-18: Added.
 func ExamplePriceChangeClient_Get() {
 	client, err := httpclient.NewClient(httpclient.Config{
@@ -26,7 +28,7 @@ func ExamplePriceChangeClient_Get() {
 		fmt.Println(err)
 		return
 	}
-	result, err := client.MarketHub().Price().Change().Get(context.Background(), change.Params{
+	result, err := client.MarketHub().Price().Change().Get(context.Background(), change.Params{AssetType: market.AssetClassCrypto,
 		Asset: "sui", MarketType: "spot", Periods: []change.Period{change.Period5m, change.Period24h},
 	})
 	if err != nil {

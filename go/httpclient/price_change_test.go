@@ -30,6 +30,7 @@ func unavailableChanges(params change.Params) change.Result {
 // TestPriceChangeComposition verifies constructor wiring, shared authentication and one request for all selected periods.
 //
 // Version:
+//   - 2026-10-19: Update required crypto asset selectors.
 //   - 2026-10-18: Added.
 func TestPriceChangeComposition(t *testing.T) {
 	for _, signed := range []bool{false, true} {
@@ -89,7 +90,7 @@ func TestPriceChangeComposition(t *testing.T) {
 				t.Fatal("composition made a request or omitted an operation")
 			}
 			for i, periods := range [][]change.Period{nil, {change.Period24h, change.Period5m}} {
-				params := change.Params{Asset: "sui", MarketType: "perpetual", Periods: periods}
+				params := change.Params{AssetType: "crypto", Asset: "sui", MarketType: "perpetual", Periods: periods}
 				original := slices.Clone(periods)
 				result, err := client.MarketHub().Price().Change().Get(t.Context(), params)
 				if err != nil || result == nil || calls != i+1 || !slices.Equal(original, params.Periods) || len(result.Changes) != len(params.Normalize().Periods) {
@@ -103,6 +104,7 @@ func TestPriceChangeComposition(t *testing.T) {
 // TestPriceChangePreservesPartialSnapshot returns available periods even when another period is unavailable.
 //
 // Version:
+//   - 2026-10-19: Update required crypto asset selectors.
 //   - 2026-10-18: Added.
 func TestPriceChangePreservesPartialSnapshot(t *testing.T) {
 	raw := json.RawMessage(`{
@@ -118,7 +120,7 @@ func TestPriceChangePreservesPartialSnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, err := client.Get(t.Context(), change.Params{Asset: "sui", MarketType: "spot", Periods: []change.Period{change.Period5m, change.Period15m, change.Period24h}})
+	result, err := client.Get(t.Context(), change.Params{AssetType: "crypto", Asset: "sui", MarketType: "spot", Periods: []change.Period{change.Period5m, change.Period15m, change.Period24h}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,9 +132,10 @@ func TestPriceChangePreservesPartialSnapshot(t *testing.T) {
 // TestPriceChangeRejectsMalformedResults rejects wrong selectors, missing periods and invalid payloads.
 //
 // Version:
+//   - 2026-10-19: Update required crypto asset selectors.
 //   - 2026-10-18: Added.
 func TestPriceChangeRejectsMalformedResults(t *testing.T) {
-	params := change.Params{Asset: "sui", MarketType: "spot", Periods: []change.Period{change.Period5m, change.Period24h}}
+	params := change.Params{AssetType: "crypto", Asset: "sui", MarketType: "spot", Periods: []change.Period{change.Period5m, change.Period24h}}
 	for name, mutate := range map[string]func(*change.Result){
 		"wrong asset":      func(r *change.Result) { r.Asset = "eth" },
 		"wrong market":     func(r *change.Result) { r.MarketType = "perpetual" },
@@ -173,9 +176,10 @@ func TestPriceChangeRejectsMalformedResults(t *testing.T) {
 // TestPriceChangeErrors preserves errors and avoids transport calls for invalid or canceled requests.
 //
 // Version:
+//   - 2026-10-19: Update required crypto asset selectors.
 //   - 2026-10-18: Added.
 func TestPriceChangeErrors(t *testing.T) {
-	params := change.Params{Asset: "sui", MarketType: "spot"}
+	params := change.Params{AssetType: "crypto", Asset: "sui", MarketType: "spot"}
 	calls := 0
 	want := apperror.OutOfTicks()
 	client, err := newPriceChangeClient(callerFunc(func(context.Context, jsonrpc.Method, json.RawMessage) (json.RawMessage, error) {
@@ -212,7 +216,7 @@ func TestPriceChangeErrors(t *testing.T) {
 	if _, err := newPriceChangeClient(nil); err == nil {
 		t.Fatal("nil caller accepted")
 	}
-	if _, err := newPriceClient(client.caller, nil); err == nil {
+	if _, err := newPriceClient(client.caller, nil, nil); err == nil {
 		t.Fatal("missing nested operation accepted")
 	}
 }

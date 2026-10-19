@@ -24,6 +24,7 @@ const (
 )
 
 type Params struct {
+	AssetType  market.AssetClass `json:"assetType"` // Required; only crypto is supported.
 	Asset      string            `json:"asset"`
 	MarketType market.MarketType `json:"marketType"`
 	Periods    []Period          `json:"periods,omitempty"` // Empty selects all six periods.
@@ -71,9 +72,10 @@ func (p Params) Normalize() Params {
 // Omitted or empty periods select the complete default set.
 //
 // Version:
+//   - 2026-10-19: Require the crypto asset type.
 //   - 2026-10-18: Added.
 func (p Params) Validate() error {
-	if err := (price.Params{Asset: p.Asset, MarketType: p.MarketType}).Validate(); err != nil {
+	if err := (price.Params{AssetType: p.AssetType, Asset: p.Asset, MarketType: p.MarketType}).Validate(); err != nil {
 		return fmt.Errorf("failed to validate price change parameters: %w", err)
 	}
 	if len(p.Periods) > maxPeriods {

@@ -14,13 +14,14 @@ import (
 // TestParameterDefaults verifies omitted periods and independent per-request slices.
 //
 // Version:
+//   - 2026-10-19: Update required crypto asset selectors.
 //   - 2026-10-18: Added.
 func TestParameterDefaults(t *testing.T) {
 	want := []Period{Period5m, Period15m, Period1h, Period4h, Period24h, Period7d}
 	for _, raw := range []string{
-		`{"asset":"sui","marketType":"spot"}`,
-		`{"asset":"sui","marketType":"spot","periods":[]}`,
-		`{"asset":"sui","marketType":"spot","periods":null}`,
+		`{"assetType":"crypto","asset":"sui","marketType":"spot"}`,
+		`{"assetType":"crypto","asset":"sui","marketType":"spot","periods":[]}`,
+		`{"assetType":"crypto","asset":"sui","marketType":"spot","periods":null}`,
 	} {
 		var original Params
 		if err := json.Unmarshal([]byte(raw), &original); err != nil {
@@ -38,7 +39,7 @@ func TestParameterDefaults(t *testing.T) {
 			t.Fatal("defaults share mutable storage")
 		}
 	}
-	original := Params{Asset: "btc", MarketType: "perpetual", Periods: []Period{Period24h, Period5m}}
+	original := Params{AssetType: "crypto", Asset: "btc", MarketType: "perpetual", Periods: []Period{Period24h, Period5m}}
 	value := original.Normalize()
 	if !slices.Equal(value.Periods, original.Periods) {
 		t.Fatal("normalization reordered selected periods")
@@ -52,33 +53,34 @@ func TestParameterDefaults(t *testing.T) {
 // TestParameterValidation preserves invalid-parameter errors and rejects ambiguous selections.
 //
 // Version:
+//   - 2026-10-19: Update required crypto asset selectors.
 //   - 2026-10-18: Added.
 func TestParameterValidation(t *testing.T) {
 	for _, p := range []Params{
-		{Asset: "sui", MarketType: "spot"},
-		{Asset: "eth", MarketType: "perpetual", Periods: []Period{Period5m, Period7d}},
+		{AssetType: "crypto", Asset: "sui", MarketType: "spot"},
+		{AssetType: "crypto", Asset: "eth", MarketType: "perpetual", Periods: []Period{Period5m, Period7d}},
 	} {
 		if err := p.Validate(); err != nil {
 			t.Fatal(err)
 		}
 	}
 	for _, p := range []Params{
-		{Asset: "", MarketType: "spot"},
-		{Asset: "SUI", MarketType: "spot"},
-		{Asset: "sui/usdc", MarketType: "spot"},
-		{Asset: "sui", MarketType: "perp"},
-		{Asset: "sui", MarketType: "future"},
-		{Asset: "sui", MarketType: "spot", Periods: []Period{"1d"}},
-		{Asset: "sui", MarketType: "spot", Periods: []Period{"365d"}},
-		{Asset: "sui", MarketType: "spot", Periods: []Period{""}},
-		{Asset: "sui", MarketType: "spot", Periods: []Period{Period5m, Period5m}},
-		{Asset: "sui", MarketType: "spot", Periods: make([]Period, 7)},
+		{AssetType: "crypto", Asset: "", MarketType: "spot"},
+		{AssetType: "crypto", Asset: "SUI", MarketType: "spot"},
+		{AssetType: "crypto", Asset: "sui/usdc", MarketType: "spot"},
+		{AssetType: "crypto", Asset: "sui", MarketType: "perp"},
+		{AssetType: "crypto", Asset: "sui", MarketType: "future"},
+		{AssetType: "crypto", Asset: "sui", MarketType: "spot", Periods: []Period{"1d"}},
+		{AssetType: "crypto", Asset: "sui", MarketType: "spot", Periods: []Period{"365d"}},
+		{AssetType: "crypto", Asset: "sui", MarketType: "spot", Periods: []Period{""}},
+		{AssetType: "crypto", Asset: "sui", MarketType: "spot", Periods: []Period{Period5m, Period5m}},
+		{AssetType: "crypto", Asset: "sui", MarketType: "spot", Periods: make([]Period, 7)},
 	} {
 		if err := p.Validate(); !errors.Is(err, apperror.InvalidParameter()) {
 			t.Fatalf("invalid parameters accepted or error chain lost: %+v %v", p, err)
 		}
 	}
-	oversized := Params{Asset: "sui", MarketType: "spot", Periods: []Period{Period(strings.Repeat("sensitive", 1024))}}
+	oversized := Params{AssetType: "crypto", Asset: "sui", MarketType: "spot", Periods: []Period{Period(strings.Repeat("sensitive", 1024))}}
 	err := oversized.Validate()
 	if err == nil || strings.Contains(err.Error(), "sensitive") {
 		t.Fatal("invalid input echoed into an error")

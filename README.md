@@ -29,6 +29,12 @@ import (
 
 ### Historical Composite candles
 
+`MarketHub.Price.Get`・`Price.Change.Get`・`Price.Range.Get`・`Candles.Get`は、
+Requestの`assetType: "crypto"`が必須です。Goでは既存の
+`finance/market.AssetClassCrypto`を指定してください。省略時の補完は行わず、
+空・null・未対応値はエラーです。既存Requestにも追加が必要です。
+`Price.Range.Get`の[契約と充足率](go/jsonrpc/markethub/price/range/README.md)も参照してください。
+
 `MarketHub.Candles.Get` は保存済みCompositeをHTTPで取得します。公開型は
 [`jsonrpc/markethub/candles`](go/jsonrpc/markethub/candles/README.md)、呼び出しは
 [`httpclient.NewClient`](go/httpclient/README.md) が組み立てる

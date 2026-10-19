@@ -1,7 +1,7 @@
 # MarketHub over HTTP
 
 `httpclient.NewClient` is the composition root for HTTP JSON-RPC. It constructs
-the request sender, MarketHub group, Candles, Price and Price.Change operations
+the request sender, MarketHub group, Candles, Price, Price.Change and Price.Range operations
 once. It is separate from `websocket.NewModule`; Historical candles use HTTP only.
 
 ```go
@@ -11,6 +11,7 @@ import (
     "time"
 
     "github.com/k4k3ru-hub/k4k3ru-sdk/go/httpclient"
+    "github.com/k4k3ru-hub/k4k3ru-sdk/go/finance/market"
     "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/candles"
 )
 
@@ -29,6 +30,7 @@ if err != nil {
 }
 
 params := candles.Params{
+    AssetType: market.AssetClassCrypto,
     Asset: "btc", MarketType: "spot",
     From: 1791331200, To: 1791417600, // 2026-10-07 UTC, [from,to).
     Interval: "1m", Limit: 300,
@@ -82,6 +84,7 @@ same composed client:
 
 ```go
 snapshot, err := client.MarketHub().Price().Get(ctx, price.Params{
+    AssetType: market.AssetClassCrypto,
     Asset: "sui", MarketType: "spot",
 })
 if err != nil {
@@ -99,6 +102,7 @@ Import `github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/price/change`:
 
 ```go
 changes, err := client.MarketHub().Price().Change().Get(ctx, change.Params{
+    AssetType: market.AssetClassCrypto,
     Asset: "sui", MarketType: "spot",
     Periods: []change.Period{change.Period5m, change.Period15m, change.Period24h},
 })
@@ -117,3 +121,31 @@ backward reference selection and partial availability. The compiled
 [`ExamplePriceChangeClient_Get`](price_change_example_test.go) uses the same
 composition root. Server deployment and the new method's access/credit policy
 are separate from this SDK implementation.
+
+## Price ranges and required asset type
+
+Price.Get, Price.Change.Get, Price.Range.Get and Candles.Get require
+`AssetType: market.AssetClassCrypto` (`"assetType":"crypto"` on the wire).
+Missing, null, empty or unsupported types are rejected before HTTP is called.
+There is no default. Existing requests must add this field before migrating to
+the corresponding server version. Result shapes for the existing APIs do not
+change. No existing `assetClass` fields on other APIs are renamed.
+
+Import `pricerange "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/price/range"`:
+
+```go
+ranges, err := client.MarketHub().Price().Range().Get(ctx, pricerange.Params{
+    AssetType: market.AssetClassCrypto,
+    Asset: "sui", MarketType: market.MarketTypeSpot,
+    Periods: []pricerange.Period{pricerange.Period5m, pricerange.Period24h},
+})
+if err != nil {
+    return err
+}
+// ranges.Ranges includes High/Low even when CoverageStatus is insufficient.
+// Low/High are nil only when unavailable. All timestamps use Unix microseconds.
+```
+
+See the [range contract](../jsonrpc/markethub/price/range/README.md) and compiled
+[`ExamplePriceRangeClient_Get`](price_range_example_test.go). Range server
+deployment and access/credit policy are not part of this SDK implementation.
