@@ -32,6 +32,7 @@ type Client struct {
 type MarketHubClient struct {
 	candles *CandlesClient
 	price   *PriceClient
+	volume  *VolumeClient
 }
 
 type endpointParseError struct{ cause error }
@@ -56,7 +57,7 @@ func (e endpointParseError) Unwrap() error { return e.cause }
 // concurrent use when the resulting client is shared between goroutines.
 //
 // Version:
-//   - 2026-10-19: Compose the price-range client with the shared transport.
+//   - 2026-10-19: Compose price-range and volume clients with the shared transport.
 //   - 2026-10-18: Compose current-price and price-change clients with the shared transport.
 //   - 2026-10-11: Added.
 func NewClient(config Config) (*Client, error) {
@@ -93,7 +94,11 @@ func NewClient(config Config) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create http client: %w", err)
 	}
-	return &Client{marketHub: &MarketHubClient{candles: candles, price: price}}, nil
+	volume, err := newVolumeClient(sender)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create http client: %w", err)
+	}
+	return &Client{marketHub: &MarketHubClient{candles: candles, price: price, volume: volume}}, nil
 }
 
 // Price returns the Composite price group with current-price, change and range operations.
@@ -128,4 +133,15 @@ func (c *MarketHubClient) Candles() *CandlesClient {
 		return nil
 	}
 	return c.candles
+}
+
+// Volume returns the observed USD volume operation client.
+//
+// Version:
+//   - 2026-10-19: Added.
+func (c *MarketHubClient) Volume() *VolumeClient {
+	if c == nil {
+		return nil
+	}
+	return c.volume
 }

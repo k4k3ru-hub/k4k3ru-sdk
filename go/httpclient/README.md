@@ -1,7 +1,7 @@
 # MarketHub over HTTP
 
 `httpclient.NewClient` is the composition root for HTTP JSON-RPC. It constructs
-the request sender, MarketHub group, Candles, Price, Price.Change and Price.Range operations
+the request sender, MarketHub group, Candles, Price, Price.Change, Price.Range and Volume operations
 once. It is separate from `websocket.NewModule`; Historical candles use HTTP only.
 
 ```go
@@ -149,3 +149,58 @@ if err != nil {
 See the [range contract](../jsonrpc/markethub/price/range/README.md) and compiled
 [`ExamplePriceRangeClient_Get`](price_range_example_test.go). Range server
 deployment and access/credit policy are not part of this SDK implementation.
+
+
+## Observed USD volume
+
+`client.MarketHub().Volume().Get(ctx, volume.Params{...})` calls
+`MarketHub.Volume.Get` once for the selected periods. Types belong to
+`github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/volume`.
+The constructor composes this client with the same injected transport and
+credential provider; requests do not retry automatically.
+
+```go
+volumes, err := client.MarketHub().Volume().Get(ctx, volume.Params{
+    AssetType: market.AssetClassCrypto,
+    Asset: "sui", MarketType: market.MarketTypeSpot,
+    Periods: []volume.Period{volume.Period5m, volume.Period24h},
+})
+if err != nil {
+    return err
+}
+for _, v := range volumes.Volumes {
+    if v.Volume == nil {
+        continue // No usable turnover or verified idle observation.
+    }
+    // *v.Volume is observed USD turnover, not an estimate of missing markets.
+    // Retain v.CoverageStatus and v.CoveragePercentage with the value.
+}
+```
+
+`assetType` is required and currently accepts only `crypto`. `asset` uses the
+same lowercase canonical slug as Price APIs, e.g. `sui`; `marketType` accepts
+`spot` or `perpetual`. Omitted periods select `5m`, `15m`, `1h`, `4h`, `24h`,
+and `7d`. Explicit periods retain their order; duplicates are invalid.
+
+- `method` is `sum`, `definition` is `composite`, and `currency` is `USD`.
+- `from` is `floorMinute(to - period)`. Each period includes retained developing
+  amounts up to the common evaluation time, so the interval may be less than one
+  minute longer than its nominal duration. `from`, `to` and `sentAt` are Unix μs;
+  `sentAt` is the Gateway send time, not observation or evaluation time.
+- Each source trade contributes once. Supported CEX/DEX markets and pools are
+  summed; Perpetual turnover is notional, not margin or open interest.
+- USD conversion uses the stored trade-time valuation under existing supported
+  quote policies. No current-price revaluation or missing-volume extrapolation.
+- Coverage counts only closed minutes in which **all then-expected markets**
+  have valid observation and USD conversion evidence. Developing minutes do not
+  increase coverage. `sufficient` starts at 50%; it does not mean complete.
+- Partial amounts remain available with `insufficient`. An observed zero is
+  `"0"`; missing evidence is `null` with `unavailable`. A zero price-candle volume
+  by itself does not establish that no trades occurred.
+- Input source-minute amounts retain the existing floating-point aggregation
+  precision; the decimal wire representation does not add accounting precision.
+
+See [`ExampleVolumeClient_Get`](volume_example_test.go) for a compiled example.
+The SDK contract and MarketHub implementation are staged. Public Gateway
+admission, pricing/limits and Console integration await the Volume policy review;
+this does not imply that the operation is enabled at a deployed endpoint.
