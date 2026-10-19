@@ -18,19 +18,22 @@ const (
 var assetPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,63}$`)
 
 type Params struct {
-	AssetType  market.AssetClass `json:"assetType"` // Required; only crypto is supported.
-	Asset      string            `json:"asset"`
-	MarketType string            `json:"marketType"` // spot or perp
-	From       int64             `json:"from"`       // Inclusive Unix seconds.
-	To         int64             `json:"to"`         // Exclusive Unix seconds.
-	Interval   string            `json:"interval"`
-	Limit      int               `json:"limit,omitempty"` // Returned candles; zero selects DefaultLimit.
+	AssetType      market.AssetClass    `json:"assetType"` // Required; only crypto is supported.
+	Asset          string               `json:"asset"`
+	MarketType     string               `json:"marketType"`       // spot or perp
+	Market         *market.MarketTarget `json:"market,omitempty"` // Omitted selects Composite; otherwise resolve one mainnet DEX market.
+	From           int64                `json:"from"`             // Inclusive Unix seconds.
+	To             int64                `json:"to"`               // Exclusive Unix seconds.
+	Interval       string               `json:"interval"`
+	Limit          int                  `json:"limit,omitempty"`          // Returned candles; zero selects DefaultLimit.
+	IncludeCurrent bool                 `json:"includeCurrent,omitempty"` // Include developing candles within the selected range.
 }
 
-// Validate validates the bounded, interval-aligned historical candle selectors.
-// The server additionally rejects ranges containing unclosed minutes.
+// Validate validates bounded, interval-aligned candle selectors and an optional market.
+// The server checks the requested end against its clock and resolves market identity.
 //
 // Version:
+//   - 2026-10-19: Accept one market target and optional developing candles.
 //   - 2026-10-19: Require the crypto asset type without changing candle selectors.
 //   - 2026-10-11: Add the cursor-free contract with at most 300 returned candles.
 func (p Params) Validate() error {
@@ -42,6 +45,11 @@ func (p Params) Validate() error {
 	}
 	if !assetPattern.MatchString(p.Asset) || (p.MarketType != "spot" && p.MarketType != "perp") {
 		return fmt.Errorf("failed to validate candle parameters: %w: asset_or_market_type=invalid", apperror.InvalidParameter())
+	}
+	if p.Market != nil {
+		if err := p.Market.Validate(); err != nil {
+			return fmt.Errorf("failed to validate candle parameters: %w", err)
+		}
 	}
 	step := int64(p.Step() / time.Second)
 	if step == 0 {

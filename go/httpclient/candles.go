@@ -25,12 +25,14 @@ func newCandlesClient(caller jsonRPCCaller) (*CandlesClient, error) {
 	return &CandlesClient{caller: caller}, nil
 }
 
-// Get retrieves one page of persisted Composite candles, ordered by UTC start.
+// Get retrieves one page of Composite or resolved-market candles, ordered by UTC start.
 // Set params.From to result.To to continue until the original params.To is reached.
+// With IncludeCurrent, refresh overlapping recent intervals and replace bars by start time.
 // Each call can consume quota and credits; this method does not retry or fetch
 // subsequent pages automatically.
 //
 // Version:
+//   - 2026-10-19: Accept resolved market metadata and optional developing candles.
 //   - 2026-10-11: Added.
 func (c *CandlesClient) Get(ctx context.Context, params candles.Params) (*candles.Result, error) {
 	if c == nil || c.caller == nil {
@@ -75,6 +77,28 @@ func validateCandlePage(result *candles.Result, params candles.Params) error {
 	if result.Asset != params.Asset || result.MarketType != params.MarketType || result.Interval != params.Interval {
 		return fmt.Errorf("failed to validate candle response: selectors=invalid")
 	}
+	if params.Market == nil {
+		if result.Definition != "composite" || result.Market != nil {
+			return fmt.Errorf("failed to validate candle response: series=invalid")
+		}
+	} else {
+		if result.Definition != "venue" || result.Market == nil || result.Currency != "USD" {
+			return fmt.Errorf("failed to validate candle response: series=invalid")
+		}
+		if err := result.Market.Validate(); err != nil {
+			return fmt.Errorf("failed to validate candle response: %w", err)
+		}
+		if err := result.Symbol.Validate(); err != nil {
+			return fmt.Errorf("failed to validate candle response: %w", err)
+		}
+		target, resolved := params.Market.Normalize(), result.Market.Normalize()
+		if target.Venue != resolved.Venue || target.Network != resolved.Network ||
+			target.Chain != "" && target.Chain != resolved.Chain ||
+			target.PoolID != "" && target.PoolID != resolved.PoolID ||
+			target.VenueSymbol != "" && target.VenueSymbol != resolved.VenueSymbol {
+			return fmt.Errorf("failed to validate candle response: market=invalid")
+		}
+	}
 	if result.From != params.From || result.To <= result.From || result.To > params.To || result.To%step != 0 {
 		return fmt.Errorf("failed to validate candle response: range=out_of_range")
 	}
@@ -83,6 +107,9 @@ func validateCandlePage(result *candles.Result, params candles.Params) error {
 	}
 	previous := result.From - step
 	for _, candle := range result.Candles {
+		if !params.IncludeCurrent && !candle.Closed {
+			return fmt.Errorf("failed to validate candle response: closed=invalid")
+		}
 		if candle.Time < result.From || candle.Time >= result.To || candle.Time%step != 0 || candle.Time <= previous {
 			return fmt.Errorf("failed to validate candle response: candle_time=invalid")
 		}

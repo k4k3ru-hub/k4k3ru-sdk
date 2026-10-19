@@ -62,11 +62,12 @@ func TestParamsValidate(t *testing.T) {
 // TestCandleJSONContract preserves nullable prices and publication units without cursor fields.
 //
 // Version:
+//   - 2026-10-19: Include USD currency and the public send timestamp.
 //   - 2026-10-19: Update required crypto asset selectors.
 //   - 2026-10-11: Added.
 //   - 2026-10-18: Preserve the explicit calculation method in historical results.
 func TestCandleJSONContract(t *testing.T) {
-	const wire = `{"definition":"composite","method":"volume_weighted_latest","asset":"btc","marketType":"spot","interval":"1m","from":1791417600,"to":1791417660,"asOf":1791418000,"candles":[{"time":1791417600,"open":null,"high":null,"low":null,"close":null,"volume":0,"quoteVolume":0,"tradeCount":0,"quality":0,"usable":false,"closed":true,"revision":"stored","publishedAt":1791417662000000,"coverage":{"known":true,"expectedSourceMinutes":1,"coveredSourceMinutes":1,"contributingSourceMinutes":0,"missingMinutes":0}}],"missingMinutes":0}`
+	const wire = `{"definition":"composite","method":"volume_weighted_latest","asset":"btc","marketType":"spot","currency":"USD","interval":"1m","from":1791417600,"to":1791417660,"asOf":1791418000,"sentAt":1791418000123456,"candles":[{"time":1791417600,"open":null,"high":null,"low":null,"close":null,"volume":0,"quoteVolume":0,"tradeCount":0,"quality":0,"usable":false,"closed":true,"revision":"stored","publishedAt":1791417662000000,"coverage":{"known":true,"expectedSourceMinutes":1,"coveredSourceMinutes":1,"contributingSourceMinutes":0,"missingMinutes":0}}],"missingMinutes":0}`
 	var result Result
 	if err := json.Unmarshal([]byte(wire), &result); err != nil {
 		t.Fatal(err)

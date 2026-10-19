@@ -1,5 +1,7 @@
 package candles
 
+import "github.com/k4k3ru-hub/k4k3ru-sdk/go/finance/market"
+
 type Coverage struct {
 	Known                     bool `json:"known"`
 	ExpectedSourceMinutes     int  `json:"expectedSourceMinutes"`
@@ -19,7 +21,7 @@ type Candle struct {
 	TradeCount  uint64   `json:"tradeCount"`
 	Quality     uint64   `json:"quality"`
 	Usable      bool     `json:"usable"`
-	Closed      bool     `json:"closed"`
+	Closed      bool     `json:"closed"` // Interval ended, including the seal delay; later corrections remain possible.
 	Revision    string   `json:"revision"`
 	PublishedAt int64    `json:"publishedAt"` // Unix microseconds; zero means unknown.
 	Coverage    Coverage `json:"coverage"`
@@ -28,14 +30,18 @@ type Candle struct {
 // Result covers [From, To). To is the next request's From until the originally
 // requested end is reached. Pages do not share an immutable publication snapshot.
 type Result struct {
-	Definition     string   `json:"definition"`
-	Method         string   `json:"method"` // Calculation identity; histories with different methods must not be spliced.
-	Asset          string   `json:"asset"`
-	MarketType     string   `json:"marketType"`
-	Interval       string   `json:"interval"`
-	From           int64    `json:"from"` // Unix seconds.
-	To             int64    `json:"to"`   // Processed range end in Unix seconds.
-	AsOf           int64    `json:"asOf"` // Request evaluation time in Unix seconds.
-	Candles        []Candle `json:"candles"`
-	MissingMinutes int      `json:"missingMinutes"`
+	Definition     string            `json:"definition"`
+	Method         string            `json:"method"` // Calculation identity; histories with different methods must not be spliced.
+	Asset          string            `json:"asset"`
+	MarketType     string            `json:"marketType"`
+	Market         *market.MarketRef `json:"market,omitempty"` // Concrete market for definition=venue.
+	Symbol         market.Symbol     `json:"symbol,omitempty"` // Canonical pair for definition=venue.
+	Currency       string            `json:"currency"`         // OHLC and quote volume currency: USD.
+	Interval       string            `json:"interval"`
+	From           int64             `json:"from"`   // Unix seconds.
+	To             int64             `json:"to"`     // Processed range end in Unix seconds.
+	AsOf           int64             `json:"asOf"`   // Request evaluation time in Unix seconds.
+	SentAt         int64             `json:"sentAt"` // Public Gateway send time in Unix microseconds.
+	Candles        []Candle          `json:"candles"`
+	MissingMinutes int               `json:"missingMinutes"`
 }

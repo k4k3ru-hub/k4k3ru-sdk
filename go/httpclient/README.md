@@ -74,6 +74,24 @@ Malformed/mismatched envelopes, invalid continuation bounds and responses over
 2 MiB are rejected. The response-size bound applies after HTTP decompression.
 Errors do not include raw response bodies or request authentication payloads.
 
+Candles can also select one Mainnet DEX market and include the current interval:
+
+```go
+params.Asset = "sui"
+params.Market = &market.MarketTarget{
+    Venue: "cetus", Chain: "sui", Network: "mainnet", PoolID: "<pool-id>",
+}
+params.IncludeCurrent = true
+// Keep From/To aligned to Interval. To may reach the current interval's end.
+page, err = client.MarketHub().Candles().Get(ctx, params)
+```
+
+`market` omitted selects Composite. Without `poolId`/`venueSymbol`, the server
+requires a unique match; ambiguous markets are errors. Refresh recent intervals
+with new requests and replace bars by start time, rather than summing their volume.
+`Closed` separates developing and closed intervals; `SentAt` is microseconds.
+Authentication and the 1,000-credit charge remain applicable to every successful call.
+
 The client and contract have fake-transport and composition tests. The compiled
 [`ExampleCandlesClient_Get`](example_test.go) uses the same composition root.
 
