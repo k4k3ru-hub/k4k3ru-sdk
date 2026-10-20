@@ -27,6 +27,13 @@ import (
 )
 ```
 
+### Current estimated funding rates
+
+市場別の推定Funding率には`client.MarketHub().Funding().Get(ctx, params)`を追加しています。
+Request／Result・120秒の鮮度判定は
+[`funding`の契約](go/jsonrpc/markethub/funding/README.md)を参照してください。
+SDK・MarketHub側のメモリ参照処理までの対応で、公開Gatewayの料金・利用上限とConsole接続は後続です。
+
 ### Quantity-specific market estimates
 
 Trade estimate用の`MarketHub.Quote.Get`は、

@@ -16,6 +16,7 @@ const (
 	MethodMarketHubPriceRangeGet                   Method = "MarketHub.Price.Range.Get"
 	MethodMarketHubVolumeGet                       Method = "MarketHub.Volume.Get"
 	MethodMarketHubQuoteGet                        Method = "MarketHub.Quote.Get"
+	MethodMarketHubFundingGet                      Method = "MarketHub.Funding.Get"
 	MethodMarketHubScalpingSubscribe               Method = "MarketHub.Scalping.Subscribe"
 	MethodMarketHubScalpingUnsubscribe             Method = "MarketHub.Scalping.Unsubscribe"
 	MethodMarketHubAMMPoolGet                      Method = "MarketHub.AMMPool.Get"

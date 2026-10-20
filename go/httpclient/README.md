@@ -1,7 +1,7 @@
 # MarketHub over HTTP
 
 `httpclient.NewClient` is the composition root for HTTP JSON-RPC. It constructs
-the request sender, MarketHub group, Candles, Price, Price.Change, Price.Range, Volume and Quote operations
+the request sender, MarketHub group, Candles, Price, Price.Change, Price.Range, Volume, Quote and Funding operations
 once. It is separate from `websocket.NewModule`; Historical candles use HTTP only.
 
 ```go
