@@ -1,7 +1,7 @@
 # MarketHub over HTTP
 
 `httpclient.NewClient` is the composition root for HTTP JSON-RPC. It constructs
-the request sender, MarketHub group, Candles, Price, Price.Change, Price.Range, Volume, Quote and Funding operations
+the request sender, MarketHub group, Candles, Price, Price.Change, Price.Range, Volume, Quote, Funding and OpenInterest operations
 once. It is separate from `websocket.NewModule`; Historical candles use HTTP only.
 
 ```go
@@ -267,3 +267,14 @@ See the [contract and JSON examples](../jsonrpc/markethub/quote/README.md) and
 [`ExampleQuoteClient_Get`](quote_example_test.go). The SDK and application
 integration are implemented. SDK publication, dependency updates and Docker rollout
 remain separate steps; SDK availability does not enable a deployed endpoint.
+
+## Current open interest
+
+`client.MarketHub().OpenInterest().Get(ctx, params)` reads current normalized
+Perpetual OI with required crypto asset type, canonical symbol and market scopes.
+Use `jsonrpc/markethub/openinterest` for the contract and `finance/market` for
+market selectors. The response separates Base-equivalent quantity from the
+native-currency valuation and preserves live/stale/unavailable status.
+See [the contract](../jsonrpc/markethub/openinterest/README.md) and
+[the composition-root example](open_interest_example_test.go).
+The server's public Gateway rollout is required before use against that endpoint.

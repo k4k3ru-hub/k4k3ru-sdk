@@ -27,6 +27,12 @@ import (
 )
 ```
 
+### Current open interest
+
+市場別の現在OIには`client.MarketHub().OpenInterest().Get(ctx, params)`を使用します。
+Base資産換算数量・評価額・評価通貨・評価根拠を返します。公開Gatewayへの接続は後続工程です。
+[`openinterest`の契約](go/jsonrpc/markethub/openinterest/README.md)を参照してください。
+
 ### Current estimated funding rates
 
 市場別の推定Funding率には`client.MarketHub().Funding().Get(ctx, params)`を追加しています。
