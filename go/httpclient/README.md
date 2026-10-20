@@ -1,7 +1,7 @@
 # MarketHub over HTTP
 
 `httpclient.NewClient` is the composition root for HTTP JSON-RPC. It constructs
-the request sender, MarketHub group, Candles, Price, Price.Change, Price.Range and Volume operations
+the request sender, MarketHub group, Candles, Price, Price.Change, Price.Range, Volume and Quote operations
 once. It is separate from `websocket.NewModule`; Historical candles use HTTP only.
 
 ```go
@@ -222,3 +222,48 @@ See [`ExampleVolumeClient_Get`](volume_example_test.go) for a compiled example.
 The SDK contract and MarketHub implementation are staged. Public Gateway
 admission, pricing/limits and Console integration await the Volume policy review;
 this does not imply that the operation is enabled at a deployed endpoint.
+
+## Quantity-specific quotes
+
+`client.MarketHub().Quote().Get(ctx, params)` calls `MarketHub.Quote.Get` once.
+Import request/response types from their owning package:
+
+```go
+import "github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/quote"
+
+estimates, err := client.MarketHub().Quote().Get(ctx, quote.Params{
+    AssetType: market.AssetClassCrypto,
+    MarketType: market.MarketTypeSpot,
+    Symbol: "SUI/USDC", Side: quote.SideBuy,
+    Quantity: market.Quantity{Amount: "100", Decimals: 0},
+    Markets: []market.MarketTarget{
+        {Venue: market.Cetus, Chain: "sui", Network: "mainnet"},
+        {Venue: market.Turbos, Chain: "sui", Network: "mainnet"},
+    },
+})
+if err != nil {
+    return err
+}
+for _, q := range estimates.Quotes {
+    if q.Status != quote.StatusVWAP {
+        continue // Reference-only and unavailable markets cannot be the best full-quantity estimate.
+    }
+    // Spot: netPayQuantity and netReceiveQuantity are present.
+    // netPrice and these quantities already reflect trading fees; gas is excluded.
+}
+```
+
+Spot Buy quantity is Quote payment; Spot Sell quantity is Base payment.
+For Perpetual, both sides specify Base-denominated contract quantity, and the
+response omits payment/receipt token quantities. Quantity is not margin or leverage.
+`sentAt` is the Gateway send time in Unix microseconds, not market freshness.
+
+The client validates status-dependent fields, echoed selectors/quantity and
+resolved market scope; it does not rank, retry, build transactions or send orders.
+Constructor composition performs no network I/O. Inject the same HTTP transport
+and credential provider used by the other operation groups.
+
+See the [contract and JSON examples](../jsonrpc/markethub/quote/README.md) and
+[`ExampleQuoteClient_Get`](quote_example_test.go). The SDK and application
+integration are implemented. SDK publication, dependency updates and Docker rollout
+remain separate steps; SDK availability does not enable a deployed endpoint.

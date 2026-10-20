@@ -27,6 +27,15 @@ import (
 )
 ```
 
+### Quantity-specific market estimates
+
+Trade estimate用の`MarketHub.Quote.Get`は、
+[`quote`の契約](go/jsonrpc/markethub/quote/README.md)と
+`client.MarketHub().Quote().Get(ctx, params)`を追加しています。
+Spotは支払数量、PerpetualはBase建て契約数量を指定します。
+MarketHub／Gateway／Consoleの接続実装まで完了しています。
+稼働環境への反映にはSDKの公開版への依存更新とDocker更新が必要です。
+
 ### Historical Composite candles
 
 `MarketHub.Price.Get`・`Price.Change.Get`・`Price.Range.Get`・`Candles.Get`は、

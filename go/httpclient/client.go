@@ -33,6 +33,7 @@ type MarketHubClient struct {
 	candles *CandlesClient
 	price   *PriceClient
 	volume  *VolumeClient
+	quote   *QuoteClient
 }
 
 type endpointParseError struct{ cause error }
@@ -57,6 +58,7 @@ func (e endpointParseError) Unwrap() error { return e.cause }
 // concurrent use when the resulting client is shared between goroutines.
 //
 // Version:
+//   - 2026-10-20: Compose the quantity-specific quote client with the shared transport.
 //   - 2026-10-19: Compose price-range and volume clients with the shared transport.
 //   - 2026-10-18: Compose current-price and price-change clients with the shared transport.
 //   - 2026-10-11: Added.
@@ -98,7 +100,11 @@ func NewClient(config Config) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create http client: %w", err)
 	}
-	return &Client{marketHub: &MarketHubClient{candles: candles, price: price, volume: volume}}, nil
+	quote, err := newQuoteClient(sender)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create http client: %w", err)
+	}
+	return &Client{marketHub: &MarketHubClient{candles: candles, price: price, volume: volume, quote: quote}}, nil
 }
 
 // Price returns the Composite price group with current-price, change and range operations.
@@ -144,4 +150,15 @@ func (c *MarketHubClient) Volume() *VolumeClient {
 		return nil
 	}
 	return c.volume
+}
+
+// Quote returns the quantity-specific market estimate operation client.
+//
+// Version:
+//   - 2026-10-20: Added.
+func (c *MarketHubClient) Quote() *QuoteClient {
+	if c == nil {
+		return nil
+	}
+	return c.quote
 }
