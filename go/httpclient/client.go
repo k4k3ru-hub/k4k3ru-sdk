@@ -30,6 +30,7 @@ type Client struct {
 }
 
 type MarketHubClient struct {
+	markets      *MarketsClient
 	candles      *CandlesClient
 	price        *PriceClient
 	volume       *VolumeClient
@@ -60,6 +61,7 @@ func (e endpointParseError) Unwrap() error { return e.cause }
 // concurrent use when the resulting client is shared between goroutines.
 //
 // Version:
+//   - 2026-10-20: Compose production market discovery with the shared transport.
 //   - 2026-10-20: Compose current open interest with the shared transport.
 //   - 2026-10-20: Compose current estimated funding with the shared transport.
 //   - 2026-10-20: Compose the quantity-specific quote client with the shared transport.
@@ -84,6 +86,10 @@ func NewClient(config Config) (*Client, error) {
 		config.Nonce = signature.GenerateNonce
 	}
 	sender := &requestSender{endpoint: u.String(), http: config.HTTPClient, credentials: config.CredentialProvider, now: config.Now, nonce: config.Nonce}
+	markets, err := newMarketsClient(sender)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create http client: %w", err)
+	}
 	candles, err := newCandlesClient(sender)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create http client: %w", err)
@@ -116,7 +122,18 @@ func NewClient(config Config) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create http client: %w", err)
 	}
-	return &Client{marketHub: &MarketHubClient{candles: candles, price: price, volume: volume, quote: quote, funding: funding, openInterest: openInterest}}, nil
+	return &Client{marketHub: &MarketHubClient{markets: markets, candles: candles, price: price, volume: volume, quote: quote, funding: funding, openInterest: openInterest}}, nil
+}
+
+// Markets returns the production market discovery operation client.
+//
+// Version:
+//   - 2026-10-20: Added.
+func (c *MarketHubClient) Markets() *MarketsClient {
+	if c == nil {
+		return nil
+	}
+	return c.markets
 }
 
 // Funding returns the current estimated perpetual funding operation client.

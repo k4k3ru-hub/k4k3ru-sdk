@@ -11,6 +11,7 @@ const maxMethodLength = 64
 type Method string
 
 const (
+	MethodMarketHubMarketsList                     Method = "MarketHub.Markets.List"
 	MethodMarketHubPriceGet                        Method = "MarketHub.Price.Get"
 	MethodMarketHubPriceChangeGet                  Method = "MarketHub.Price.Change.Get"
 	MethodMarketHubPriceRangeGet                   Method = "MarketHub.Price.Range.Get"

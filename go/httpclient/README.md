@@ -1,8 +1,16 @@
 # MarketHub over HTTP
 
 `httpclient.NewClient` is the composition root for HTTP JSON-RPC. It constructs
-the request sender, MarketHub group, Candles, Price, Price.Change, Price.Range, Volume, Quote, Funding and OpenInterest operations
+the request sender, MarketHub group, Markets, Candles, Price, Price.Change, Price.Range, Volume, Quote, Funding and OpenInterest operations
 once. It is separate from `websocket.NewModule`; Historical candles use HTTP only.
+
+For production market discovery, use
+`client.MarketHub().Markets().List(ctx, markets.Params{AssetType: market.AssetClassCrypto, Asset: "sui", MarketType: market.MarketTypePerpetual})`.
+Import the owning [`jsonrpc/markethub/markets`](../jsonrpc/markethub/markets/README.md)
+package. It returns one page (default 1, default limit 100, maximum 500), with
+market identities, asset IDs, Composite eligibility and candle support.
+It neither retries nor fetches another page automatically. This new endpoint's
+server connection and access/credit policy are separate from the SDK addition.
 
 ```go
 import (

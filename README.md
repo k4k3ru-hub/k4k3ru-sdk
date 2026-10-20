@@ -27,6 +27,14 @@ import (
 )
 ```
 
+### Production market discovery
+
+資産別の市場一覧には`client.MarketHub().Markets().List(ctx, params)`を追加しています。
+市場識別情報・資産ID・Compositeの対象可否・個別Candleの提供可否を返します。
+Request／Result・ページング・検証規則は
+[`markets`の契約](go/jsonrpc/markethub/markets/README.md)を参照してください。
+SDKまでの対応で、MarketHub／Gateway／Consoleの接続と料金・利用上限は後続です。
+
 ### Current open interest
 
 市場別の現在OIには`client.MarketHub().OpenInterest().Get(ctx, params)`を使用します。
