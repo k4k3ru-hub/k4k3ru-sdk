@@ -17,6 +17,7 @@ import (
 // TestAssetTypeRequired rejects missing, null and unsupported selectors in all asset APIs.
 //
 // Version:
+//   - 2026-10-21: Check complete requests and permit strict decode-time validation.
 //   - 2026-10-19: Added.
 func TestAssetTypeRequired(t *testing.T) {
 	type validator interface{ Validate() error }
@@ -29,22 +30,46 @@ func TestAssetTypeRequired(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			for _, raw := range []string{`{}`, `{"assetType":null}`, `{"assetType":""}`, `{"assetType":"fx"}`, `{"assetType":"stock"}`, `{"assetType":"Crypto"}`, `{"assetType":" crypto "}`} {
-				p := makeParams()
-				if err := json.Unmarshal([]byte(raw), p); err != nil {
+			decode := func(raw string, p validator) error {
+				t.Helper()
+				base, err := json.Marshal(makeParams())
+				if err != nil {
 					t.Fatal(err)
 				}
-				if err := p.Validate(); !errors.Is(err, apperror.InvalidParameter()) {
+				var fields, patch map[string]json.RawMessage
+				if err := json.Unmarshal(base, &fields); err != nil {
+					t.Fatal(err)
+				}
+				if err := json.Unmarshal([]byte(raw), &patch); err != nil {
+					t.Fatal(err)
+				}
+				delete(fields, "assetType")
+				for key, value := range patch {
+					fields[key] = value
+				}
+				body, err := json.Marshal(fields)
+				if err != nil {
+					t.Fatal(err)
+				}
+				return json.Unmarshal(body, p)
+			}
+			for _, raw := range []string{`{}`, `{"assetType":null}`, `{"assetType":""}`, `{"assetType":"fx"}`, `{"assetType":"stock"}`, `{"assetType":"Crypto"}`, `{"assetType":" crypto "}`} {
+				p := makeParams()
+				err := decode(raw, p)
+				if err == nil {
+					err = p.Validate()
+				}
+				if !errors.Is(err, apperror.InvalidParameter()) {
 					t.Fatalf("accepted invalid asset type: %s: %v", raw, err)
 				}
 			}
 			for _, raw := range []string{`{"assetType":1}`, `{"assetType":{}}`, `{"assetType":[]}`} {
-				if err := json.Unmarshal([]byte(raw), makeParams()); err == nil {
+				if err := decode(raw, makeParams()); err == nil {
 					t.Fatalf("accepted wrong JSON type: %s", raw)
 				}
 			}
 			p := makeParams()
-			if err := json.Unmarshal([]byte(`{"assetType":"crypto"}`), p); err != nil {
+			if err := decode(`{"assetType":"crypto"}`, p); err != nil {
 				t.Fatal(err)
 			}
 			if err := p.Validate(); err != nil {

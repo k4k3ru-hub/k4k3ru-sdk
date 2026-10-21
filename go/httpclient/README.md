@@ -122,6 +122,24 @@ if err != nil {
 Unlike Candles, Price permits an omitted CredentialProvider. Its quota and
 charging rules are documented in [the price contract](../jsonrpc/markethub/price/README.md).
 
+To include individual Mainnet DEX prices, pass up to 64 exact references from
+`Markets.List`. The Composite remains unchanged, and the client validates the
+returned market identities and order:
+
+```go
+snapshot, err := client.MarketHub().Price().Get(ctx, price.Params{
+    AssetType: market.AssetClassCrypto,
+    Asset: "sui", MarketType: "perpetual",
+    Markets: []market.MarketRef{
+        {Venue: "hyperliquid", Network: "mainnet", VenueSymbol: "SUI"},
+    },
+})
+if err != nil {
+    return err
+}
+// snapshot.Markets[0].Price may be nil independently of snapshot.Price.
+```
+
 ## Price changes
 
 Import `github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/price/change`:

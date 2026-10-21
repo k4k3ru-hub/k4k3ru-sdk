@@ -50,10 +50,11 @@ func (c *PriceClient) Change() *PriceChangeClient {
 	return c.change
 }
 
-// Get retrieves the latest in-memory Composite price without automatic retries.
+// Get retrieves Composite and optional individual market prices without automatic retries.
 // Each request shares the account's method quota and may consume credits.
 //
 // Version:
+//   - 2026-10-21: Bind individual market results to exact requested references.
 //   - 2026-10-18: Added.
 func (c *PriceClient) Get(ctx context.Context, params price.Params) (*price.Result, error) {
 	if c == nil || c.caller == nil || ctx == nil {
@@ -65,6 +66,7 @@ func (c *PriceClient) Get(ctx context.Context, params price.Params) (*price.Resu
 	if err := params.Validate(); err != nil {
 		return nil, fmt.Errorf("failed to get price: %w", err)
 	}
+	params = params.Normalize()
 	encoded, err := json.Marshal(params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode price parameters: %w", err)
@@ -80,11 +82,8 @@ func (c *PriceClient) Get(ctx context.Context, params price.Params) (*price.Resu
 	if result == nil {
 		return nil, fmt.Errorf("failed to get price: result=null")
 	}
-	if err := result.Validate(); err != nil {
+	if err := result.ValidateFor(params); err != nil {
 		return nil, fmt.Errorf("failed to get price: %w", err)
-	}
-	if result.Asset != params.Asset || result.MarketType != params.MarketType {
-		return nil, fmt.Errorf("failed to get price: selectors=invalid")
 	}
 	return result, nil
 }

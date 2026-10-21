@@ -1,4 +1,4 @@
-# Current Composite price
+# Current Composite and market prices
 
 `MarketHub.Price.Get` is an HTTP snapshot operation. `Params.Asset` is the
 canonical asset slug, and `Params.MarketType` uses the owning
@@ -7,7 +7,7 @@ canonical asset slug, and `Params.MarketType` uses the owning
 `Params.AssetType` is required: use `market.AssetClassCrypto` from
 `finance/market` (`"assetType":"crypto"`). Missing, null, empty and unsupported
 values are rejected; no crypto default is applied. Existing requests must add
-the field. The Result is unchanged.
+the field. Omitting `markets` preserves the Composite-only response.
 
 `Result.Price` is a decimal string pointer, `nil` for `unavailable`.
 `Status` is `live`, `stale`, or `unavailable`. The fixed metadata is
@@ -37,6 +37,29 @@ Volume uses actual transaction-time totals and is not the sum of rolling weights
 New-method candle history starts at cutover; older five-second VWAP files are
 retained separately. Current-price responses are memory-only and do not restore
 an old candle close as a fresh price after restart.
+
+## Individual markets
+
+Optionally pass `Params.Markets` with 1–64 exact `finance/market.MarketRef` values
+returned by `MarketHub.Markets.List`. The initial scope is Mainnet DEX markets.
+AMMs require chain/network/pool identity; order books require network/venueSymbol.
+Empty, null, duplicate, unsupported and mismatched asset/market-type selections
+are rejected. The requested order is preserved in `Result.Markets` and verified
+by the HTTP client. The selection does **not** filter Composite contributors.
+
+Each `MarketPrice` contains `market`, canonical `symbol`, `currency: USD`,
+`method: last_trade`, nullable `price`, and `status`. It is the latest valid
+Trade/Swap execution price, converted with retained USD rates during background
+refresh; it is neither a size-specific quote nor a fee-adjusted price. Each
+market independently returns live (last trade within 60 seconds and valid FX),
+stale (retained valid price), or unavailable (no valid retained value).
+All entries share the response's `sentAt`; it does not indicate execution time.
+No per-market interval or contributor count is returned. Use `Quote.Get` for
+size-specific execution estimates.
+
+One batch is one request under the existing quota/credit policy. No additional
+Venue RPC or Parquet read is made by Price.Get, and restarting does not restore
+individual current prices from historical candles.
 
 For multi-period percentage comparisons, use the separate
 [`MarketHub.Price.Change.Get` contract](change/README.md) and
