@@ -307,6 +307,12 @@ The server's public Gateway rollout is required before use against that endpoint
 
 ## Asset metadata
 
+Use `client.MarketHub().Asset().List(ctx, asset.ListParams{AssetType: "crypto", MarketType: "spot", Search: "sui", Limit: 25})`
+to discover assets. The existing Asset client also owns this operation; no
+additional transport or constructor is needed. See the [list contract](../jsonrpc/markethub/asset/LIST.md).
+One call fetches one page and validates its filters; there is no automatic
+pagination or retry. Asset.List pricing and public Gateway rollout are pending.
+
 `client.MarketHub().Asset().Get(ctx, asset.Params{AssetType: "crypto", Asset: "sui"})`
 returns registered Mainnet metadata independently of current prices. Import the
 owning `jsonrpc/markethub/asset` package; see its [contract](../jsonrpc/markethub/asset/README.md)

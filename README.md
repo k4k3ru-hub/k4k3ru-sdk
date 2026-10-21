@@ -29,6 +29,11 @@ import (
 
 ### Registered asset metadata
 
+資産一覧・検索には`client.MarketHub().Asset().List(ctx, asset.ListParams{AssetType: "crypto", Search: "sui", Limit: 25})`を使用します。
+任意のMarket Type絞込みとページングに対応し、名前・シンボル・全対応Market Typeを返します。
+価格などの指標はカテゴリ別APIで取得します。[Asset.Listの契約](go/jsonrpc/markethub/asset/LIST.md)を参照してください。
+Asset.Listの公開Gateway接続・料金・利用上限は次のレビュー対象です。
+
 資産名・シンボル・登録済みMarket Typeの取得には
 `client.MarketHub().Asset().Get(ctx, params)`を使用します。
 Requestは必須の`assetType: "crypto"`と`asset`のみです。

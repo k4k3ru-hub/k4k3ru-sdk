@@ -3,6 +3,9 @@
 Registered Mainnet asset metadata from MarketHub's in-memory Registry/Catalog.
 No request-time Parquet, Venue RPC, external metadata or price history is needed.
 
+For paginated search and discovery, see [Asset.List](LIST.md). Both operations
+use the same Catalog identities and full registered market-type coverage.
+
 ## Request
 
 ```json

@@ -27,3 +27,24 @@ func ExampleAssetClient_Get() {
 	}
 	_ = result
 }
+
+// ExampleAssetClient_List shows asset discovery with optional type and search filters.
+//
+// Version:
+//   - 2026-10-21: Added.
+func ExampleAssetClient_List() {
+	client, err := httpclient.NewClient(httpclient.Config{
+		EndpointURL: "https://api.example.test/",
+		HTTPClient:  &http.Client{Timeout: 10 * time.Second},
+	})
+	if err != nil {
+		return
+	}
+	result, err := client.MarketHub().Asset().List(context.Background(), asset.ListParams{
+		AssetType: "crypto", MarketType: "spot", Search: "sui", Limit: 25,
+	})
+	if err != nil {
+		return
+	}
+	_ = result
+}
