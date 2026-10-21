@@ -30,6 +30,7 @@ type Client struct {
 }
 
 type MarketHubClient struct {
+	asset        *AssetClient
 	markets      *MarketsClient
 	candles      *CandlesClient
 	price        *PriceClient
@@ -61,6 +62,7 @@ func (e endpointParseError) Unwrap() error { return e.cause }
 // concurrent use when the resulting client is shared between goroutines.
 //
 // Version:
+//   - 2026-10-21: Compose registered asset metadata with the shared transport.
 //   - 2026-10-20: Compose production market discovery with the shared transport.
 //   - 2026-10-20: Compose current open interest with the shared transport.
 //   - 2026-10-20: Compose current estimated funding with the shared transport.
@@ -86,6 +88,10 @@ func NewClient(config Config) (*Client, error) {
 		config.Nonce = signature.GenerateNonce
 	}
 	sender := &requestSender{endpoint: u.String(), http: config.HTTPClient, credentials: config.CredentialProvider, now: config.Now, nonce: config.Nonce}
+	asset, err := newAssetClient(sender)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create http client: %w", err)
+	}
 	markets, err := newMarketsClient(sender)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create http client: %w", err)
@@ -122,7 +128,7 @@ func NewClient(config Config) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create http client: %w", err)
 	}
-	return &Client{marketHub: &MarketHubClient{markets: markets, candles: candles, price: price, volume: volume, quote: quote, funding: funding, openInterest: openInterest}}, nil
+	return &Client{marketHub: &MarketHubClient{asset: asset, markets: markets, candles: candles, price: price, volume: volume, quote: quote, funding: funding, openInterest: openInterest}}, nil
 }
 
 // Markets returns the production market discovery operation client.
@@ -212,4 +218,15 @@ func (c *MarketHubClient) OpenInterest() *OpenInterestClient {
 		return nil
 	}
 	return c.openInterest
+}
+
+// Asset returns the registered asset metadata operation client.
+//
+// Version:
+//   - 2026-10-21: Added.
+func (c *MarketHubClient) Asset() *AssetClient {
+	if c == nil {
+		return nil
+	}
+	return c.asset
 }

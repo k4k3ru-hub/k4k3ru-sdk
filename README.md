@@ -27,6 +27,14 @@ import (
 )
 ```
 
+### Registered asset metadata
+
+資産名・シンボル・登録済みMarket Typeの取得には
+`client.MarketHub().Asset().Get(ctx, params)`を使用します。
+Requestは必須の`assetType: "crypto"`と`asset`のみです。
+[Asset.Getの契約](go/jsonrpc/markethub/asset/README.md)を参照してください。
+公開Gatewayの料金・利用上限とConsoleへの接続は後続工程です。
+
 ### Production market discovery
 
 資産別の市場一覧には`client.MarketHub().Markets().List(ctx, params)`を追加しています。

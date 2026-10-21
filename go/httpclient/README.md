@@ -304,3 +304,11 @@ native-currency valuation and preserves live/stale/unavailable status.
 See [the contract](../jsonrpc/markethub/openinterest/README.md) and
 [the composition-root example](open_interest_example_test.go).
 The server's public Gateway rollout is required before use against that endpoint.
+
+## Asset metadata
+
+`client.MarketHub().Asset().Get(ctx, asset.Params{AssetType: "crypto", Asset: "sui"})`
+returns registered Mainnet metadata independently of current prices. Import the
+owning `jsonrpc/markethub/asset` package; see its [contract](../jsonrpc/markethub/asset/README.md)
+and [composition example](asset_example_test.go). Public Gateway pricing and
+admission remain a separate rollout step.
