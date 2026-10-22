@@ -2,6 +2,8 @@ module github.com/k4k3ru-hub/k4k3ru-sdk/go
 
 go 1.25.7
 
+toolchain go1.27.3
+
 require (
 	github.com/ethereum/go-ethereum v1.17.3
 	github.com/k4k3ru-hub/onchain/go v0.0.0-20260926052811-d42337ea7d66

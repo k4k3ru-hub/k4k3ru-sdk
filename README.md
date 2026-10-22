@@ -450,3 +450,9 @@ MarketHub側はResultと購読型を持ち、`websocket.NewModule` が
 TradeHub側の保存・配信と合わせて更新してください。現在の配信元は
 `evaluation_unavailable`を返し、MarketHubの実データによる条件評価は次工程です。
 `Scalping.Get`は将来の注文・ポジション取得用として保留しています。
+
+## Go toolchain
+
+開発・検証にはGo 1.27.3を使用し、モジュールの最低対応Goは維持しています。
+`toolchain`指定はこのモジュール内の開発に適用されます。TLSの修正を取り込むには、
+利用アプリケーション側でも修正版Goを選び、再ビルドしてください。
