@@ -44,6 +44,7 @@ type MarketPrice struct {
 // Validate validates the response values and their availability relationship.
 //
 // Version:
+//   - 2026-10-22: Validate the reference-price cutover contract.
 //   - 2026-10-21: Validate independently available market prices and exact identities.
 //   - 2026-10-19: Validate the crypto-only response independently of request defaults.
 //   - 2026-10-18: Validate latest-price weighting with a rolling 60-second volume window.
@@ -51,7 +52,7 @@ func (r Result) Validate() error {
 	if err := (Params{AssetType: market.AssetClassCrypto, Asset: r.Asset, MarketType: r.MarketType}).Validate(); err != nil {
 		return fmt.Errorf("failed to validate price response: %w", err)
 	}
-	if r.Definition != "composite" || r.Currency != "USD" || r.Method != "volume_weighted_latest" || r.Interval != "60s" || r.SentAt <= 0 {
+	if r.Definition != "composite" || r.Currency != "USD" || r.Method != "volume_weighted_reference" || r.Interval != "60s" || r.SentAt <= 0 {
 		return fmt.Errorf("failed to validate price response: metadata=invalid")
 	}
 	switch r.Status {
@@ -88,7 +89,11 @@ func (r Result) Validate() error {
 		if err := entry.Symbol.Validate(); err != nil {
 			return fmt.Errorf("failed to validate price response: %w", err)
 		}
-		if entry.Currency != "USD" || entry.Method != "last_trade" {
+		expectedMethod := "last_trade"
+		if entry.Market.PoolID != "" {
+			expectedMethod = "pool_price"
+		}
+		if entry.Currency != "USD" || entry.Method != expectedMethod {
 			return fmt.Errorf("failed to validate price response: market_metadata=invalid")
 		}
 		if entry.Status == StatusUnavailable {
@@ -113,6 +118,7 @@ func (r Result) Validate() error {
 // ValidateFor verifies response values and the exact requested market order and scope.
 //
 // Version:
+//   - 2026-10-22: Validate the reference-price cutover contract.
 //   - 2026-10-21: Added.
 func (r Result) ValidateFor(params Params) error {
 	if err := params.Validate(); err != nil {

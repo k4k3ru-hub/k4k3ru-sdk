@@ -16,7 +16,7 @@ func pointer[T any](value T) *T { return &value }
 
 func resultFixture() Result {
 	to := time.Date(2026, 10, 19, 12, 10, 30, 123000, time.UTC)
-	return Result{Asset: "sui", MarketType: "spot", Definition: "composite", Currency: "USD", Method: "volume_weighted_latest", SentAt: to.UnixMicro() + 1000,
+	return Result{Asset: "sui", MarketType: "spot", Definition: "composite", Currency: "USD", Method: "volume_weighted_reference", SentAt: to.UnixMicro() + 1000,
 		Ranges: []Range{
 			{Period: Period24h, From: to.Add(-24 * time.Hour).Truncate(time.Minute).UnixMicro(), To: to.UnixMicro(), Low: pointer("0.9"), High: pointer("1.1"), CoveragePercentage: "50", CoverageStatus: CoverageStatusSufficient},
 			{Period: Period7d, From: to.Add(-7 * 24 * time.Hour).Truncate(time.Minute).UnixMicro(), To: to.UnixMicro(), Low: pointer("0.9"), High: pointer("1.1"), CoveragePercentage: "7.142857142857142857", CoverageStatus: CoverageStatusInsufficient},

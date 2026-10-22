@@ -28,7 +28,7 @@ func TestPriceComposition(t *testing.T) {
 		if req.Method != jsonrpc.MethodMarketHubPriceGet || req.Auth != nil || string(req.Params) != `{"assetType":"crypto","asset":"sui","marketType":"perpetual"}` {
 			t.Fatalf("wrong request: %+v", req)
 		}
-		return testResponse(t, req, price.Result{Asset: "sui", MarketType: "perpetual", Definition: "composite", Currency: "USD", Method: "volume_weighted_latest", Interval: "60s", Status: price.StatusUnavailable, SentAt: 1792300000123456}, nil, 200), nil
+		return testResponse(t, req, price.Result{Asset: "sui", MarketType: "perpetual", Definition: "composite", Currency: "USD", Method: "volume_weighted_reference", Interval: "60s", Status: price.StatusUnavailable, SentAt: 1792300000123456}, nil, 200), nil
 	})})
 	if err != nil || client.MarketHub().Candles() == nil || client.MarketHub().Price() == nil || calls != 0 {
 		t.Fatalf("composition failed: %v", err)

@@ -42,7 +42,7 @@ step; publishing this SDK does not deploy the endpoint.
   "marketType": "spot",
   "definition": "composite",
   "currency": "USD",
-  "method": "volume_weighted_latest",
+  "method": "volume_weighted_reference",
   "price": "1.02",
   "changes": [
     {

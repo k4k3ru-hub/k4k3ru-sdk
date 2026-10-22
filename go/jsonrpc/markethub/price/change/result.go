@@ -44,13 +44,14 @@ type Change struct {
 // server responsibilities; the SDK does not recompute or round the percentage.
 //
 // Version:
+//   - 2026-10-22: Validate the reference-price cutover contract.
 //   - 2026-10-19: Validate the crypto-only response independently of request defaults.
 //   - 2026-10-18: Added.
 func (r Result) Validate() error {
 	if err := (Params{AssetType: market.AssetClassCrypto, Asset: r.Asset, MarketType: r.MarketType}).Validate(); err != nil {
 		return fmt.Errorf("failed to validate price change response: %w", err)
 	}
-	if r.Definition != "composite" || r.Currency != "USD" || r.Method != "volume_weighted_latest" || r.SentAt <= 0 {
+	if r.Definition != "composite" || r.Currency != "USD" || r.Method != "volume_weighted_reference" || r.SentAt <= 0 {
 		return fmt.Errorf("failed to validate price change response: metadata=invalid")
 	}
 	if r.Price != nil {

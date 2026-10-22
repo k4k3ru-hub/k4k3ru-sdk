@@ -19,7 +19,7 @@ import (
 func unavailableChanges(params change.Params) change.Result {
 	result := change.Result{
 		Asset: params.Asset, MarketType: params.MarketType, Definition: "composite",
-		Currency: "USD", Method: "volume_weighted_latest", SentAt: 1792326930000000,
+		Currency: "USD", Method: "volume_weighted_reference", SentAt: 1792326930000000,
 	}
 	for _, period := range params.Normalize().Periods {
 		result.Changes = append(result.Changes, change.Change{Period: period, Status: change.StatusUnavailable})
@@ -109,7 +109,7 @@ func TestPriceChangeComposition(t *testing.T) {
 func TestPriceChangePreservesPartialSnapshot(t *testing.T) {
 	raw := json.RawMessage(`{
 		"asset":"sui","marketType":"spot","definition":"composite","currency":"USD",
-		"method":"volume_weighted_latest","price":"1.02","sentAt":1792326930000000,
+		"method":"volume_weighted_reference","price":"1.02","sentAt":1792326930000000,
 		"changes":[
 			{"period":"5m","changePercentage":"2","referencePrice":"1","referenceAt":1792326600000000,"status":"live"},
 			{"period":"15m","changePercentage":"6.25","referencePrice":"0.96","referenceAt":1792325880000000,"status":"stale"},

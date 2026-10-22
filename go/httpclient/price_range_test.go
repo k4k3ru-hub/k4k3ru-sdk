@@ -20,7 +20,7 @@ import (
 
 func rangeResponse(p pricerange.Params) pricerange.Result {
 	to := time.Date(2026, 10, 19, 12, 10, 30, 123000, time.UTC)
-	r := pricerange.Result{Asset: p.Asset, MarketType: p.MarketType, Definition: "composite", Currency: "USD", Method: "volume_weighted_latest", SentAt: to.UnixMicro() + 1000}
+	r := pricerange.Result{Asset: p.Asset, MarketType: p.MarketType, Definition: "composite", Currency: "USD", Method: "volume_weighted_reference", SentAt: to.UnixMicro() + 1000}
 	for _, period := range p.Normalize().Periods {
 		r.Ranges = append(r.Ranges, pricerange.Range{Period: period, From: to.Add(-period.Duration()).Truncate(time.Minute).UnixMicro(), To: to.UnixMicro(), CoveragePercentage: "0", CoverageStatus: pricerange.CoverageStatusUnavailable})
 	}

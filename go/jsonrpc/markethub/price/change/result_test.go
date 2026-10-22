@@ -12,7 +12,7 @@ func pointer[T any](value T) *T { return &value }
 
 func mixedResult() Result {
 	return Result{
-		Asset: "sui", MarketType: "spot", Definition: "composite", Currency: "USD", Method: "volume_weighted_latest",
+		Asset: "sui", MarketType: "spot", Definition: "composite", Currency: "USD", Method: "volume_weighted_reference",
 		Price: pointer("1.02"), SentAt: 1792326930000000,
 		Changes: []Change{
 			{Period: Period5m, ChangePercentage: pointer("2"), ReferencePrice: pointer("1"), ReferenceAt: pointer(int64(1792326600000000)), Status: StatusLive},

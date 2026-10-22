@@ -34,7 +34,7 @@ func TestPriceMarketsHTTP(t *testing.T) {
 		if req.Method != jsonrpc.MethodMarketHubPriceGet || len(got.Markets) != 1 || got.Markets[0] != q.Markets[0] {
 			t.Fatal("wrong batch", req)
 		}
-		result := price.Result{Asset: "sui", MarketType: "perpetual", Definition: "composite", Currency: "USD", Method: "volume_weighted_latest", Interval: "60s", Status: price.StatusUnavailable, SentAt: 1792508400000001,
+		result := price.Result{Asset: "sui", MarketType: "perpetual", Definition: "composite", Currency: "USD", Method: "volume_weighted_reference", Interval: "60s", Status: price.StatusUnavailable, SentAt: 1792508400000001,
 			Markets: []price.MarketPrice{{Market: q.Markets[0], Symbol: "SUI/USDC", Currency: "USD", Method: "last_trade", Status: price.StatusUnavailable}}}
 		if mode == "missing" {
 			result.Markets = nil

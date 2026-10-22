@@ -21,7 +21,7 @@ func TestPriceContract(t *testing.T) {
 			t.Fatalf("invalid selectors accepted: %+v", p)
 		}
 	}
-	r := Result{Asset: "sui", MarketType: "spot", Definition: "composite", Currency: "USD", Method: "volume_weighted_latest", Interval: "60s", Status: StatusUnavailable, SentAt: 1792300000123456}
+	r := Result{Asset: "sui", MarketType: "spot", Definition: "composite", Currency: "USD", Method: "volume_weighted_reference", Interval: "60s", Status: StatusUnavailable, SentAt: 1792300000123456}
 	if err := r.Validate(); err != nil {
 		t.Fatal(err)
 	}

@@ -103,7 +103,7 @@ func TestResult(t *testing.T) {
 //   - 2026-10-19: Added.
 func TestInvalidResults(t *testing.T) {
 	for name, mutate := range map[string]func(*Result){
-		"wrong method":         func(r *Result) { r.Method = "volume_weighted_latest" },
+		"wrong method":         func(r *Result) { r.Method = "volume_weighted_reference" },
 		"wrong currency":       func(r *Result) { r.Currency = "USDC" },
 		"wrong definition":     func(r *Result) { r.Definition = "venue" },
 		"missing send time":    func(r *Result) { r.SentAt = 0 },

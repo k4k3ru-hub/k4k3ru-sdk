@@ -57,7 +57,7 @@ func TestMarketPriceResultBinding(t *testing.T) {
 	ref := market.MarketRef{Venue: "hyperliquid", Network: "mainnet", VenueSymbol: "SUI"}
 	q := Params{AssetType: "crypto", Asset: "sui", MarketType: "perpetual", Markets: []market.MarketRef{ref}}
 	value := "1.234"
-	r := Result{Asset: "sui", MarketType: "perpetual", Definition: "composite", Currency: "USD", Method: "volume_weighted_latest", Interval: "60s", Status: StatusUnavailable, SentAt: 1792508400000001,
+	r := Result{Asset: "sui", MarketType: "perpetual", Definition: "composite", Currency: "USD", Method: "volume_weighted_reference", Interval: "60s", Status: StatusUnavailable, SentAt: 1792508400000001,
 		Markets: []MarketPrice{{Market: ref, Symbol: "SUI/USDC", Currency: "USD", Method: "last_trade", Price: &value, Status: StatusLive}}}
 	if err := r.ValidateFor(q); err != nil {
 		t.Fatal(err)

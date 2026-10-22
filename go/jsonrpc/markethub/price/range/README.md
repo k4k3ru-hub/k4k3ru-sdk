@@ -29,7 +29,7 @@ periods select all six. Explicit periods must be distinct, and their order is
 preserved in `ranges[]`. Days are elapsed 24-hour periods, not calendar days.
 
 The Result contains `asset`, `marketType`, `definition: "composite"`,
-`currency: "USD"`, `method: "volume_weighted_latest"`, `ranges[]`, and `sentAt`.
+`currency: "USD"`, `method: "volume_weighted_reference"`, `ranges[]`, and `sentAt`.
 Each range contains:
 
 | Field | Meaning |

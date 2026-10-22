@@ -66,7 +66,7 @@ seven-day span and 300 returned candles. The SDK does not fetch pages automatica
 request evaluation time, not a completeness watermark or a snapshot selector.
 `Result.SentAt` is the public Gateway send time in Unix **microseconds**.
 `Result.Currency` is `USD`. `Definition` is `composite` or `venue`; venue candles
-use `method: "trade"` and transaction-time OHLC instead of Composite admission-time OHLC.
+use `method: "pool_price"` and admission-time Pool OHLC for AMMs; order-book markets retain `method: "trade"` and transaction-time OHLC.
 `Candle.PublishedAt` retains Unix **microseconds**, with zero meaning unknown.
 Open/high/low/close are USD prices; pointers are nil when `Usable` is false.
 Volume is base-asset quantity, quote volume is USD, and trade count is the
@@ -92,8 +92,8 @@ one-minute publications; pages do not freeze revisions across requests.
 This replaces the previous interval-slot limit and opaque cursor contract.
 Update requests using limits over 300 or a cursor together with the server.
 
-The Composite method is `volume_weighted_latest`: each minute's OHLC is the path
-of Composite prices admitted by MarketHub, using latest market prices weighted
+The Composite method is `volume_weighted_reference`: each minute's OHLC is the path
+of Composite prices admitted by MarketHub, using Pool state prices for AMMs and latest trade prices for order books, weighted
 by trailing 60-second base volume. `method` identifies this calculation separately
 from the candle `interval`. A usable price candle can have zero `tradeCount` when
 recent trades still contribute to the rolling price window. Volume is actual
@@ -117,3 +117,5 @@ The existing 1,000-credit success charge and authenticated quota also apply to
 archive pages, selectors and refresh requests. The Console Market chart uses a
 free internal route to this same calculation and shares the account/method quota.
 The paid Historical page remains unchanged.
+
+AMM display candles are stored independently of execution candles. Only the new `pool_price` history is served for AMM markets; there is no price-basis selector or trade-price fallback. Composite `volume_weighted_reference` history also starts at cutover. Existing files are retained. Volume remains actual transaction-time volume and is not inferred from state changes.
