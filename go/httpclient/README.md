@@ -318,3 +318,14 @@ returns registered Mainnet metadata independently of current prices. Import the
 owning `jsonrpc/markethub/asset` package; see its [contract](../jsonrpc/markethub/asset/README.md)
 and [composition example](asset_example_test.go). Public Gateway pricing and
 admission remain a separate rollout step.
+
+## Asset news
+
+`client.MarketHub().News().List(ctx, news.Params{AssetType: "crypto", Asset: "sui"})`
+reads source-attributed Mainnet metadata from the owning
+`jsonrpc/markethub/news` package. The client validates source/run attribution and
+fetches one page without retries. For page 2 and later, pass the first response's
+`Snapshot` with the same Asset and filters. Source collection health can change
+between pages; the snapshot pins item revisions rather than collector health.
+See the [contract](../jsonrpc/markethub/news/README.md). SDK publication and the
+service rollout are required before using the new method in production.
