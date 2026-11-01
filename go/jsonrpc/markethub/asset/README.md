@@ -66,3 +66,8 @@ and does not retry automatically.
 SDK and MarketHub backend support are prepared. Public Gateway admission,
 pricing, quotas, final send-time stamping and Console integration follow after
 their separate review. This contract does not announce a deployed free endpoint.
+
+
+For precomputed market metrics, both registered market types and per-source
+Funding/Open Interest, see [Asset.Overview.Get](overview/README.md). This addition
+is unpublished; Asset.Get retains its metadata-only contract and pricing.

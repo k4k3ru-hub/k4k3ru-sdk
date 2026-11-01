@@ -9,13 +9,20 @@ import (
 	"github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/asset"
 )
 
-type AssetClient struct{ caller jsonRPCCaller }
+type AssetClient struct {
+	caller   jsonRPCCaller
+	overview *AssetOverviewClient
+}
 
 func newAssetClient(caller jsonRPCCaller) (*AssetClient, error) {
 	if caller == nil {
 		return nil, fmt.Errorf("failed to create asset client: caller=null")
 	}
-	return &AssetClient{caller: caller}, nil
+	overview, err := newAssetOverviewClient(caller)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create asset client: %w", err)
+	}
+	return &AssetClient{caller: caller, overview: overview}, nil
 }
 
 // Get retrieves registered asset metadata in one request, preserving caller parameters.

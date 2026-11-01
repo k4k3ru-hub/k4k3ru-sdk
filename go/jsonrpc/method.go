@@ -12,6 +12,7 @@ type Method string
 
 const (
 	MethodMarketHubNewsList                        Method = "MarketHub.News.List"
+	MethodMarketHubAssetOverviewGet                Method = "MarketHub.Asset.Overview.Get"
 	MethodMarketHubAssetGet                        Method = "MarketHub.Asset.Get"
 	MethodMarketHubAssetList                       Method = "MarketHub.Asset.List"
 	MethodMarketHubMarketsList                     Method = "MarketHub.Markets.List"

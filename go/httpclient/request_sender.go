@@ -97,12 +97,16 @@ func (s *requestSender) call(ctx context.Context, method jsonrpc.Method, params 
 			result = nil
 		}
 	}()
-	body, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes+1))
+	responseLimit := maxResponseBytes
+	if method == jsonrpc.MethodMarketHubAssetOverviewGet {
+		responseLimit = (4 << 20) + 1024
+	}
+	body, err := io.ReadAll(io.LimitReader(response.Body, int64(responseLimit)+1))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read http response: %w", err)
 	}
-	if len(body) > maxResponseBytes {
-		return nil, fmt.Errorf("failed to read http response: body=too_long max_length=%d", maxResponseBytes)
+	if len(body) > responseLimit {
+		return nil, fmt.Errorf("failed to read http response: body=too_long max_length=%d", responseLimit)
 	}
 	var rpcResponse jsonrpc.Response
 	decodeErr := json.Unmarshal(body, &rpcResponse)

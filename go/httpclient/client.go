@@ -63,6 +63,7 @@ func (e endpointParseError) Unwrap() error { return e.cause }
 // concurrent use when the resulting client is shared between goroutines.
 //
 // Version:
+//   - 2026-11-01: Compose the retained Asset.Overview operation.
 //   - 2026-10-31: Compose retained Asset news with the shared transport.
 //   - 2026-10-21: Compose registered asset metadata with the shared transport.
 //   - 2026-10-20: Compose production market discovery with the shared transport.
