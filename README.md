@@ -40,6 +40,23 @@ Requestは必須の`assetType: "crypto"`と`asset`のみです。
 [Asset.Getの契約](go/jsonrpc/markethub/asset/README.md)を参照してください。
 公開Gatewayの料金・利用上限とConsoleへの接続は後続工程です。
 
+### Official Asset context
+
+The source implementation includes a separate context reader using the owning
+[`assetnews` contract](go/jsonrpc/markethub/assetnews/README.md):
+
+```go
+result, err := client.MarketHub().AssetNews().List(ctx, assetnews.Params{
+    AssetType: "crypto", Asset: "sui",
+})
+```
+
+Import `github.com/k4k3ru-hub/k4k3ru-sdk/go/jsonrpc/markethub/assetnews` for its
+parameters. Responses explicitly use `scope=asset_context`; unknown networks and
+source plans are retained without treating them as verified Mainnet deployment.
+The existing `MarketHub().News().List` remains Mainnet-only. Release and service
+deployment must be verified separately from these source changes.
+
 ### Production market discovery
 
 資産別の市場一覧には`client.MarketHub().Markets().List(ctx, params)`を追加しています。
